@@ -1,0 +1,194 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "WildCAM ESP32 Monitoring Dashboard",
+    "tags": ["wildcam", "wildlife", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Overview",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"wildcam-backend\"}",
+            "legendFormat": "Backend Status",
+            "refId": "A"
+          },
+          {
+            "expr": "wildcam_active_cameras_total",
+            "legendFormat": "Active Cameras",
+            "refId": "B"
+          },
+          {
+            "expr": "increase(wildcam_wildlife_detections_total[1h])",
+            "legendFormat": "Detections (Last Hour)",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 0}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "API Response Times",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"wildcam-backend\"}[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"wildcam-backend\"}[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"wildcam-backend\"}[5m]))",
+            "legendFormat": "99th percentile",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Response Time (seconds)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Wildlife Detection Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(wildcam_wildlife_detections_total[5m]) * 60",
+            "legendFormat": "Detections per minute",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(wildcam_false_positives_total[5m]) * 60",
+            "legendFormat": "False positives per minute",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate (per minute)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Camera Health Status",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "wildcam_camera_last_seen_timestamp",
+            "legendFormat": "{{camera_id}}",
+            "format": "table",
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "camera_id": "Camera ID",
+                "Value": "Last Seen (timestamp)",
+                "location": "Location"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Error Rate by Endpoint",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"wildcam-backend\",status=~\"5..\"}[5m]) / rate(http_requests_total{job=\"wildcam-backend\"}[5m])",
+            "legendFormat": "{{method}} {{handler}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Error Rate",
+            "min": 0,
+            "max": 1
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Database Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "postgres_connections_active",
+            "legendFormat": "Active Connections",
+            "refId": "A"
+          },
+          {
+            "expr": "postgres_connections_idle",
+            "legendFormat": "Idle Connections",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(postgres_queries_total[5m])",
+            "legendFormat": "Queries per second",
+            "refId": "C"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Storage Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "wildcam_storage_used_bytes / wildcam_storage_total_bytes",
+            "legendFormat": "Storage Usage %",
+            "refId": "A"
+          },
+          {
+            "expr": "wildcam_image_count_total",
+            "legendFormat": "Total Images Stored",
+            "refId": "B"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 30,
+    "version": 1
+  }
+}
