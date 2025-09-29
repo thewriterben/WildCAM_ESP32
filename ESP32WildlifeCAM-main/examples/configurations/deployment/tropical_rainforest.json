@@ -1,0 +1,187 @@
+{
+  "deployment_profile": {
+    "name": "Tropical Rainforest",
+    "environment_type": "tropical",
+    "climate_zone": "equatorial",
+    "deployment_id": "TR_001",
+    "version": "1.2.0"
+  },
+  
+  "environmental_conditions": {
+    "temperature": {
+      "min_celsius": 20,
+      "max_celsius": 35,
+      "average_celsius": 27,
+      "compensation_factor": 1.15
+    },
+    "humidity": {
+      "min_percent": 70,
+      "max_percent": 100,
+      "average_percent": 85,
+      "adjustment_factor": 0.85
+    },
+    "precipitation": {
+      "annual_mm": 2500,
+      "wet_season_months": [4, 5, 6, 7, 8, 9, 10],
+      "dry_season_months": [11, 12, 1, 2, 3],
+      "condensation_delay_ms": 30000
+    },
+    "light_conditions": {
+      "canopy_coverage_percent": 85,
+      "low_light_hours_per_day": 16,
+      "peak_sunlight_hours": "10:00-14:00"
+    }
+  },
+  
+  "camera_configuration": {
+    "resolution": "FRAMESIZE_UXGA",
+    "quality": 8,
+    "night_vision_enabled": true,
+    "flash_intensity": 80,
+    "hdr_enabled": true,
+    "auto_exposure": true,
+    "humidity_compensation": true
+  },
+  
+  "motion_detection": {
+    "pir_threshold": 75,
+    "advanced_analysis": true,
+    "canopy_filtering": true,
+    "wind_compensation": true,
+    "rainfall_detection": true,
+    "confidence_threshold": 0.7
+  },
+  
+  "power_management": {
+    "solar_panel": {
+      "wattage": 20,
+      "efficiency_factor": 0.6,
+      "daily_hours": 6,
+      "rainy_season_adjustment": 0.4
+    },
+    "battery": {
+      "capacity_mah": 10000,
+      "chemistry": "LiFePO4",
+      "temperature_derating": true,
+      "humidity_protection": true
+    },
+    "power_saving": {
+      "aggressive_mode": false,
+      "sleep_during_rain": true,
+      "temperature_throttling": true
+    }
+  },
+  
+  "wildlife_profile": {
+    "target_species": [
+      {
+        "name": "toucan",
+        "activity_pattern": "diurnal",
+        "confidence_threshold": 0.8,
+        "priority": "high"
+      },
+      {
+        "name": "jaguar",
+        "activity_pattern": "crepuscular",
+        "confidence_threshold": 0.9,
+        "priority": "critical"
+      },
+      {
+        "name": "sloth",
+        "activity_pattern": "variable",
+        "confidence_threshold": 0.7,
+        "priority": "medium"
+      },
+      {
+        "name": "howler_monkey",
+        "activity_pattern": "diurnal",
+        "confidence_threshold": 0.8,
+        "priority": "high"
+      },
+      {
+        "name": "macaw",
+        "activity_pattern": "diurnal",
+        "confidence_threshold": 0.85,
+        "priority": "high"
+      }
+    ],
+    "seasonal_variations": {
+      "wet_season": {
+        "increased_activity": ["amphibians", "insects"],
+        "decreased_activity": ["large_mammals"],
+        "capture_frequency_multiplier": 1.2
+      },
+      "dry_season": {
+        "increased_activity": ["large_mammals", "birds"],
+        "decreased_activity": ["amphibians"],
+        "capture_frequency_multiplier": 0.8
+      }
+    }
+  },
+  
+  "communication": {
+    "primary": {
+      "type": "wifi",
+      "ssid": "RainforestNet",
+      "power_save": false,
+      "range_extender": true
+    },
+    "secondary": {
+      "type": "lora",
+      "frequency": 915000000,
+      "power": 20,
+      "mesh_enabled": true
+    },
+    "backup": {
+      "type": "cellular",
+      "technology": "LTE_CAT_M1",
+      "data_limit_mb": 500,
+      "emergency_only": true
+    }
+  },
+  
+  "storage": {
+    "local_retention_days": 14,
+    "compression_enabled": true,
+    "encryption_enabled": true,
+    "humidity_protection": true,
+    "auto_cleanup_threshold": 90
+  },
+  
+  "ai_configuration": {
+    "edge_ai_enabled": true,
+    "model_variant": "tropical_optimized",
+    "confidence_threshold": 0.75,
+    "federated_learning": {
+      "enabled": true,
+      "contribution_rate": 0.1,
+      "privacy_level": "high"
+    }
+  },
+  
+  "monitoring": {
+    "health_check_interval_minutes": 15,
+    "telemetry_transmission_hours": 6,
+    "alert_thresholds": {
+      "battery_critical": 15,
+      "temperature_warning": 40,
+      "humidity_warning": 95,
+      "storage_warning": 85
+    }
+  },
+  
+  "maintenance": {
+    "lens_cleaning_interval_days": 7,
+    "solar_panel_cleaning_days": 14,
+    "enclosure_inspection_months": 3,
+    "sd_card_replacement_months": 12
+  },
+  
+  "installation": {
+    "mounting_height_meters": 3.5,
+    "orientation": "north_facing",
+    "tilt_angle_degrees": 15,
+    "weatherproofing_rating": "IP67",
+    "camouflage_required": true
+  }
+}

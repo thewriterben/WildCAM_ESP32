@@ -1,492 +1,454 @@
-# ESP32 Wildlife Camera API Reference
-
-This document provides comprehensive API reference for the ESP32 Wildlife Camera project, including the new AI-powered wildlife detection capabilities.
-
-## AI and Machine Learning Classes
-
-### TensorFlowLiteImplementation
-*TensorFlow Lite Micro integration for wildlife detection.*
-
-#### Initialization
-```cpp
-#include "ai/tensorflow_lite_implementation.h"
-
-// Initialize TensorFlow Lite system
-bool initializeTensorFlowLite();
-
-// Clean up resources
-void cleanupTensorFlowLite();
-
-// Load models from directory
-bool loadWildlifeModels(const char* modelsDirectory);
-```
-
-#### Methods
-- `init()` - Initialize TensorFlow Lite Micro system
-- `loadModel(WildlifeModelType type, const char* modelPath)` - Load specific model
-- `runInference(WildlifeModelType type, const uint8_t* imageData, uint32_t width, uint32_t height)` - Run inference
-- `detectSpecies(const CameraFrame& frame)` - Detect wildlife species
-- `analyzeBehavior(const CameraFrame& frame)` - Analyze animal behavior
-- `detectMotion(const CameraFrame& frame)` - AI-enhanced motion detection
-- `detectHuman(const CameraFrame& frame)` - Human presence detection
-- `validateModel(const char* modelPath)` - Validate model file
-- `benchmarkModel(WildlifeModelType type, uint32_t iterations)` - Performance benchmarking
-
-#### Model Types
-```cpp
-enum WildlifeModelType {
-    MODEL_SPECIES_CLASSIFIER,  // Wildlife species identification
-    MODEL_BEHAVIOR_ANALYZER,   // Animal behavior analysis
-    MODEL_MOTION_DETECTOR,     // AI-enhanced motion detection
-    MODEL_HUMAN_DETECTOR,      // Human detection
-    MODEL_COUNT
-};
-```
-
-#### Performance Monitoring
-```cpp
-// Enable performance monitoring
-void enablePerformanceMonitoring(bool enable);
-
-// Get performance metrics
-uint32_t getAverageInferenceTime(WildlifeModelType type);
-float getModelAccuracy(WildlifeModelType type);
-size_t getMemoryUsage();
-```
-
-### WildlifeClassifier
-*High-level wildlife species classification interface.*
-
-#### Initialization
-```cpp
-#include "ai/wildlife_classifier.h"
-
-WildlifeClassifier classifier;
-bool success = classifier.initialize();
-```
-
-#### Methods
-- `initialize()` - Initialize classifier system
-- `classifyFrame(camera_fb_t* frame)` - Classify species in camera frame
-- `classifyImage(const uint8_t* imageData, size_t imageSize, uint16_t width, uint16_t height)` - Classify species in image data
-- `setConfidenceThreshold(float threshold)` - Set minimum confidence threshold
-- `setEnabled(bool enable)` - Enable/disable classifier
-- `getStatistics()` - Get classification statistics
-- `resetStatistics()` - Reset performance statistics
-- `cleanup()` - Clean up resources
-
-#### Species Types
-```cpp
-enum class SpeciesType {
-    UNKNOWN = 0,
-    WHITE_TAILED_DEER = 1,
-    BLACK_BEAR = 2,
-    RED_FOX = 3,
-    GRAY_WOLF = 4,
-    MOUNTAIN_LION = 5,
-    ELK = 6,
-    MOOSE = 7,
-    RACCOON = 8,
-    COYOTE = 9,
-    BOBCAT = 10,
-    WILD_TURKEY = 11,
-    BALD_EAGLE = 12,
-    RED_TAILED_HAWK = 13,
-    GREAT_BLUE_HERON = 14,
-    HUMAN = 50
-};
-```
-
-#### Static Utility Methods
-```cpp
-// Get human-readable species name
-static String getSpeciesName(SpeciesType species);
-
-// Get confidence level description
-static String getConfidenceLevelDescription(ConfidenceLevel level);
-
-// Check if species is potentially dangerous
-static bool isDangerousSpecies(SpeciesType species);
-```
+# 📚 ESP32 Wildlife Camera API Reference
 
 ## Core Classes
 
-### CameraHandler
-*Camera management and image capture functionality.*
+### CameraManager
+*Advanced camera management with multiple capture modes*
 
-#### Methods
-- `init()` - Initialize camera system
-- `captureImage()` - Capture a single image
-- `getStatus()` - Get camera status
+#### Public Methods
+```cpp
+class CameraManager {
+public:
+    // Initialization
+    bool initialize();
+    bool configure(const CameraConfig& config);
+    
+    // Image Capture
+    bool captureImage(const char* filename = nullptr);
+    bool captureBurst(int count, int interval_ms = 500);
+    bool startTimeLapse(int interval_s, int duration_s = 0);
+    bool stopTimeLapse();
+    
+    // Video Recording
+    bool startVideoRecording(const char* filename = nullptr);
+    bool stopVideoRecording();
+    bool isRecording();
+    
+    // Status and Configuration
+    CameraStatus getStatus();
+    bool setResolution(framesize_t size);
+    bool setQuality(int quality); // 0-63, lower = better
+    bool enableNightVision(bool enable);
+    
+    // Advanced Features
+    bool enableBurstMode(bool enable);
+    bool setImageFormat(pixformat_t format);
+    float getLastCaptureTime();
+};
+```
 
-### MotionFilter
-*Motion detection and filtering system.*
+#### Usage Example
+```cpp
+CameraManager camera;
+CameraConfig config = {
+    .resolution = FRAMESIZE_UXGA,
+    .quality = 10,
+    .enablePSRAM = true
+};
 
-#### Methods
-- `init()` - Initialize motion detection
-- `checkMotion()` - Check for motion events
-- `setThreshold()` - Configure motion sensitivity
+if (camera.initialize() && camera.configure(config)) {
+    camera.captureImage("wildlife_001.jpg");
+}
+```
 
-### SolarManager
-*Solar power management and battery monitoring.*
+### MotionDetectionManager
+*Enhanced motion detection with AI-powered filtering*
 
-#### Methods
-- `init()` - Initialize power management
-- `getBatteryLevel()` - Get current battery level
-- `getSolarVoltage()` - Get solar panel voltage
+#### Public Methods
+```cpp
+class MotionDetectionManager {
+public:
+    // Initialization
+    bool initialize(int pirPin = 12);
+    bool configure(const MotionConfig& config);
+    
+    // Detection
+    bool checkMotion();
+    bool isMotionDetected();
+    float getConfidence();
+    MotionData getLastMotion();
+    
+    // Advanced Analysis
+    bool enableAdvancedAnalysis(bool enable);
+    bool setThreshold(float threshold);
+    bool setFilteringEnabled(bool enable);
+    
+    // Callbacks
+    void setMotionCallback(void (*callback)(MotionData));
+    void enableLogging(bool enable);
+};
+```
 
-### LoraMesh
-*LoRa mesh networking functionality.*
+### PowerManager
+*Comprehensive power management with solar integration*
 
-#### Methods
-- `init()` - Initialize LoRa network
-- `sendMessage()` - Send data over LoRa
-- `receiveMessage()` - Receive LoRa messages
+#### Public Methods
+```cpp
+class PowerManager {
+public:
+    // Initialization
+    bool initialize();
+    bool configurePowerSaving(PowerMode mode);
+    
+    // Battery Management
+    int getBatteryPercentage();
+    float getBatteryVoltage();
+    bool isCharging();
+    float getChargingCurrent();
+    
+    // Solar Panel
+    float getSolarVoltage();
+    float getSolarCurrent();
+    float getSolarPower();
+    
+    // Power Control
+    bool enableDeepSleep(uint64_t sleep_time_us);
+    bool enableLightSleep(uint64_t sleep_time_us);
+    PowerMode getCurrentMode();
+    
+    // Statistics
+    PowerStats getPowerStatistics();
+    float getAveragePowerConsumption();
+};
+```
+
+### StorageManager
+*SD card and file system management*
+
+#### Public Methods
+```cpp
+class StorageManager {
+public:
+    // Initialization
+    static bool initialize();
+    static bool isInitialized();
+    
+    // File Operations
+    static bool saveImage(const char* filename, uint8_t* data, size_t length);
+    static bool saveVideo(const char* filename, uint8_t* data, size_t length);
+    static bool deleteFile(const char* filename);
+    static bool fileExists(const char* filename);
+    
+    // Directory Management
+    static bool createDirectory(const char* dirname);
+    static std::vector<String> listFiles(const char* path = "/");
+    
+    // Storage Statistics
+    static StorageStats getStatistics();
+    static bool hasAdequateSpace(size_t required_bytes);
+    static bool performCleanup();
+};
+```
+
+### WildlifeClassifier
+*AI-powered wildlife species classification*
+
+#### Public Methods
+```cpp
+class WildlifeClassifier {
+public:
+    // Initialization
+    bool initialize();
+    bool loadModel(const char* model_path);
+    
+    // Classification
+    ClassificationResult classifyImage(uint8_t* image_data, size_t length);
+    std::vector<Species> detectSpecies(uint8_t* image_data);
+    float getConfidence();
+    
+    // Model Management
+    bool updateModel(const char* new_model_path);
+    ModelInfo getModelInfo();
+    
+    // Federated Learning
+    bool enableFederatedLearning(bool enable);
+    bool contributeToFederation(const TrainingData& data);
+};
+```
 
 ## Data Structures
 
-### InferenceResult
-*TensorFlow Lite inference result structure.*
-
 ```cpp
-struct InferenceResult {
-    float confidence;           // Confidence score (0.0-1.0)
-    String className;           // Detected class name
-    uint32_t classIndex;        // Class index
-    uint32_t inferenceTime;     // Inference time in milliseconds
-    bool valid;                 // Result validity flag
+struct MotionData {
+    unsigned long timestamp;
+    bool detected;
+    float confidence;
+    int sensorValue;
+    float temperature;
+    float humidity;
+    int lightLevel;
+    MotionType type;               // PIR, ADVANCED, AI_FILTERED
+};
+```
+
+### StorageStats
+```cpp
+struct StorageStats {
+    uint64_t totalSpace;           // Total storage in bytes
+    uint64_t freeSpace;            // Available space in bytes
+    uint64_t usedSpace;            // Used space in bytes
+    float usagePercentage;         // Usage as percentage
+    int fileCount;                 // Number of files
+    unsigned long lastUpdate;      // Last update timestamp
 };
 ```
 
 ### ClassificationResult
-*Wildlife classification result structure.*
-
 ```cpp
 struct ClassificationResult {
-    SpeciesType species;                    // Detected species
-    float confidence;                       // Confidence score (0.0-1.0)
-    ConfidenceLevel confidenceLevel;        // Confidence category
-    uint32_t inferenceTime;                 // Processing time (ms)
-    bool isValid;                          // Detection validity
-    String speciesName;                    // Human-readable species name
-    uint8_t animalCount;                   // Number of animals detected
-    float boundingBoxes[10][4];            // Bounding boxes [x, y, w, h]
+    String species;                // Detected species name
+    float confidence;              // Classification confidence (0-1)
+    BoundingBox bbox;              // Object location
+    std::vector<String> attributes; // Additional attributes
+    unsigned long timestamp;       // Detection timestamp
 };
 ```
 
-### CameraMetadata
+## Web API Endpoints
+
+### Device Status
+```http
+GET /api/status
+```
+Response:
+```json
+{
+    "device_id": "ESP32CAM_001",
+    "uptime": 3600,
+    "battery": 85,
+    "storage": {
+        "total": 32000000000,
+        "free": 25000000000,
+        "usage": 21.9
+    },
+    "last_capture": "2025-01-01T12:00:00Z"
+}
+```
+
+### Capture Image
+```http
+POST /api/capture
+Content-Type: application/json
+
+{
+    "filename": "wildlife_001.jpg",
+    "quality": 10,
+    "enable_flash": false
+}
+```
+
+### Configuration Management
+```http
+GET /api/config
+PUT /api/config
+```
+
+### File Management
+```http
+GET /api/files
+GET /api/files/{filename}
+DELETE /api/files/{filename}
+```
+
+### Real-time Streaming
+```http
+GET /stream
+```
+Returns MJPEG stream for live monitoring.
+
+## Configuration APIs
+
+### WiFi Configuration
 ```cpp
-struct CameraMetadata {
+struct WiFiConfig {
+    String ssid;
+    String password;
+    String hostname = "ESP32WildlifeCam";
+    bool enableAP = false;
+    String apPassword = "wildcam123";
+    int timeout_ms = 30000;
+};
+
+bool configureWiFi(const WiFiConfig& config);
+```
+
+### Environmental Configuration
+```cpp
+enum EnvironmentType {
+    TROPICAL,
+    DESERT,
+    ARCTIC,
+    TEMPERATE_FOREST
+};
+
+struct EnvironmentalConfig {
+    EnvironmentType type;
+    float temperatureRange[2];     // Min, Max
+    float humidityRange[2];        // Min, Max
+    int operatingVoltage;          // mV
+    bool weatherproofing;
+};
+```
+
+## Event System
+
+### Event Types
+```cpp
+enum EventType {
+    MOTION_DETECTED,
+    CAPTURE_COMPLETED,
+    STORAGE_LOW,
+    BATTERY_LOW,
+    SYSTEM_ERROR,
+    NETWORK_CONNECTED,
+    CLASSIFICATION_COMPLETED
+};
+```
+
+### Event Handler
+```cpp
+class EventManager {
+public:
+    void registerHandler(EventType type, EventCallback callback);
+    void fireEvent(EventType type, const EventData& data);
+    void removeHandler(EventType type);
+};
+```
+
+### Usage Example
+```cpp
+EventManager events;
+events.registerHandler(MOTION_DETECTED, [](const EventData& data) {
+    Serial.println("Motion detected at: " + String(data.timestamp));
+    camera.captureImage();
+});
+```
+
+## Error Handling
+
+### Error Codes
+```cpp
+enum ErrorCode {
+    SUCCESS = 0,
+    CAMERA_INIT_FAILED = 1001,
+    SD_CARD_ERROR = 2001,
+    MOTION_SENSOR_ERROR = 3001,
+    POWER_SYSTEM_ERROR = 4001,
+    NETWORK_ERROR = 5001,
+    CLASSIFICATION_ERROR = 6001
+};
+```
+
+### Error Information
+```cpp
+struct ErrorInfo {
+    ErrorCode code;
+    String message;
     unsigned long timestamp;
-    int batteryLevel;
-    bool motionDetected;
-    float temperature;
-    float humidity;
-    int lightLevel;
-    int imageWidth;
-    int imageHeight;
-    float compressionRatio;
-    
-    // AI Enhancement Fields
-    bool aiProcessed;
-    String detectedSpecies;
-    float speciesConfidence;
-    bool dangerousSpeciesAlert;
+    String component;
+    bool recoverable;
 };
 ```
 
-### ModelInfo
-*TensorFlow Lite model information structure.*
+## Usage Examples
 
+### Complete Wildlife Monitoring Setup
 ```cpp
-struct ModelInfo {
-    WildlifeModelType type;     // Model type identifier
-    String name;                // Human-readable model name
-    String filename;            // Model filename
-    size_t size;               // Model size in bytes
-    uint32_t version;          // Model version
-    bool loaded;               // Load status
-    float accuracy;            // Model accuracy
-    uint32_t inputWidth;       // Input image width
-    uint32_t inputHeight;      // Input image height
-    uint32_t channels;         // Input channels (1 or 3)
-};
-```
-
-### Configuration Options
-*Configuration parameters and their descriptions.*
-
-```cpp
-// AI Configuration
-#define SPECIES_CONFIDENCE_THRESHOLD 0.7f
-#define TFLITE_ARENA_SIZE (512 * 1024)
-#define MAX_SPECIES_COUNT 50
-#define AI_INFERENCE_TIMEOUT_MS 5000
-
-// Model Paths
-#define MODELS_PRIMARY_PATH "/models/"
-#define MODELS_SD_PATH "/sd/models/"
-#define MODELS_ALT_PATH "/data/models/"
-```
-
-## Examples
-
-### Basic AI Wildlife Detection
-```cpp
-#include "ai/wildlife_classifier.h"
-#include "camera_handler.h"
-
-WildlifeClassifier classifier;
+#include "camera/camera_manager.h"
+#include "detection/motion_detection_manager.h"
+#include "power/power_manager.h"
+#include "storage/storage_manager.h"
 
 void setup() {
     Serial.begin(115200);
     
-    // Initialize camera
-    CameraHandler::init();
-    
-    // Initialize AI classifier
-    if (!classifier.initialize()) {
-        Serial.println("ERROR: Failed to initialize wildlife classifier");
+    // Initialize storage
+    if (!StorageManager::initialize()) {
+        Serial.println("Storage initialization failed!");
         return;
     }
     
-    Serial.println("Wildlife AI system ready");
-}
-
-void loop() {
-    if (motionDetected) {
-        // Capture image
-        camera_fb_t* frame = esp_camera_fb_get();
-        
-        // Classify wildlife
-        WildlifeClassifier::ClassificationResult result = classifier.classifyFrame(frame);
-        
-        if (result.isValid) {
-            Serial.printf("Detected: %s (%.1f%% confidence)\n", 
-                         result.speciesName.c_str(), 
-                         result.confidence * 100);
-            
-            // Check for dangerous species
-            if (WildlifeClassifier::isDangerousSpecies(result.species)) {
-                Serial.println("⚠️ DANGEROUS SPECIES ALERT!");
-                // Trigger alert system
-                sendDangerousSpeciesAlert(result);
-            }
+    // Configure camera
+    CameraManager camera;
+    CameraConfig camConfig = {
+        .resolution = FRAMESIZE_UXGA,
+        .quality = 10,
+        .enableBurst = true
+    };
+    
+    camera.initialize();
+    camera.configure(camConfig);
+    
+    // Setup motion detection
+    MotionDetectionManager motion;
+    motion.initialize(12); // PIR on GPIO 12
+    motion.setMotionCallback([](MotionData data) {
+        if (data.confidence > 0.8) {
+            camera.captureBurst(3, 1000); // 3 images, 1s apart
         }
-        
-        esp_camera_fb_return(frame);
-    }
+    });
     
-    delay(1000);
-}
-```
-
-### Advanced TensorFlow Lite Usage
-```cpp
-#include "ai/tensorflow_lite_implementation.h"
-
-void setup() {
-    // Initialize TensorFlow Lite system
-    if (!initializeTensorFlowLite()) {
-        Serial.println("ERROR: TensorFlow Lite initialization failed");
-        return;
-    }
+    // Configure power management
+    PowerManager power;
+    power.initialize();
+    power.configurePowerSaving(POWER_MODE_EFFICIENT);
     
-    // Load models
-    if (!loadWildlifeModels("/models")) {
-        Serial.println("WARNING: No models loaded, using fallback mode");
-    }
-    
-    // Validate models
-    bool speciesModelValid = g_tensorflowImplementation->validateModel(
-        "/models/species_classifier_v1.0.0.tflite");
-    
-    if (speciesModelValid) {
-        Serial.println("Species classifier model validated successfully");
-    }
-    
-    // Enable performance monitoring
-    g_tensorflowImplementation->enablePerformanceMonitoring(true);
-    
-    // Benchmark performance
-    g_tensorflowImplementation->benchmarkModel(MODEL_SPECIES_CLASSIFIER, 10);
+    Serial.println("Wildlife monitoring system ready!");
 }
 
 void loop() {
-    // Multi-model inference example
-    camera_fb_t* frame = esp_camera_fb_get();
+    // System automatically handles motion detection and captures
+    delay(1000);
     
-    CameraFrame cameraFrame;
-    cameraFrame.data = frame->buf;
-    cameraFrame.width = frame->width;
-    cameraFrame.height = frame->height;
-    
-    // Run different types of inference
-    InferenceResult speciesResult = g_tensorflowImplementation->detectSpecies(cameraFrame);
-    InferenceResult motionResult = g_tensorflowImplementation->detectMotion(cameraFrame);
-    InferenceResult humanResult = g_tensorflowImplementation->detectHuman(cameraFrame);
-    
-    // Process results
-    if (speciesResult.valid) {
-        Serial.printf("Species: %s (%.2f)\n", speciesResult.className.c_str(), speciesResult.confidence);
+    // Optional: Print status every 10 seconds
+    static unsigned long lastStatus = 0;
+    if (millis() - lastStatus > 10000) {
+        auto stats = StorageManager::getStatistics();
+        Serial.printf("Storage: %.1f%% used, Battery: %d%%\n", 
+                     stats.usagePercentage, 
+                     PowerManager::getBatteryPercentage());
+        lastStatus = millis();
     }
-    
-    if (motionResult.valid && motionResult.confidence > 0.8) {
-        Serial.println("High-confidence motion detected");
-    }
-    
-    if (humanResult.valid && humanResult.confidence > 0.9) {
-        Serial.println("Human presence detected");
-    }
-    
-    esp_camera_fb_return(frame);
-    delay(5000);
 }
 ```
 
-### Memory-Optimized AI Usage
+### Federated Learning Integration
 ```cpp
-#include "ai/tensorflow_lite_implementation.h"
-#include "optimizations/memory_optimizer.h"
+#include "ai/wildlife_classifier.h"
+#include "ai/federated_learning_system.h"
 
-void setup() {
-    // Initialize memory optimizer
-    MemoryOptimizer::init();
-    
-    // Initialize TensorFlow Lite with memory optimization
-    if (!initializeTensorFlowLite()) {
-        Serial.println("ERROR: Failed to initialize AI system");
-        return;
-    }
-    
-    // Monitor memory usage
-    size_t memoryUsage = g_tensorflowImplementation->getMemoryUsage();
-    Serial.printf("AI system memory usage: %d bytes\n", memoryUsage);
-    
-    // Check fragmentation
-    size_t fragmentation = MemoryOptimizer::getFragmentationLevel();
-    Serial.printf("Memory fragmentation: %d%%\n", fragmentation);
-}
+WildlifeClassifier classifier;
+FederatedLearningSystem federation;
 
-void classifyWithMemoryMonitoring(camera_fb_t* frame) {
-    // Check memory before inference
-    size_t freeHeap = ESP.getFreeHeap();
-    size_t freePsram = ESP.getFreePsram();
+void processWildlifeImage(uint8_t* imageData, size_t length) {
+    // Classify the image
+    auto result = classifier.classifyImage(imageData, length);
     
-    Serial.printf("Before inference - Heap: %d, PSRAM: %d\n", freeHeap, freePsram);
+    // Log detection
+    Serial.printf("Detected: %s (confidence: %.2f)\n", 
+                 result.species.c_str(), result.confidence);
     
-    // Run classification
-    WildlifeClassifier::ClassificationResult result = classifier.classifyFrame(frame);
-    
-    // Check memory after inference  
-    size_t freeHeapAfter = ESP.getFreeHeap();
-    size_t freePsramAfter = ESP.getFreePsram();
-    
-    Serial.printf("After inference - Heap: %d, PSRAM: %d\n", freeHeapAfter, freePsramAfter);
-    
-    // Defragment if needed
-    if (MemoryOptimizer::getFragmentationLevel() > 40) {
-        MemoryOptimizer::defragmentHeap();
-        Serial.println("Memory defragmentation performed");
+    // Contribute to federated learning if confidence is high
+    if (result.confidence > 0.9) {
+        TrainingData trainingData = {
+            .imageData = imageData,
+            .length = length,
+            .label = result.species,
+            .confidence = result.confidence
+        };
+        
+        federation.contributeTrainingData(trainingData);
     }
 }
 ```
-
-## Error Codes
-
-### AI System Error Codes
-
-| Code | Name | Description |
-|------|------|-------------|
-| `AI_SUCCESS` | Success | Operation completed successfully |
-| `AI_ERROR_INIT_FAILED` | Initialization Failed | TensorFlow Lite initialization failed |
-| `AI_ERROR_MODEL_NOT_FOUND` | Model Not Found | Model file not found in specified paths |
-| `AI_ERROR_MODEL_INVALID` | Invalid Model | Model file is corrupted or invalid |
-| `AI_ERROR_INSUFFICIENT_MEMORY` | Insufficient Memory | Not enough memory for model loading |
-| `AI_ERROR_INFERENCE_FAILED` | Inference Failed | Model inference execution failed |
-| `AI_ERROR_TIMEOUT` | Timeout | Inference exceeded maximum time limit |
-| `AI_ERROR_INVALID_INPUT` | Invalid Input | Input data format or size is invalid |
-
-### Memory Management Error Codes
-
-| Code | Name | Description |
-|------|------|-------------|
-| `MEM_SUCCESS` | Success | Memory operation successful |
-| `MEM_ERROR_ALLOCATION_FAILED` | Allocation Failed | Memory allocation failed |
-| `MEM_ERROR_HIGH_FRAGMENTATION` | High Fragmentation | Memory fragmentation above threshold |
-| `MEM_ERROR_PSRAM_UNAVAILABLE` | PSRAM Unavailable | PSRAM not found or accessible |
-
-## Performance Benchmarks
-
-### Target Performance Metrics
-
-| Operation | Target Time | Acceptable Time | Memory Usage |
-|-----------|-------------|-----------------|--------------|
-| Species Classification | <1000ms | <2000ms | <512KB |
-| Behavior Analysis | <800ms | <1500ms | <384KB |
-| Motion Detection | <200ms | <500ms | <128KB |
-| Human Detection | <600ms | <1200ms | <256KB |
-| Model Loading | <5000ms | <10000ms | <4MB |
-
-### Accuracy Targets
-
-| Model Type | Target Accuracy | Minimum Accuracy |
-|------------|----------------|------------------|
-| Species Classifier | >95% | >90% |
-| Behavior Analyzer | >90% | >85% |
-| Motion Detector | >98% | >95% |
-| Human Detector | >97% | >93% |
 
 ---
 
-*For detailed ML workflow documentation, see [ML_WORKFLOW.md](../docs/ML_WORKFLOW.md)*
-
-*For deployment scenarios, see [docs/deployment/scenarios/](../docs/deployment/scenarios/)*
-
-### CameraHandler
-*Camera management and image capture functionality.*
-
-#### Methods
-- `init()` - Initialize camera system
-- `captureImage()` - Capture a single image
-- `getStatus()` - Get camera status
-
-### MotionFilter
-*Motion detection and filtering system.*
-
-#### Methods
-- `init()` - Initialize motion detection
-- `checkMotion()` - Check for motion events
-- `setThreshold()` - Configure motion sensitivity
-
-### SolarManager
-*Solar power management and battery monitoring.*
-
-#### Methods
-- `init()` - Initialize power management
-- `getBatteryLevel()` - Get current battery level
-- `getSolarVoltage()` - Get solar panel voltage
-
-### LoraMesh
-*LoRa mesh networking functionality.*
-
-#### Methods
-- `init()` - Initialize LoRa network
-- `sendMessage()` - Send data over LoRa
-- `receiveMessage()` - Receive LoRa messages
-
-## Data Structures
-
-### CameraMetadata
-```cpp
-struct CameraMetadata {
-    unsigned long timestamp;
-    int batteryLevel;
-    bool motionDetected;
-    float temperature;
-    float humidity;
-    int lightLevel;
-    int imageWidth;
+## Related Documentation
+- [Setup Guide](setup_guide.md) - Complete installation and configuration
+- [Hardware Integration](hardware_selection_guide.md) - Hardware setup and wiring
+- [Analytics Dashboard](ANALYTICS_DASHBOARD.md) - Web interface and data visualization
+- [Troubleshooting](troubleshooting.md) - Common issues and solutions
     int imageHeight;
     float compressionRatio;
 };
