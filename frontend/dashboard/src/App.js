@@ -18,10 +18,7 @@ import { Dashboard, PhotoCamera, Analytics, Settings, DeviceHub, Map, Timeline, 
 import DashboardHome from './components/DashboardHome';
 import LiveDetections from './components/LiveDetections';
 import SpeciesAnalytics from './components/SpeciesAnalytics';
-import DeviceManagement from './components/DeviceManagement';
-import MapView from './components/MapView';
-import ActivityTimeline from './components/ActivityTimeline';
-import SystemSettings from './components/SystemSettings';
+import CameraManagement from './components/CameraManagement';
 
 // Import WebSocket service
 import WebSocketService from './services/WebSocketService';
@@ -168,13 +165,13 @@ function App() {
   const renderSelectedPage = () => {
     switch (selectedPage) {
       case 'dashboard':
-        return <div>Dashboard - Real-time species tracking and system overview</div>;
+        return <DashboardHome realtimeData={realtimeData} />;
       case 'detections':
-        return <div>Live Detections - Real-time wildlife detection feed</div>;
+        return <LiveDetections />;
       case 'analytics':
-        return <div>Species Analytics - Population tracking and behavior analysis</div>;
+        return <SpeciesAnalytics />;
       case 'devices':
-        return <div>Device Management - Camera network status and configuration</div>;
+        return <CameraManagement />;
       case 'map':
         return <div>Map View - Geographic distribution of wildlife detections</div>;
       case 'timeline':
@@ -182,7 +179,7 @@ function App() {
       case 'settings':
         return <div>System Settings - Configuration and preferences</div>;
       default:
-        return <div>Dashboard Home</div>;
+        return <DashboardHome realtimeData={realtimeData} />;
     }
   };
 
