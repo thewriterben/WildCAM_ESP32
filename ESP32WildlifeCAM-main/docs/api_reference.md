@@ -1,14 +1,5 @@
 # 📚 ESP32 Wildlife Camera API Reference
 
-## Table of Contents
-1. [Core Classes](#core-classes)
-2. [Data Structures](#data-structures)
-3. [Web API Endpoints](#web-api-endpoints)
-4. [Configuration APIs](#configuration-apis)
-5. [Event System](#event-system)
-6. [Error Handling](#error-handling)
-7. [Usage Examples](#usage-examples)
-
 ## Core Classes
 
 ### CameraManager
@@ -177,21 +168,6 @@ public:
 
 ## Data Structures
 
-### CameraConfig
-```cpp
-struct CameraConfig {
-    framesize_t resolution = FRAMESIZE_UXGA;
-    int quality = 10;              // 0-63, lower = better quality
-    pixformat_t format = PIXFORMAT_JPEG;
-    bool enablePSRAM = true;
-    bool enableBurst = false;
-    bool enableTimeLapse = false;
-    bool enableNightVision = false;
-    int flashIntensity = 0;        // 0-255
-};
-```
-
-### MotionData
 ```cpp
 struct MotionData {
     unsigned long timestamp;

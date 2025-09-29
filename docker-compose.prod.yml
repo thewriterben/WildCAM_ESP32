@@ -1,0 +1,293 @@
+# Production Docker Compose configuration for ESP32 WildCAM
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wildlife_db}
+      POSTGRES_USER: ${POSTGRES_USER:-wildlife_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations/init_database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./backend/migrations/sample_data.sql:/docker-entrypoint-initdb.d/02-sample-data.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"  # Bind to localhost only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wildlife_user} -d ${POSTGRES_DB:-wildlife_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD}"
+    ports:
+      - "127.0.0.1:6379:6379"  # Bind to localhost only
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-wildlife_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wildlife_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+      FLASK_ENV: production
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      GUNICORN_MAX_REQUESTS: ${GUNICORN_MAX_REQUESTS:-1000}
+      GUNICORN_MAX_REQUESTS_JITTER: ${GUNICORN_MAX_REQUESTS_JITTER:-100}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5000:5000"  # Bind to localhost only
+    volumes:
+      - backend_uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/logs
+
+  frontend:
+    build: 
+      context: ./frontend/dashboard
+      dockerfile: Dockerfile.prod
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-https://api.wildcam.local}
+      REACT_APP_WEBSOCKET_URL: ${REACT_APP_WEBSOCKET_URL:-wss://api.wildcam.local}
+    ports:
+      - "127.0.0.1:3000:3000"  # Bind to localhost only
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  nginx:
+    image: nginx:1.24-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+  # Monitoring stack
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.external-url=https://prometheus.wildcam.local'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"  # Bind to localhost only
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SERVER_ROOT_URL: https://grafana.wildcam.local
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: "strict"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "127.0.0.1:3001:3000"  # Bind to localhost only
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # Optional: MQTT broker for ESP32 communication
+  mqtt_broker:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+      - "8883:8883"  # TLS port
+      - "9001:9001"  # WebSocket
+    volumes:
+      - ./mosquitto/mosquitto.prod.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/ssl:/mosquitto/ssl:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/log
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # Optional: InfluxDB for time-series data
+  influxdb:
+    image: influxdb:2.7-alpine
+    ports:
+      - "127.0.0.1:8086:8086"  # Bind to localhost only
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: wildlife
+      DOCKER_INFLUXDB_INIT_BUCKET: camera_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # Log aggregation
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "127.0.0.1:9200:9200"  # Bind to localhost only
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    volumes:
+      - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./monitoring/logstash/config:/usr/share/logstash/config:ro
+      - nginx_logs:/var/log/nginx:ro
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "127.0.0.1:5601:5601"  # Bind to localhost only
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # Security scanning
+  trivy:
+    image: aquasec/trivy:latest
+    command: ["server", "--listen", "0.0.0.0:4954"]
+    ports:
+      - "127.0.0.1:4954:4954"  # Bind to localhost only
+    volumes:
+      - trivy_cache:/root/.cache/trivy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
+  nginx_logs:
+    driver: local
+  nginx_cache:
+    driver: local
+  mosquitto_data:
+    driver: local
+  mosquitto_logs:
+    driver: local
+  influxdb_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  trivy_cache:
+    driver: local

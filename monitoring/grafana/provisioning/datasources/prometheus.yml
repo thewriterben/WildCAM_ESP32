@@ -1,0 +1,28 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090
+    access: proxy
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      httpMethod: "POST"
+      prometheusType: "Prometheus"
+      prometheusVersion: "2.40.0"
+  
+  - name: InfluxDB
+    type: influxdb
+    url: http://influxdb:8086
+    access: proxy
+    database: camera_data
+    user: admin
+    jsonData:
+      version: "InfluxQL"
+      organization: wildlife
+      defaultBucket: camera_data
+      httpMode: GET
+    secureJsonData:
+      token: "${INFLUXDB_TOKEN}"

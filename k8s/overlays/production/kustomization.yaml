@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
+
+patchesStrategicMerge:
+- replica-count.yaml
+- resource-limits.yaml
+
+configMapGenerator:
+- name: wildcam-config
+  behavior: merge
+  literals:
+  - FLASK_ENV=production
+  - NODE_ENV=production
+  - REACT_APP_API_URL=https://api.wildcam.production.com
+  - REACT_APP_WEBSOCKET_URL=wss://api.wildcam.production.com
+
+secretGenerator:
+- name: wildcam-secrets
+  behavior: replace
+  files:
+  - postgres-password=secrets/postgres-password.txt
+  - jwt-secret=secrets/jwt-secret.txt
+  - secret-key=secrets/secret-key.txt
+  - influxdb-token=secrets/influxdb-token.txt
+
+namespace: wildcam-prod
+
+namePrefix: prod-
+
+commonLabels:
+  environment: production

@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: wildcam
+  labels:
+    app: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/thewriterben/wildcam_esp32-backend:latest
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - configMapRef:
+            name: wildcam-config
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wildcam-secrets
+              key: postgres-password
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: wildcam-secrets
+              key: jwt-secret
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: wildcam-secrets
+              key: secret-key
+        - name: DATABASE_URL
+          value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres-service:5432/$(POSTGRES_DB)"
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/uploads
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: backend-uploads-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-uploads-pvc
+  namespace: wildcam
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: wildcam
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: wildcam
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

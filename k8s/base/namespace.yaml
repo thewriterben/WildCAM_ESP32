@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wildcam
+  labels:
+    name: wildcam
+    app.kubernetes.io/name: wildcam
+    app.kubernetes.io/part-of: esp32-wildlife-monitoring
