@@ -2,6 +2,15 @@
 #include "../utils/logger.h"
 #include <esp_heap_caps.h>
 
+// Include TensorFlow Lite implementation
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "../firmware/src/ai/tensorflow_lite_implementation.h"
+#ifdef __cplusplus
+}
+#endif
+
 bool WildlifeClassifier::initialize() {
     if (initialized) {
         return true;
@@ -46,9 +55,24 @@ WildlifeClassifier::ClassificationResult WildlifeClassifier::classifyFrame(camer
 
     uint32_t startTime = millis();
 
-    // For demonstration, use simplified classification
-    // In a real implementation, this would decode JPEG and run TensorFlow Lite inference
-    result = performSimplifiedClassification(frame->buf, frame->len);
+    // Use TensorFlow Lite if available, otherwise fall back to simplified classification
+    if (g_tensorflowImplementation && g_tensorflowImplementation->isModelLoaded(MODEL_SPECIES_CLASSIFIER)) {
+        // Use actual TensorFlow Lite inference
+        CameraFrame cameraFrame;
+        cameraFrame.data = frame->buf;
+        cameraFrame.width = frame->width;
+        cameraFrame.height = frame->height;
+        
+        InferenceResult tfResult = g_tensorflowImplementation->detectSpecies(cameraFrame);
+        if (tfResult.valid) {
+            result = convertTensorFlowResult(tfResult);
+        } else {
+            result = performSimplifiedClassification(frame->buf, frame->len);
+        }
+    } else {
+        // Fall back to simplified classification
+        result = performSimplifiedClassification(frame->buf, frame->len);
+    }
     
     result.inferenceTime = millis() - startTime;
     updateStatistics(result);
@@ -62,9 +86,9 @@ WildlifeClassifier::ClassificationResult WildlifeClassifier::classifyFrame(camer
 }
 
 WildlifeClassifier::ClassificationResult WildlifeClassifier::classifyImage(const uint8_t* imageData, 
-                                                                          size_t imageSize, 
-                                                                          uint16_t width, 
-                                                                          uint16_t height) {
+                                                                      size_t imageSize, 
+                                                                      uint16_t width, 
+                                                                      uint16_t height) {
     ClassificationResult result = {};
     result.isValid = false;
 
@@ -74,10 +98,25 @@ WildlifeClassifier::ClassificationResult WildlifeClassifier::classifyImage(const
 
     uint32_t startTime = millis();
 
-    // Simplified classification for demonstration
-    result = performSimplifiedClassification(imageData, imageSize);
+    // Use TensorFlow Lite if available
+    if (g_tensorflowImplementation && g_tensorflowImplementation->isModelLoaded(MODEL_SPECIES_CLASSIFIER)) {
+        InferenceResult tfResult = g_tensorflowImplementation->runInference(
+            MODEL_SPECIES_CLASSIFIER, imageData, width, height, 3);
+        if (tfResult.valid) {
+            result = convertTensorFlowResult(tfResult);
+        } else {
+            result = performSimplifiedClassification(imageData, imageSize);
+        }
+    } else {
+        // Fall back to simplified classification
+        result = performSimplifiedClassification(imageData, imageSize);
+    }
     
     result.inferenceTime = millis() - startTime;
+    updateStatistics(result);
+
+    return result;
+}
     updateStatistics(result);
 
     return result;
@@ -153,22 +192,43 @@ void WildlifeClassifier::cleanup() {
 }
 
 bool WildlifeClassifier::loadModel() {
-    // In a real implementation, this would:
-    // 1. Load the TensorFlow Lite model from SD card or flash
-    // 2. Initialize the TensorFlow Lite interpreter
-    // 3. Allocate input/output tensors
-    
     LOG_INFO("Loading wildlife classification model...");
     
-    // Placeholder implementation
-    // Real model loading would use TensorFlow Lite Micro APIs
-    modelBuffer = heap_caps_malloc(512 * 1024, MALLOC_CAP_8BIT); // 512KB model
-    if (modelBuffer == nullptr) {
-        LOG_ERROR("Failed to allocate model buffer");
-        return false;
+    // Initialize TensorFlow Lite if not already initialized
+    if (!g_tensorflowImplementation) {
+        if (!initializeTensorFlowLite()) {
+            LOG_ERROR("Failed to initialize TensorFlow Lite");
+            return false;
+        }
+    }
+    
+    // Try to load species classifier model from multiple locations
+    const char* modelPaths[] = {
+        "/models/species_classifier_v1.0.0.tflite",
+        "/sd/models/species_classifier_v1.0.0.tflite", 
+        "/data/models/species_classifier_v1.0.0.tflite"
+    };
+    
+    bool modelLoaded = false;
+    for (const char* path : modelPaths) {
+        if (g_tensorflowImplementation->loadModel(MODEL_SPECIES_CLASSIFIER, path)) {
+            LOG_INFO("Model loaded from: " + String(path));
+            modelLoaded = true;
+            break;
+        }
+    }
+    
+    if (!modelLoaded) {
+        LOG_WARNING("No model file found, using simplified classification");
+        // Allocate placeholder buffers for simplified mode
+        modelBuffer = heap_caps_malloc(512 * 1024, MALLOC_CAP_8BIT); // 512KB placeholder
+        if (modelBuffer == nullptr) {
+            LOG_ERROR("Failed to allocate model buffer");
+            return false;
+        }
     }
 
-    LOG_INFO("Model loaded successfully (placeholder)");
+    LOG_INFO("Wildlife classification model initialized");
     return true;
 }
 
@@ -213,6 +273,36 @@ bool WildlifeClassifier::runInference(const float* inputTensor, float* outputTen
     outputTensor[randomSpecies] = 0.8f;
 
     return true;
+}
+
+// Convert TensorFlow Lite result to WildlifeClassifier result format
+WildlifeClassifier::ClassificationResult WildlifeClassifier::convertTensorFlowResult(const InferenceResult& tfResult) {
+    ClassificationResult result = {};
+    
+    result.confidence = tfResult.confidence;
+    result.inferenceTime = tfResult.inferenceTime;
+    result.isValid = tfResult.valid && (tfResult.confidence >= confidenceThreshold);
+    
+    // Map class index to species type
+    if (tfResult.classIndex < 50) {
+        result.species = static_cast<SpeciesType>(tfResult.classIndex);
+    } else {
+        result.species = SpeciesType::UNKNOWN;
+    }
+    
+    result.confidenceLevel = scoreToConfidenceLevel(tfResult.confidence);
+    result.speciesName = getSpeciesName(result.species);
+    result.animalCount = 1; // Simplified - assume single animal detection
+    
+    // Set bounding box (simplified - would come from object detection model)
+    if (result.isValid) {
+        result.boundingBoxes[0][0] = 0.2f; // x
+        result.boundingBoxes[0][1] = 0.2f; // y
+        result.boundingBoxes[0][2] = 0.6f; // width
+        result.boundingBoxes[0][3] = 0.6f; // height
+    }
+    
+    return result;
 }
 
 WildlifeClassifier::ClassificationResult WildlifeClassifier::processOutput(const float* outputTensor) {
@@ -305,4 +395,50 @@ WildlifeClassifier::ClassificationResult WildlifeClassifier::performSimplifiedCl
     }
     
     return result;
+}
+
+// Static method implementations
+String WildlifeClassifier::getSpeciesName(SpeciesType species) {
+    switch (species) {
+        case SpeciesType::WHITE_TAILED_DEER: return "White-tailed Deer";
+        case SpeciesType::BLACK_BEAR: return "Black Bear";
+        case SpeciesType::RED_FOX: return "Red Fox";
+        case SpeciesType::GRAY_WOLF: return "Gray Wolf";
+        case SpeciesType::MOUNTAIN_LION: return "Mountain Lion";
+        case SpeciesType::ELK: return "Elk";
+        case SpeciesType::MOOSE: return "Moose";
+        case SpeciesType::RACCOON: return "Raccoon";
+        case SpeciesType::COYOTE: return "Coyote";
+        case SpeciesType::BOBCAT: return "Bobcat";
+        case SpeciesType::WILD_TURKEY: return "Wild Turkey";
+        case SpeciesType::BALD_EAGLE: return "Bald Eagle";
+        case SpeciesType::RED_TAILED_HAWK: return "Red-tailed Hawk";
+        case SpeciesType::GREAT_BLUE_HERON: return "Great Blue Heron";
+        case SpeciesType::HUMAN: return "Human";
+        default: return "Unknown Species";
+    }
+}
+
+String WildlifeClassifier::getConfidenceLevelDescription(ConfidenceLevel level) {
+    switch (level) {
+        case ConfidenceLevel::VERY_HIGH: return "Very High (>90%)";
+        case ConfidenceLevel::HIGH: return "High (75-90%)";
+        case ConfidenceLevel::MEDIUM: return "Medium (60-75%)";
+        case ConfidenceLevel::LOW: return "Low (40-60%)";
+        case ConfidenceLevel::VERY_LOW: return "Very Low (<40%)";
+        default: return "Unknown";
+    }
+}
+
+bool WildlifeClassifier::isDangerousSpecies(SpeciesType species) {
+    switch (species) {
+        case SpeciesType::BLACK_BEAR:
+        case SpeciesType::GRAY_WOLF:
+        case SpeciesType::MOUNTAIN_LION:
+        case SpeciesType::COYOTE:
+        case SpeciesType::BOBCAT:
+            return true;
+        default:
+            return false;
+    }
 }
