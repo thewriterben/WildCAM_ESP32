@@ -1,0 +1,192 @@
+{
+  "test_scenario": {
+    "name": "Basic Wildlife Detection Workflow",
+    "description": "Tests complete motion detection to image capture workflow",
+    "version": "1.0.0",
+    "duration_minutes": 30,
+    "test_type": "functional"
+  },
+  
+  "test_steps": [
+    {
+      "step": 1,
+      "name": "System Initialization",
+      "description": "Initialize all system components",
+      "timeout_seconds": 60,
+      "actions": [
+        "power_on_system",
+        "initialize_camera",
+        "initialize_motion_sensor",
+        "initialize_storage",
+        "check_system_health"
+      ],
+      "expected_results": {
+        "camera_ready": true,
+        "motion_sensor_ready": true,
+        "storage_available": true,
+        "system_status": "operational"
+      }
+    },
+    {
+      "step": 2,
+      "name": "Motion Detection Test",
+      "description": "Simulate motion detection event",
+      "timeout_seconds": 30,
+      "actions": [
+        "simulate_motion_trigger",
+        "wait_for_detection",
+        "verify_motion_event"
+      ],
+      "expected_results": {
+        "motion_detected": true,
+        "detection_time_ms": 1000,
+        "confidence_score": 0.8
+      }
+    },
+    {
+      "step": 3,
+      "name": "Image Capture Test",
+      "description": "Capture image after motion detection",
+      "timeout_seconds": 10,
+      "actions": [
+        "trigger_image_capture",
+        "wait_for_capture_completion",
+        "verify_image_quality"
+      ],
+      "expected_results": {
+        "image_captured": true,
+        "capture_time_ms": 2000,
+        "image_size_bytes": 100000,
+        "image_quality_acceptable": true
+      }
+    },
+    {
+      "step": 4,
+      "name": "Storage Verification",
+      "description": "Verify image is properly stored",
+      "timeout_seconds": 15,
+      "actions": [
+        "check_file_creation",
+        "verify_file_integrity",
+        "check_metadata"
+      ],
+      "expected_results": {
+        "file_exists": true,
+        "file_readable": true,
+        "metadata_complete": true,
+        "storage_space_updated": true
+      }
+    },
+    {
+      "step": 5,
+      "name": "System Health Check",
+      "description": "Verify system remains stable after operation",
+      "timeout_seconds": 20,
+      "actions": [
+        "check_memory_usage",
+        "check_power_consumption",
+        "check_component_status",
+        "verify_system_responsiveness"
+      ],
+      "expected_results": {
+        "memory_within_limits": true,
+        "power_consumption_normal": true,
+        "all_components_functional": true,
+        "system_responsive": true
+      }
+    }
+  ],
+  
+  "test_data": {
+    "motion_patterns": [
+      {
+        "type": "single_event",
+        "duration_ms": 3000,
+        "intensity": "medium",
+        "expected_triggers": 1
+      },
+      {
+        "type": "multiple_events",
+        "duration_ms": 10000,
+        "intensity": "high",
+        "expected_triggers": 3
+      }
+    ],
+    "capture_settings": {
+      "resolution": "FRAMESIZE_UXGA",
+      "quality": 10,
+      "format": "JPEG"
+    }
+  },
+  
+  "success_criteria": {
+    "all_steps_passed": true,
+    "total_execution_time_max_seconds": 150,
+    "memory_leak_detected": false,
+    "error_count_max": 0,
+    "performance_degradation_max_percent": 10
+  },
+  
+  "failure_analysis": {
+    "common_failures": [
+      {
+        "failure": "camera_init_timeout",
+        "description": "Camera initialization takes too long",
+        "troubleshooting": [
+          "Check power supply voltage",
+          "Verify camera module connection",
+          "Reset ESP32 system"
+        ]
+      },
+      {
+        "failure": "motion_sensor_unresponsive",
+        "description": "PIR sensor not detecting motion",
+        "troubleshooting": [
+          "Check sensor power connection",
+          "Verify GPIO pin assignment",
+          "Adjust sensitivity settings"
+        ]
+      },
+      {
+        "failure": "storage_write_error",
+        "description": "Cannot write image to storage",
+        "troubleshooting": [
+          "Check SD card connection",
+          "Verify available storage space",
+          "Test SD card in different device"
+        ]
+      }
+    ]
+  },
+  
+  "monitoring_points": [
+    {
+      "metric": "response_time",
+      "measurement_points": [
+        "motion_detection_to_capture",
+        "capture_to_storage_complete",
+        "end_to_end_workflow"
+      ],
+      "acceptable_range_ms": [500, 5000]
+    },
+    {
+      "metric": "memory_usage",
+      "measurement_points": [
+        "system_startup",
+        "after_capture",
+        "after_storage"
+      ],
+      "acceptable_range_percent": [30, 80]
+    },
+    {
+      "metric": "power_consumption",
+      "measurement_points": [
+        "idle_state",
+        "motion_detection",
+        "image_capture",
+        "data_processing"
+      ],
+      "baseline_mw": 500
+    }
+  ]
+}
