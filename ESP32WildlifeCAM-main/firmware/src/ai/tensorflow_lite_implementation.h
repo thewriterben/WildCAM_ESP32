@@ -154,6 +154,9 @@ private:
     uint32_t maxInferenceTime_;
     bool performanceMonitoring_;
     
+    // Model data storage
+    const uint8_t* modelData_[MODEL_COUNT];
+    
     // Performance tracking
     struct PerformanceMetrics {
         uint32_t totalInferences;

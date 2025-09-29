@@ -5,6 +5,10 @@
 #include <esp_camera.h>
 #include "../include/config.h"
 
+// Forward declarations
+struct InferenceResult;
+struct CameraFrame;
+
 /**
  * @brief Wildlife species classification using TensorFlow Lite
  * 
@@ -213,6 +217,13 @@ private:
      * @return Classification result
      */
     ClassificationResult performSimplifiedClassification(const uint8_t* imageData, size_t imageSize);
+    
+    /**
+     * @brief Convert TensorFlow Lite result to classifier result format
+     * @param tfResult TensorFlow Lite inference result
+     * @return Classification result
+     */
+    ClassificationResult convertTensorFlowResult(const InferenceResult& tfResult);
 };
 
 #endif // WILDLIFE_CLASSIFIER_H
