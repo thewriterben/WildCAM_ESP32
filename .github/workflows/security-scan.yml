@@ -1,0 +1,176 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Security Scan
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install safety
+      run: pip install safety
+    
+    - name: Run safety check on Python dependencies
+      run: |
+        cd backend/
+        safety check -r requirements.txt --json --output safety-report.json || true
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend/dashboard/
+        npm ci
+    
+    - name: Audit npm packages
+      run: |
+        cd frontend/dashboard/
+        npm audit --audit-level high --json > npm-audit.json || true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          backend/safety-report.json
+          frontend/dashboard/npm-audit.json
+
+  container-scan:
+    runs-on: ubuntu-latest
+    name: Container Security Scan
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker images
+      run: |
+        docker build -t wildcam-backend:test ./backend
+        docker build -t wildcam-frontend:test ./frontend/dashboard
+    
+    - name: Run Trivy vulnerability scanner on backend
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'wildcam-backend:test'
+        format: 'sarif'
+        output: 'backend-trivy-results.sarif'
+    
+    - name: Run Trivy vulnerability scanner on frontend
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'wildcam-frontend:test'
+        format: 'sarif'
+        output: 'frontend-trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'backend-trivy-results.sarif'
+        category: 'backend'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'frontend-trivy-results.sarif'
+        category: 'frontend'
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    name: Secret Detection
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Run TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  infrastructure-scan:
+    runs-on: ubuntu-latest
+    name: Infrastructure Security Scan
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Checkov - Infrastructure security analysis
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: .
+        framework: dockerfile,kubernetes,secrets
+        output_format: sarif
+        output_file_path: checkov-results.sarif
+    
+    - name: Upload Checkov scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'checkov-results.sarif'
+
+  license-check:
+    runs-on: ubuntu-latest
+    name: License Compliance Check
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install license checker
+      run: pip install pip-licenses
+    
+    - name: Check Python license compliance
+      run: |
+        cd backend/
+        pip install -r requirements.txt
+        pip-licenses --format=json --output-file=python-licenses.json
+        # Check for GPL and other problematic licenses
+        pip-licenses | grep -E "(GPL|AGPL|LGPL)" && exit 1 || true
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install license checker for Node.js
+      run: npm install -g license-checker
+    
+    - name: Check Node.js license compliance
+      run: |
+        cd frontend/dashboard/
+        npm ci
+        license-checker --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;Unlicense" --json --out npm-licenses.json
+    
+    - name: Upload license reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-reports
+        path: |
+          backend/python-licenses.json
+          frontend/dashboard/npm-licenses.json
