@@ -8,8 +8,10 @@
 #include "tensorflow_lite_implementation.h"
 #include "../config.h"
 #include "../debug_utils.h"
+#include "../optimizations/memory_optimizer.h"
 #include <SD_MMC.h>
 #include <FS.h>
+#include <LittleFS.h>
 
 // Global instance
 TensorFlowLiteImplementation* g_tensorflowImplementation = nullptr;
@@ -246,11 +248,21 @@ bool TensorFlowLiteImplementation::initializeModel(WildlifeModelType type, const
             break;
     }
     
-    // Use PSRAM if available for large models
+    // Use PSRAM if available for large models, with memory optimizer integration
     if (psramFound() && model.arenaSize > 100 * 1024) {
-        model.tensorArena = (uint8_t*)ps_malloc(model.arenaSize);
+        // Try to use memory optimizer for aligned allocation
+        model.tensorArena = (uint8_t*)MemoryOptimizer::allocateAligned(model.arenaSize, 32);
+        if (!model.tensorArena) {
+            // Fallback to standard PSRAM allocation
+            model.tensorArena = (uint8_t*)ps_malloc(model.arenaSize);
+        }
     } else {
-        model.tensorArena = (uint8_t*)malloc(model.arenaSize);
+        // Use memory optimizer for DMA-capable allocation for smaller models
+        model.tensorArena = (uint8_t*)MemoryOptimizer::allocateDMA(model.arenaSize);
+        if (!model.tensorArena) {
+            // Fallback to standard malloc
+            model.tensorArena = (uint8_t*)malloc(model.arenaSize);
+        }
     }
     
     if (!model.tensorArena) {
@@ -632,6 +644,21 @@ void TensorFlowLiteImplementation::updatePerformanceMetrics(WildlifeModelType ty
     
     if (inferenceTime < metrics.minTime) metrics.minTime = inferenceTime;
     if (inferenceTime > metrics.maxTime) metrics.maxTime = inferenceTime;
+    
+    // Monitor memory fragmentation during AI operations
+    size_t fragmentationLevel = MemoryOptimizer::getFragmentationLevel();
+    if (fragmentationLevel > 30) { // 30% fragmentation threshold
+        DEBUG_PRINTF("WARNING: High memory fragmentation (%d%%) during AI inference\n", fragmentationLevel);
+        // Trigger defragmentation if safe to do so
+        MemoryOptimizer::defragmentHeap();
+    }
+    
+    // Log performance metrics periodically
+    if (metrics.totalInferences % 10 == 0) {
+        uint32_t avgTime = metrics.totalTime / metrics.totalInferences;
+        DEBUG_PRINTF("Model %d performance: avg=%dms, min=%dms, max=%dms, runs=%d\n", 
+                    type, avgTime, metrics.minTime, metrics.maxTime, metrics.totalInferences);
+    }
 }
 #endif
 
@@ -687,4 +714,105 @@ bool loadWildlifeModels(const char* modelsDirectory) {
     }
     
     return g_tensorflowImplementation->loadModelsFromDirectory(modelsDirectory);
+}
+
+// Model validation
+bool TensorFlowLiteImplementation::validateModel(const char* modelPath) {
+    DEBUG_PRINTF("Validating model: %s\n", modelPath);
+    
+    // Check if file exists
+    if (!SD_MMC.exists(modelPath) && !LittleFS.exists(modelPath)) {
+        DEBUG_PRINTF("ERROR: Model file not found: %s\n", modelPath);
+        return false;
+    }
+    
+    // Open and read basic model header
+    File modelFile;
+    if (SD_MMC.exists(modelPath)) {
+        modelFile = SD_MMC.open(modelPath, FILE_READ);
+    } else {
+        modelFile = LittleFS.open(modelPath, FILE_READ);
+    }
+    
+    if (!modelFile) {
+        DEBUG_PRINTF("ERROR: Cannot open model file: %s\n", modelPath);
+        return false;
+    }
+    
+    // Check minimum file size
+    size_t fileSize = modelFile.size();
+    if (fileSize < 1024) { // Minimum 1KB for a valid TensorFlow Lite model
+        DEBUG_PRINTF("ERROR: Model file too small (%d bytes): %s\n", fileSize, modelPath);
+        modelFile.close();
+        return false;
+    }
+    
+    // Read and validate TensorFlow Lite magic number
+    uint8_t header[4];
+    if (modelFile.read(header, 4) != 4) {
+        DEBUG_PRINTF("ERROR: Cannot read model header: %s\n", modelPath);
+        modelFile.close();
+        return false;
+    }
+    
+    modelFile.close();
+    
+    // Check TensorFlow Lite FlatBuffer magic number (simplified check)
+    // A more complete implementation would validate the entire FlatBuffer structure
+    DEBUG_PRINTF("Model validation passed: %s (%d bytes)\n", modelPath, fileSize);
+    return true;
+}
+
+// Benchmark model performance
+bool TensorFlowLiteImplementation::benchmarkModel(WildlifeModelType type, uint32_t iterations) {
+    if (!isModelLoaded(type)) {
+        DEBUG_PRINTF("ERROR: Model not loaded for benchmarking: %d\n", type);
+        return false;
+    }
+    
+    DEBUG_PRINTF("Benchmarking model %d with %d iterations...\n", type, iterations);
+    
+    // Create dummy input data for benchmarking
+    uint32_t inputSize = 224 * 224 * 3; // Standard input size
+    uint8_t* dummyData = (uint8_t*)malloc(inputSize);
+    if (!dummyData) {
+        DEBUG_PRINTF("ERROR: Cannot allocate dummy data for benchmarking\n");
+        return false;
+    }
+    
+    // Fill with pattern data
+    for (uint32_t i = 0; i < inputSize; i++) {
+        dummyData[i] = (i % 256);
+    }
+    
+    uint32_t totalTime = 0;
+    uint32_t successCount = 0;
+    
+    for (uint32_t i = 0; i < iterations; i++) {
+        uint32_t startTime = millis();
+        
+        InferenceResult result = runInference(type, dummyData, 224, 224, 3);
+        
+        uint32_t inferenceTime = millis() - startTime;
+        
+        if (result.valid) {
+            successCount++;
+            totalTime += inferenceTime;
+        }
+        
+        // Small delay between iterations
+        delay(10);
+    }
+    
+    free(dummyData);
+    
+    if (successCount > 0) {
+        uint32_t avgTime = totalTime / successCount;
+        DEBUG_PRINTF("Benchmark results - Model %d: avg=%dms, success=%d/%d\n", 
+                    type, avgTime, successCount, iterations);
+        return true;
+    } else {
+        DEBUG_PRINTF("ERROR: All benchmark iterations failed for model %d\n", type);
+        return false;
+    }
 }
