@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="ui.dashboard">Wildlife Camera Dashboard</title>
+    <link rel="stylesheet" href="/assets/dashboard.css">
+    <link rel="manifest" href="/assets/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+    <div id="app" class="dashboard">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <span class="icon">🦌</span>
+                    <span data-i18n="system.device_name">Wildlife Camera</span>
+                </h1>
+                <div class="header-controls">
+                    <!-- Language Selector -->
+                    <div id="header-language-selector" data-language-selector data-variant="inline"></div>
+                    
+                    <button id="theme-toggle" class="btn btn-icon" title="Toggle theme" data-i18n-target="title" data-i18n="ui.theme">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                    <div class="connection-status" id="connection-status">
+                        <span class="status-indicator"></span>
+                        <span class="status-text" data-i18n="system.status_loading">Connecting...</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard-content">
+            <!-- System Overview Cards -->
+            <section class="cards-grid">
+                <!-- System Health Card -->
+                <div class="card system-health">
+                    <div class="card-header">
+                        <h3 data-i18n="system.system_health">System Health</h3>
+                        <span class="status-badge" id="system-status" data-i18n="system.status_ok">Good</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="metrics-grid">
+                            <div class="metric">
+                                <span class="metric-label" data-i18n="system.uptime">Uptime</span>
+                                <span class="metric-value" id="uptime">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Memory</span>
+                                <span class="metric-value" id="memory">-- / --</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Temperature</span>
+                                <span class="metric-value" id="temperature">--°C</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">WiFi Signal</span>
+                                <span class="metric-value" id="wifi-signal">-- dBm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Power Management Card -->
+                <div class="card power-management">
+                    <div class="card-header">
+                        <h3>Power System</h3>
+                        <span class="power-status" id="power-status">
+                            <span class="charging-icon">⚡</span>
+                        </span>
+                    </div>
+                    <div class="card-content">
+                        <div class="battery-display">
+                            <div class="battery-container">
+                                <div class="battery-level" id="battery-level"></div>
+                                <div class="battery-percentage" id="battery-percentage">--</div>
+                            </div>
+                        </div>
+                        <div class="power-metrics">
+                            <div class="metric">
+                                <span class="metric-label">Battery</span>
+                                <span class="metric-value" id="battery-voltage">--V</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Solar</span>
+                                <span class="metric-value" id="solar-voltage">--V</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wildlife Activity Card -->
+                <div class="card wildlife-activity">
+                    <div class="card-header">
+                        <h3>Wildlife Activity</h3>
+                        <span class="activity-indicator" id="activity-indicator">
+                            <span class="pulse"></span>
+                        </span>
+                    </div>
+                    <div class="card-content">
+                        <div class="detection-summary">
+                            <div class="detection-count">
+                                <span class="count-number" id="daily-captures">--</span>
+                                <span class="count-label">Today</span>
+                            </div>
+                            <div class="detection-count">
+                                <span class="count-number" id="total-captures">--</span>
+                                <span class="count-label">Total</span>
+                            </div>
+                        </div>
+                        <div class="last-detection" id="last-detection">
+                            <div class="detection-info">
+                                <span class="species" id="last-species">No recent activity</span>
+                                <span class="confidence" id="last-confidence"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Storage Management Card -->
+                <div class="card storage-management">
+                    <div class="card-header">
+                        <h3>Storage</h3>
+                        <button class="btn btn-small" id="storage-refresh">Refresh</button>
+                    </div>
+                    <div class="card-content">
+                        <div class="storage-bar">
+                            <div class="storage-used" id="storage-used"></div>
+                        </div>
+                        <div class="storage-stats">
+                            <div class="stat">
+                                <span class="stat-label">Used</span>
+                                <span class="stat-value" id="storage-used-text">-- GB</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Free</span>
+                                <span class="stat-value" id="storage-free-text">-- GB</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Images</span>
+                                <span class="stat-value" id="image-count">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Camera Control Section -->
+            <section class="camera-section">
+                <div class="card camera-control">
+                    <div class="card-header">
+                        <h3>Camera Control</h3>
+                        <div class="camera-status" id="camera-status">
+                            <span class="status-indicator ready"></span>
+                            <span>Ready</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="camera-controls">
+                            <button class="btn btn-primary" id="capture-btn">
+                                <span class="btn-icon">📸</span>
+                                Capture Photo
+                            </button>
+                            <button class="btn btn-secondary" id="stream-btn">
+                                <span class="btn-icon">📹</span>
+                                Live Stream
+                            </button>
+                        </div>
+                        <div class="camera-settings">
+                            <div class="setting">
+                                <label for="capture-interval">Interval (minutes)</label>
+                                <select id="capture-interval">
+                                    <option value="5">5</option>
+                                    <option value="10">10</option>
+                                    <option value="30" selected>30</option>
+                                    <option value="60">60</option>
+                                </select>
+                            </div>
+                            <div class="setting">
+                                <label for="motion-sensitivity">Motion Sensitivity</label>
+                                <input type="range" id="motion-sensitivity" min="0" max="100" value="75">
+                                <span class="range-value">75%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Image Gallery Section -->
+            <section class="gallery-section">
+                <div class="card image-gallery">
+                    <div class="card-header">
+                        <h3>Recent Images</h3>
+                        <div class="gallery-controls">
+                            <button class="btn btn-small" id="gallery-refresh">Refresh</button>
+                            <button class="btn btn-small" id="download-all">Download All</button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="gallery-grid" id="gallery-grid">
+                            <!-- Gallery items will be populated via JavaScript -->
+                        </div>
+                        <div class="gallery-pagination">
+                            <button class="btn btn-small" id="prev-page" disabled>Previous</button>
+                            <span class="page-info" id="page-info">Page 1 of 1</span>
+                            <button class="btn btn-small" id="next-page" disabled>Next</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Real-time Charts Section -->
+            <section class="charts-section">
+                <div class="card chart-container">
+                    <div class="card-header">
+                        <h3>System Metrics</h3>
+                        <div class="chart-controls">
+                            <select id="chart-timeframe">
+                                <option value="1h">Last Hour</option>
+                                <option value="6h">Last 6 Hours</option>
+                                <option value="24h" selected>Last 24 Hours</option>
+                                <option value="7d">Last 7 Days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="chart-tabs">
+                            <button class="chart-tab active" data-chart="battery">Battery</button>
+                            <button class="chart-tab" data-chart="detections">Detections</button>
+                            <button class="chart-tab" data-chart="memory">Memory</button>
+                        </div>
+                        <div class="chart-area">
+                            <canvas id="metrics-chart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Logs Section -->
+            <section class="logs-section">
+                <div class="card system-logs">
+                    <div class="card-header">
+                        <h3>System Logs</h3>
+                        <div class="log-controls">
+                            <select id="log-filter">
+                                <option value="all">All Events</option>
+                                <option value="wildlife">Wildlife Detections</option>
+                                <option value="system">System Events</option>
+                                <option value="errors">Errors</option>
+                            </select>
+                            <button class="btn btn-small" id="clear-logs">Clear</button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="log-container" id="log-container">
+                            <!-- Log entries will be populated via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modal for image preview -->
+        <div id="image-modal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close">&times;</span>
+                <img id="modal-image" src="" alt="Wildlife Image">
+                <div class="modal-info">
+                    <h4 id="modal-title">Image Details</h4>
+                    <div class="modal-details">
+                        <div class="detail">
+                            <span class="detail-label">Species:</span>
+                            <span class="detail-value" id="modal-species">Unknown</span>
+                        </div>
+                        <div class="detail">
+                            <span class="detail-label">Confidence:</span>
+                            <span class="detail-value" id="modal-confidence">N/A</span>
+                        </div>
+                        <div class="detail">
+                            <span class="detail-label">Timestamp:</span>
+                            <span class="detail-value" id="modal-timestamp">N/A</span>
+                        </div>
+                        <div class="detail">
+                            <span class="detail-label">File Size:</span>
+                            <span class="detail-value" id="modal-filesize">N/A</span>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" id="modal-download">Download</button>
+                        <button class="btn btn-secondary" id="modal-delete">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast notifications -->
+        <div id="toast-container" class="toast-container"></div>
+
+        <!-- Loading overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Loading dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/assets/i18n.js"></script>
+    <script src="/assets/language_selector.js"></script>
+    <script src="/assets/websocket.js"></script>
+    <script src="/assets/charts.js"></script>
+    <script src="/assets/dashboard.js"></script>
+</body>
+</html>

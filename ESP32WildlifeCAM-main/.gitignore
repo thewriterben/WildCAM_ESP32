@@ -1,0 +1,52 @@
+# Build artifacts
+.pio/
+.vscode/
+build/
+dist/
+
+# WiFi credentials (security)
+wifi_config.h
+
+# Platform-specific
+*.swp
+*.swo
+*~
+
+# Dependencies
+node_modules/
+lib/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+*.code-workspace
+
+# Temporary files
+tmp/
+temp/
+
+# Testing
+test_results/
+
+# Environment variables
+.env
+
+# PlatformIO specific
+.pio/
+lib_deps/
+.platformio/
+
+# Build and cache directories
+.cache/
+out/
+bin/__pycache__/

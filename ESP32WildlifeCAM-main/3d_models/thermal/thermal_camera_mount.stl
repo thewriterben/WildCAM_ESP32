@@ -1,0 +1,39 @@
+/**
+ * @file thermal_camera_mount.stl
+ * @brief STL file placeholder for thermal camera mounting bracket
+ * @author ESP32WildlifeCAM Team
+ * @date 2024-09-01
+ * 
+ * This is a placeholder file. In production, this would contain
+ * the actual STL geometry data for 3D printing a thermal camera mount.
+ */
+
+/*
+STL File Content - Binary Format
+================================
+
+This file would contain binary STL data for:
+- FLIR Lepton 3.5 mounting bracket
+- Integration with existing ESP32 camera enclosures
+- Weather-resistant design for outdoor deployment
+- Cable management for thermal sensor connection
+
+Key Features:
+- Compatible with existing enclosure designs
+- Adjustable mounting angles (0-45 degrees)
+- IP65 weather protection rating
+- Tool-free assembly design
+- Material: PETG or ABS recommended
+
+Mounting Points:
+- 4x M3 screws for thermal camera attachment
+- 2x M4 screws for enclosure integration
+- Cable pass-through with gasket seal
+
+Dimensions:
+- 45mm x 35mm x 20mm (L x W x H)
+- Weight: ~15 grams (printed)
+- Print time: ~45 minutes at 0.2mm layer height
+
+Note: Actual STL binary data would be here in production.
+*/

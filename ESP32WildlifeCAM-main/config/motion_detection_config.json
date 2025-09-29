@@ -1,0 +1,224 @@
+{
+  "motionDetectionConfig": {
+    "version": "2.0",
+    "lastUpdated": "2025-01-01T00:00:00Z",
+    
+    "coordinator": {
+      "enabled": true,
+      "defaultMethod": "adaptive",
+      "fusionWeights": {
+        "pirWeight": 0.3,
+        "frameWeight": 0.4,
+        "aiWeight": 0.3
+      },
+      "thresholds": {
+        "motionConfidenceThreshold": 0.6,
+        "captureThreshold": 0.7,
+        "transmitThreshold": 0.8,
+        "alertThreshold": 0.85
+      },
+      "adaptation": {
+        "useEnvironmentalAdaptation": true,
+        "useTimeOfDayAdaptation": true,
+        "useWeatherCompensation": true
+      },
+      "performance": {
+        "maxProcessingTimeMs": 500,
+        "enablePerformanceOptimization": true,
+        "enableWildlifeAnalysis": true
+      },
+      "errorHandling": {
+        "maxConsecutiveFailures": 5,
+        "recoveryDelayMs": 1000,
+        "enableFallbackMethods": true
+      }
+    },
+    
+    "adaptiveProcessor": {
+      "enabled": true,
+      "activityWindowMinutes": 60,
+      "dormantThresholdMinutes": 30,
+      "batteryLowThreshold": 3.2,
+      "temperatureRange": {
+        "optimalMin": 10.0,
+        "optimalMax": 30.0
+      },
+      "roi": {
+        "enabled": true,
+        "defaultX": 80,
+        "defaultY": 60,
+        "defaultWidth": 160,
+        "defaultHeight": 120
+      },
+      "frameRate": {
+        "normalIntervalMs": 1000,
+        "lowActivityIntervalMs": 5000,
+        "dormantIntervalMs": 30000,
+        "maxFrameSkips": 10,
+        "qualityReductionFactor": 0.8
+      }
+    },
+    
+    "wildlifeAnalyzer": {
+      "enabled": true,
+      "analysisWindowMs": 10000,
+      "minTrackingTimeMs": 500,
+      "minMovementThreshold": 2.0,
+      "sizeThresholds": {
+        "maxInsectSize": 0.05,
+        "minLargeMammalSize": 0.3
+      },
+      "patternThresholds": {
+        "vegetationPeriodicityThreshold": 0.7,
+        "wildlifeConfidenceThreshold": 0.6,
+        "captureThreshold": 0.7
+      },
+      "features": {
+        "useTimeOfDayAdaptation": true,
+        "useSizeFiltering": true,
+        "useMovementFiltering": true
+      },
+      "timePatterns": {
+        "dawn": {
+          "hours": [5, 6, 7, 8],
+          "activityLevel": 0.8,
+          "commonPatterns": ["small_bird", "large_bird"]
+        },
+        "morning": {
+          "hours": [9, 10, 11],
+          "activityLevel": 0.6,
+          "commonPatterns": ["small_mammal", "medium_mammal"]
+        },
+        "midday": {
+          "hours": [12, 13, 14, 15],
+          "activityLevel": 0.3,
+          "commonPatterns": ["insect"]
+        },
+        "evening": {
+          "hours": [16, 17, 18, 19],
+          "activityLevel": 0.9,
+          "commonPatterns": ["medium_mammal", "large_mammal"]
+        },
+        "night": {
+          "hours": [20, 21, 22, 23, 0, 1, 2, 3, 4],
+          "activityLevel": 0.4,
+          "commonPatterns": ["small_mammal"]
+        }
+      }
+    },
+    
+    "environmentalIntegration": {
+      "enabled": true,
+      "sensors": {
+        "temperature": {
+          "enabled": true,
+          "adjustmentEnabled": true,
+          "extremeTemperatureThreshold": 10.0
+        },
+        "lightLevel": {
+          "enabled": true,
+          "nightThreshold": 0.1,
+          "adjustmentFactor": 0.9
+        },
+        "humidity": {
+          "enabled": true,
+          "highHumidityThreshold": 80.0
+        },
+        "windSpeed": {
+          "enabled": true,
+          "highWindThreshold": 20.0,
+          "adjustmentFactor": 0.85
+        }
+      },
+      "weatherCompensation": {
+        "enabled": true,
+        "rainAdjustment": 0.7,
+        "windAdjustment": 0.8,
+        "fogAdjustment": 0.6
+      }
+    },
+    
+    "powerOptimization": {
+      "enabled": true,
+      "batteryThresholds": {
+        "critical": 3.0,
+        "low": 3.2,
+        "normal": 3.6,
+        "high": 4.0
+      },
+      "powerSavingModes": {
+        "critical": {
+          "processingLevel": "minimal",
+          "detectionMethod": "pir_only",
+          "intervalMs": 60000
+        },
+        "low": {
+          "processingLevel": "reduced",
+          "detectionMethod": "hybrid_basic",
+          "intervalMs": 10000
+        },
+        "normal": {
+          "processingLevel": "normal",
+          "detectionMethod": "adaptive",
+          "intervalMs": 1000
+        },
+        "high": {
+          "processingLevel": "enhanced",
+          "detectionMethod": "full_fusion",
+          "intervalMs": 500
+        }
+      }
+    },
+    
+    "legacy": {
+      "pirSensor": {
+        "pin": 13,
+        "sensitivity": 0.75,
+        "triggerDelayMs": 2000,
+        "enabled": true
+      },
+      "frameAnalysis": {
+        "threshold": 0.6,
+        "backgroundSubtraction": true,
+        "motionVectorAnalysis": true,
+        "objectSizeFiltering": true
+      },
+      "multiZonePir": {
+        "enabled": true,
+        "zones": [
+          {
+            "id": 1,
+            "pin": 16,
+            "name": "Main Trail",
+            "sensitivity": 0.8,
+            "priority": 0
+          },
+          {
+            "id": 2,
+            "pin": 17,
+            "name": "Secondary Path",
+            "sensitivity": 0.75,
+            "priority": 128
+          },
+          {
+            "id": 3,
+            "pin": 1,
+            "name": "Background",
+            "sensitivity": 0.7,
+            "priority": 255
+          }
+        ]
+      }
+    },
+    
+    "debugging": {
+      "logLevel": "info",
+      "enableDetailedLogging": false,
+      "logMotionEvents": true,
+      "logPerformanceMetrics": true,
+      "logWildlifeAnalysis": true,
+      "saveDebugImages": false,
+      "debugImagePath": "/sdcard/debug/"
+    }
+  }
+}

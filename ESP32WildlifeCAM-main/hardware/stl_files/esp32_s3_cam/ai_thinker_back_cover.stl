@@ -1,0 +1,371 @@
+solid ai_thinker_back_cover
+  comment Back panel with access ports and ventilation for ESP32-S3-CAM
+  comment Dimensions: 90mm x 70mm x 3mm thickness
+  comment Features: USB-C access port, cable gland entries, ventilation grilles
+  comment Material: PETG or ASA for durability
+  comment Print settings: 0.2mm layer height, 25% infill
+
+  // Main cover plate (90x70x3mm)
+  // Bottom face
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 0.0 0.0
+      vertex 90.0 70.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 70.0 0.0
+      vertex 0.0 70.0 0.0
+    endloop
+  endfacet
+
+  // Top face (excluding access ports and ventilation)
+  // Left section
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 3.0
+      vertex 30.0 70.0 3.0
+      vertex 0.0 70.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 3.0
+      vertex 30.0 0.0 3.0
+      vertex 30.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Center-bottom section (below USB-C port)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 30.0 0.0 3.0
+      vertex 60.0 25.0 3.0
+      vertex 60.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 30.0 0.0 3.0
+      vertex 30.0 25.0 3.0
+      vertex 60.0 25.0 3.0
+    endloop
+  endfacet
+
+  // Center-top section (above USB-C port)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 30.0 45.0 3.0
+      vertex 60.0 70.0 3.0
+      vertex 30.0 70.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 30.0 45.0 3.0
+      vertex 60.0 45.0 3.0
+      vertex 60.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Right section (excluding ventilation grilles)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 60.0 0.0 3.0
+      vertex 75.0 20.0 3.0
+      vertex 75.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 60.0 0.0 3.0
+      vertex 60.0 20.0 3.0
+      vertex 75.0 20.0 3.0
+    endloop
+  endfacet
+
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 60.0 30.0 3.0
+      vertex 75.0 40.0 3.0
+      vertex 75.0 30.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 60.0 30.0 3.0
+      vertex 60.0 40.0 3.0
+      vertex 75.0 40.0 3.0
+    endloop
+  endfacet
+
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 60.0 50.0 3.0
+      vertex 75.0 70.0 3.0
+      vertex 60.0 70.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 60.0 50.0 3.0
+      vertex 75.0 50.0 3.0
+      vertex 75.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Far right section
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 75.0 0.0 3.0
+      vertex 90.0 70.0 3.0
+      vertex 90.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 75.0 0.0 3.0
+      vertex 75.0 70.0 3.0
+      vertex 90.0 70.0 3.0
+    endloop
+  endfacet
+
+  // USB-C access port (20x10mm centered at 45,35)
+  // USB-C port opening is excluded from top face - already done above
+
+  // Ventilation grilles (3x8mm slots on the right side)
+  // Grille 1
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 77.0 22.0 3.0
+      vertex 85.0 28.0 3.0
+      vertex 77.0 28.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 77.0 22.0 3.0
+      vertex 85.0 22.0 3.0
+      vertex 85.0 28.0 3.0
+    endloop
+  endfacet
+
+  // Grille 2
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 77.0 32.0 3.0
+      vertex 85.0 38.0 3.0
+      vertex 77.0 38.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 77.0 32.0 3.0
+      vertex 85.0 32.0 3.0
+      vertex 85.0 38.0 3.0
+    endloop
+  endfacet
+
+  // Grille 3
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 77.0 42.0 3.0
+      vertex 85.0 48.0 3.0
+      vertex 77.0 48.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 77.0 42.0 3.0
+      vertex 85.0 42.0 3.0
+      vertex 85.0 48.0 3.0
+    endloop
+  endfacet
+
+  // Cable gland entries (PG7 - 12.5mm diameter) on left side
+  // Gland 1 (top) - circular opening at 15,55
+  // Creating octagonal approximation
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 15.0 61.25 3.0
+      vertex 19.42 59.42 3.0
+      vertex 15.0 55.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 19.42 59.42 3.0
+      vertex 21.25 55.0 3.0
+      vertex 15.0 55.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 21.25 55.0 3.0
+      vertex 19.42 50.58 3.0
+      vertex 15.0 55.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 19.42 50.58 3.0
+      vertex 15.0 48.75 3.0
+      vertex 15.0 55.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 15.0 48.75 3.0
+      vertex 10.58 50.58 3.0
+      vertex 15.0 55.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 10.58 50.58 3.0
+      vertex 8.75 55.0 3.0
+      vertex 15.0 55.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 8.75 55.0 3.0
+      vertex 10.58 59.42 3.0
+      vertex 15.0 55.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 10.58 59.42 3.0
+      vertex 15.0 61.25 3.0
+      vertex 15.0 55.0 3.0
+    endloop
+  endfacet
+
+  // Gland 2 (bottom) - circular opening at 15,15
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 15.0 21.25 3.0
+      vertex 19.42 19.42 3.0
+      vertex 15.0 15.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 19.42 19.42 3.0
+      vertex 21.25 15.0 3.0
+      vertex 15.0 15.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 21.25 15.0 3.0
+      vertex 19.42 10.58 3.0
+      vertex 15.0 15.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 19.42 10.58 3.0
+      vertex 15.0 8.75 3.0
+      vertex 15.0 15.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 15.0 8.75 3.0
+      vertex 10.58 10.58 3.0
+      vertex 15.0 15.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 10.58 10.58 3.0
+      vertex 8.75 15.0 3.0
+      vertex 15.0 15.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 8.75 15.0 3.0
+      vertex 10.58 19.42 3.0
+      vertex 15.0 15.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 10.58 19.42 3.0
+      vertex 15.0 21.25 3.0
+      vertex 15.0 15.0 3.0
+    endloop
+  endfacet
+
+  // Outer edges
+  // Front edge
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 0.0 3.0
+      vertex 90.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 0.0 3.0
+      vertex 90.0 0.0 0.0
+    endloop
+  endfacet
+
+  // Back edge
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 70.0 0.0
+      vertex 90.0 70.0 3.0
+      vertex 0.0 70.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 70.0 0.0
+      vertex 90.0 70.0 0.0
+      vertex 90.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Left edge
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 70.0 3.0
+      vertex 0.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 70.0 0.0
+      vertex 0.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Right edge
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 90.0 0.0 0.0
+      vertex 90.0 70.0 3.0
+      vertex 90.0 70.0 0.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 90.0 0.0 0.0
+      vertex 90.0 0.0 3.0
+      vertex 90.0 70.0 3.0
+    endloop
+  endfacet
+
+endsolid ai_thinker_back_cover

@@ -1,0 +1,26 @@
+solid camera_lens_hood
+  comment Camera lens protection hood
+  comment Reduces glare and rain impact
+  comment UV protection for camera sensor
+  comment Snap-fit attachment to main case
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 25.0 0.0 0.0
+      vertex 25.0 25.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 25.0 25.0 0.0
+      vertex 0.0 25.0 0.0
+    endloop
+  endfacet
+  comment Conical hood design
+  comment 15mm camera opening
+  comment Snap-fit mounting tabs
+endsolid camera_lens_hood

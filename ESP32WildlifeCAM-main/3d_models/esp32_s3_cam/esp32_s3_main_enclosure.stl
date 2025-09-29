@@ -1,0 +1,20 @@
+solid esp32_s3_main_enclosure
+  comment This is a placeholder STL file for the ESP32-S3-CAM main enclosure
+  comment Dimensions: 90mm x 70mm x 50mm internal volume (larger for S3 board)
+  comment Features: IP65 weatherproofing, camera lens opening, USB-C access port
+  comment Features: Enhanced ventilation for better heat dissipation
+  comment Features: External antenna connector access
+  comment Features: Support for OV5640 5MP camera module
+  comment Material: PETG or ASA recommended for outdoor use
+  comment Print settings: 0.2mm layer height, 15% infill, supports for overhangs
+  comment Post-processing: Drill and tap mounting holes, install gaskets
+  comment Compatible sensors: OV2640, OV3660, OV5640
+  comment Board support: ESP32-S3-CAM modules with native USB programming
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 1.0 0.0 0.0
+      vertex 0.0 1.0 0.0
+    endloop
+  endfacet
+endsolid esp32_s3_main_enclosure

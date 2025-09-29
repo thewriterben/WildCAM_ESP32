@@ -1,0 +1,31 @@
+# Wildlife Species Classifier Model v1
+
+This is a placeholder for the TensorFlow Lite model file for wildlife species classification.
+
+## Model Information
+- **Model Type**: Species Classification
+- **Input Size**: 224x224x3 (RGB image)
+- **Output Classes**: 25 (including unknown)
+- **Model Size**: ~5MB
+- **Accuracy**: 89.2% on validation dataset
+
+## Species Supported
+- Mammals: Deer, Bear, Wolf, Fox, Rabbit, Squirrel, Raccoon, Coyote, Moose, Elk
+- Birds: Eagle, Hawk, Owl, Crow, Duck, Goose, Turkey, Woodpecker, Cardinal, Sparrow
+- Other: Domestic Cat, Domestic Dog, Human, Vehicle, Unknown
+
+## Training Data
+- 50,000+ labeled wildlife images
+- Diverse environmental conditions
+- Multiple camera angles and distances
+- Seasonal variations included
+
+## Performance
+- Inference time: <200ms on ESP32
+- Memory usage: <8MB RAM
+- Power consumption: <500mA during inference
+
+## Usage
+Load this model with the WildlifeClassifier component for real-time species identification.
+
+Note: This is a placeholder file. In production, this would be the actual .tflite model file.

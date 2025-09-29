@@ -1,0 +1,30 @@
+solid desert_heat_sink_assembly
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 20.0 20.0 0.0
+      vertex 80.0 20.0 0.0
+      vertex 80.0 60.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 20.0 20.0 0.0
+      vertex 80.0 60.0 0.0
+      vertex 20.0 60.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 20.0 20.0 25.0
+      vertex 80.0 60.0 25.0
+      vertex 80.0 20.0 25.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 20.0 20.0 25.0
+      vertex 20.0 60.0 25.0
+      vertex 80.0 60.0 25.0
+    endloop
+  endfacet
+endsolid desert_heat_sink_assembly

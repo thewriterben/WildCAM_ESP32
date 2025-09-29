@@ -1,0 +1,28 @@
+solid basic_wildlife_cam_case
+  comment Budget-friendly wildlife camera enclosure
+  comment Universal ESP32 board compatibility
+  comment Dimensions: 70mm x 55mm x 35mm internal
+  comment Material: PLA with UV coating recommended
+  comment Design: Single-piece snap-fit assembly
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 75.0 0.0 0.0
+      vertex 75.0 60.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 75.0 60.0 0.0
+      vertex 0.0 60.0 0.0
+    endloop
+  endfacet
+  comment Basic box structure with snap-fit lid
+  comment Camera opening: 10mm centered
+  comment Cable routing: Side channel
+  comment Mounting holes: 4x M3 on back panel
+endsolid basic_wildlife_cam_case

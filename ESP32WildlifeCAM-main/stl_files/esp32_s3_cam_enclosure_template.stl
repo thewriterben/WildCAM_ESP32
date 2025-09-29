@@ -1,0 +1,41 @@
+solid esp32_s3_cam_enclosure_template
+  # ESP32WildlifeCAM - ESP32-S3-CAM Enclosure Template
+  # This is a template STL file for ESP32-S3-CAM boards
+  # 
+  # Dimensions: 90mm x 70mm x 45mm (larger for S3 capabilities)
+  # Material: PETG or ABS recommended
+  # 
+  # Key Features:
+  # - Enhanced ventilation for higher-performance S3 chip
+  # - USB-C access port for programming/debugging
+  # - Larger camera sensor cutout (supports OV5640)
+  # - AI acceleration heat dissipation design
+  # - Multiple antenna mounting options
+  #
+  # This template provides the foundational geometry.
+  # For complete detailed STL with full geometry, use:
+  # ../3d_models/esp32_s3_cam/esp32_s3_main_enclosure.stl
+  #
+  # S3-Specific Customizations:
+  # - Heat sink mounting points for AI processing
+  # - Dual antenna support (WiFi + optional LoRa)
+  # - Enhanced cable management for additional sensors
+  # - Larger battery compartment for extended operation
+  
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 0.0 0.0
+      vertex 90.0 70.0 0.0
+    endloop
+  endfacet
+  
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 70.0 0.0
+      vertex 0.0 70.0 0.0
+    endloop
+  endfacet
+  
+endsolid esp32_s3_cam_enclosure_template

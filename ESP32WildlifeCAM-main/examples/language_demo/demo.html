@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="ui.dashboard">Wildlife Camera Multi-Language Demo</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --error-color: #e74c3c;
+            --background-color: #ecf0f1;
+            --surface-color: #ffffff;
+            --text-color: #2c3e50;
+            --text-muted: #7f8c8d;
+            --border-color: #bdc3c7;
+            --border-radius: 6px;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+
+        .header {
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .logo .emoji {
+            font-size: 2rem;
+        }
+
+        .language-controls {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .demo-card {
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .demo-card h3 {
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-md);
+            font-size: 1.2rem;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            color: var(--text-muted);
+        }
+
+        .status-value {
+            font-weight: bold;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-badge.online {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .status-badge.warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .button-demo {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            margin-top: var(--spacing-md);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background: #95a5a6;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success-color);
+            color: white;
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .wildlife-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+
+        .wildlife-item {
+            text-align: center;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: var(--background-color);
+        }
+
+        .wildlife-item .emoji {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .wildlife-item .species {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .wildlife-item .confidence {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .current-time {
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: var(--accent-color);
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-demo {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <span class="emoji">🦌</span>
+                <span data-i18n="system.device_name">Wildlife Camera</span>
+            </div>
+            <div class="language-controls">
+                <div id="language-selector-header" data-language-selector data-variant="inline"></div>
+                <button id="refresh-demo" class="btn btn-primary" data-i18n="ui.refresh">Refresh Demo</button>
+            </div>
+        </header>
+
+        <div class="demo-grid">
+            <!-- System Status Card -->
+            <div class="demo-card">
+                <h3 data-i18n="system.system_health">System Health</h3>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="system.status">Status</span>
+                    <span class="status-badge online" data-i18n="system.status_online">Online</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="system.uptime">Uptime</span>
+                    <span class="status-value">2d 14h 32m</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="system.version">Version</span>
+                    <span class="status-value">3.0.0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="ui.language">Language</span>
+                    <span class="status-value" id="current-language-display">English</span>
+                </div>
+            </div>
+
+            <!-- Power Status Card -->
+            <div class="demo-card">
+                <h3 data-i18n="power.power_system">Power System</h3>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="power.battery_level">Battery Level</span>
+                    <span class="status-value">78%</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="power.solar_voltage">Solar Voltage</span>
+                    <span class="status-value">4.2V</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="power.power_consumption">Power Consumption</span>
+                    <span class="status-value">245mA</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="power.estimated_runtime">Estimated Runtime</span>
+                    <span class="status-value">18h 45m</span>
+                </div>
+            </div>
+
+            <!-- Camera Controls Card -->
+            <div class="demo-card">
+                <h3 data-i18n="camera.camera_control">Camera Control</h3>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="camera.resolution">Resolution</span>
+                    <span class="status-value">1920x1080</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="camera.quality">Quality</span>
+                    <span class="status-value">High</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="camera.motion_detection">Motion Detection</span>
+                    <span class="status-badge online" data-i18n="system.status_online">Online</span>
+                </div>
+                <div class="button-demo">
+                    <button class="btn btn-primary" data-i18n="camera.capture_photo">Capture Photo</button>
+                    <button class="btn btn-secondary" data-i18n="camera.start_recording">Start Recording</button>
+                </div>
+            </div>
+
+            <!-- Storage Card -->
+            <div class="demo-card">
+                <h3 data-i18n="storage.storage_management">Storage Management</h3>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="storage.storage_used">Storage Used</span>
+                    <span class="status-value">2.3 GB</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="storage.storage_free">Storage Free</span>
+                    <span class="status-value">5.7 GB</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="storage.total_files">Total Files</span>
+                    <span class="status-value">1,247</span>
+                </div>
+                <div class="button-demo">
+                    <button class="btn btn-primary" data-i18n="ui.download">Download</button>
+                    <button class="btn btn-secondary" data-i18n="ui.delete">Delete</button>
+                </div>
+            </div>
+
+            <!-- Wildlife Activity Card -->
+            <div class="demo-card">
+                <h3 data-i18n="wildlife.wildlife_activity">Wildlife Activity</h3>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="wildlife.detection_count">Today's Detections</span>
+                    <span class="status-value">23</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="wildlife.last_seen">Last Seen</span>
+                    <span class="status-value">2 hours ago</span>
+                </div>
+                <div class="wildlife-grid">
+                    <div class="wildlife-item">
+                        <span class="emoji">🦌</span>
+                        <div class="species" data-i18n="wildlife.deer">Deer</div>
+                        <div class="confidence">87%</div>
+                    </div>
+                    <div class="wildlife-item">
+                        <span class="emoji">🐰</span>
+                        <div class="species" data-i18n="wildlife.rabbit">Rabbit</div>
+                        <div class="confidence">92%</div>
+                    </div>
+                    <div class="wildlife-item">
+                        <span class="emoji">🦅</span>
+                        <div class="species" data-i18n="wildlife.eagle">Eagle</div>
+                        <div class="confidence">78%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time & Date Card -->
+            <div class="demo-card">
+                <h3 data-i18n="ui.current_time">Current Time</h3>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="ui.date">Date</span>
+                    <span class="status-value current-time" id="current-date">--</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="ui.time">Time</span>
+                    <span class="status-value current-time" id="current-time">--</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="settings.time_zone">Time Zone</span>
+                    <span class="status-value">UTC+0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="text-align: center; margin-top: 2rem;">
+            <div class="button-demo" style="justify-content: center;">
+                <button class="btn btn-primary" data-i18n="ui.refresh" onclick="refreshDemo()">Refresh</button>
+                <button class="btn btn-secondary" data-i18n="ui.settings">Settings</button>
+                <button class="btn btn-secondary" data-i18n="ui.analytics">Analytics</button>
+                <button class="btn btn-secondary" data-i18n="ui.help">Help</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Scripts -->
+    <script src="../firmware/src/web/web_assets/i18n.js"></script>
+    <script src="../firmware/src/web/web_assets/language_selector.js"></script>
+
+    <script>
+        // Demo functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Multi-language demo loaded');
+
+            // Update current time display
+            function updateCurrentTime() {
+                const now = new Date();
+                
+                if (window.formatDate && window.formatTime) {
+                    document.getElementById('current-date').textContent = formatDate(now);
+                    document.getElementById('current-time').textContent = formatTime(now);
+                } else {
+                    document.getElementById('current-date').textContent = now.toLocaleDateString();
+                    document.getElementById('current-time').textContent = now.toLocaleTimeString();
+                }
+            }
+
+            // Update language display
+            function updateLanguageDisplay() {
+                if (window.i18n) {
+                    const langInfo = window.i18n.getCurrentLanguageInfo();
+                    document.getElementById('current-language-display').textContent = 
+                        `${langInfo.flag} ${langInfo.nativeName}`;
+                }
+            }
+
+            // Show notification
+            function showNotification(message) {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+
+            // Listen for language changes
+            document.addEventListener('languageChanged', function(e) {
+                console.log('Language changed to:', e.detail.language);
+                updateLanguageDisplay();
+                updateCurrentTime();
+                
+                const langInfo = window.i18n ? window.i18n.getCurrentLanguageInfo() : null;
+                if (langInfo) {
+                    showNotification(`${langInfo.flag} Language changed to ${langInfo.nativeName}`);
+                }
+            });
+
+            // Refresh demo button
+            document.getElementById('refresh-demo').addEventListener('click', function() {
+                refreshDemo();
+            });
+
+            // Initialize
+            updateCurrentTime();
+            updateLanguageDisplay();
+            
+            // Update time every second
+            setInterval(updateCurrentTime, 1000);
+        });
+
+        // Global refresh function
+        function refreshDemo() {
+            console.log('Refreshing demo...');
+            
+            // Simulate some dynamic updates
+            const batteryLevel = Math.floor(Math.random() * 40) + 60; // 60-100%
+            const detectionCount = Math.floor(Math.random() * 50) + 10; // 10-60
+            
+            // Update values (in a real app, these would come from the API)
+            document.querySelector('.demo-card:nth-child(2) .status-value').textContent = batteryLevel + '%';
+            document.querySelector('.demo-card:nth-child(5) .status-value').textContent = detectionCount;
+            
+            // Show refresh notification
+            if (window.t) {
+                const message = `${window.t('ui.refresh')} - ${window.t('system.message_ready')}`;
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 2000);
+            }
+        }
+
+        // Mock API simulation (in a real app, this would connect to the ESP32)
+        if (!window.fetch) {
+            console.log('Demo mode: API calls would connect to ESP32 at /api/translations');
+        }
+    </script>
+</body>
+</html>

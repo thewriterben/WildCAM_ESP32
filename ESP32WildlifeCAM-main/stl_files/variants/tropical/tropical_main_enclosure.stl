@@ -1,0 +1,86 @@
+solid tropical_main_enclosure
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 95.0 0.0 0.0
+      vertex 95.0 75.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 95.0 75.0 0.0
+      vertex 0.0 75.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 55.0
+      vertex 95.0 75.0 55.0
+      vertex 95.0 0.0 55.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 55.0
+      vertex 0.0 75.0 55.0
+      vertex 95.0 75.0 55.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 95.0 0.0 55.0
+      vertex 95.0 0.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 0.0 55.0
+      vertex 95.0 0.0 55.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 95.0 0.0 0.0
+      vertex 95.0 75.0 55.0
+      vertex 95.0 75.0 0.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 95.0 0.0 0.0
+      vertex 95.0 0.0 55.0
+      vertex 95.0 75.0 55.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 95.0 75.0 0.0
+      vertex 0.0 75.0 55.0
+      vertex 0.0 75.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 95.0 75.0 0.0
+      vertex 95.0 75.0 55.0
+      vertex 0.0 75.0 55.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 75.0 0.0
+      vertex 0.0 0.0 55.0
+      vertex 0.0 0.0 0.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 75.0 0.0
+      vertex 0.0 75.0 55.0
+      vertex 0.0 0.0 55.0
+    endloop
+  endfacet
+endsolid tropical_main_enclosure

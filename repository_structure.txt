@@ -1,0 +1,50 @@
+ESP32WildlifeCAM/
+├── firmware/
+│   ├── main/
+│   │   ├── main.cpp
+│   │   ├── camera_manager.cpp
+│   │   ├── ml_inference.cpp
+│   │   ├── power_manager.cpp
+│   │   ├── connectivity.cpp
+│   │   └── sensors.cpp
+│   ├── include/
+│   │   └── wildlife_cam.h
+│   ├── models/
+│   │   └── wildlife_model.tflite
+│   └── platformio.ini
+├── backend/
+│   ├── api/
+│   │   ├── app.py
+│   │   ├── models.py
+│   │   └── routes.py
+│   ├── ml/
+│   │   ├── train_model.py
+│   │   ├── inference.py
+│   │   └── dataset_prep.py
+│   ├── database/
+│   │   └── schema.sql
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── App.js
+│   │   ├── components/
+│   │   └── services/
+│   └── package.json
+├── mobile/
+│   ├── android/
+│   └── ios/
+├── hardware/
+│   ├── schematics/
+│   ├── pcb/
+│   └── enclosure/
+├── docs/
+│   ├── setup_guide.md
+│   ├── api_documentation.md
+│   └── hardware_assembly.md
+├── tools/
+│   ├── megadetector_integration.py
+│   ├── data_analysis.py
+│   └── deployment_scripts/
+├── docker/
+│   └── docker-compose.yml
+└── README.md

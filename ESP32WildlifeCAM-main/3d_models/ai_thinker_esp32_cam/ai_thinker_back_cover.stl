@@ -1,0 +1,25 @@
+solid ai_thinker_back_cover
+  comment Back cover for AI-Thinker ESP32-CAM enclosure
+  comment Features: Hinged access panel, cable routing, programming access
+  comment Includes: Reset button access, USB programming port
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 85.0 0.0 0.0
+      vertex 85.0 65.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 85.0 65.0 0.0
+      vertex 0.0 65.0 0.0
+    endloop
+  endfacet
+  comment Programming port access hole would be here
+  comment Cable gland openings would be modeled
+  comment Hinge mechanism would be defined
+endsolid ai_thinker_back_cover

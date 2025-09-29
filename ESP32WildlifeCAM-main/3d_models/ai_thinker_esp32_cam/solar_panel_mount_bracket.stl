@@ -1,0 +1,26 @@
+solid solar_panel_mount_bracket
+  comment Solar panel mounting bracket for wildlife camera
+  comment Compatible with: 80-120mm solar panels
+  comment Features: Adjustable tilt 0-45 degrees, secure attachment
+  comment Material: PETG or ABS with 100% infill for strength
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 120.0 0.0 0.0
+      vertex 120.0 15.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 120.0 15.0 0.0
+      vertex 0.0 15.0 0.0
+    endloop
+  endfacet
+  comment Mounting holes and adjustment mechanism would be modeled here
+  comment Standard M3 or M4 mounting holes
+  comment Tilt adjustment slots
+endsolid solar_panel_mount_bracket

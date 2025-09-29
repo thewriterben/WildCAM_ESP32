@@ -1,0 +1,25 @@
+solid ai_thinker_front_cover
+  comment Front cover for AI-Thinker ESP32-CAM enclosure
+  comment Features: Transparent camera lens opening, UV protection
+  comment Material: Clear PETG with UV resistance recommended
+  comment Camera opening: 12mm diameter centered
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 85.0 0.0 0.0
+      vertex 85.0 65.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 85.0 65.0 0.0
+      vertex 0.0 65.0 0.0
+    endloop
+  endfacet
+  comment Camera opening would be modeled as a circular hole
+  comment Center at (42.5, 32.5) with 12mm diameter
+endsolid ai_thinker_front_cover

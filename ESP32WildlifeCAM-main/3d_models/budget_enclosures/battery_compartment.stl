@@ -1,0 +1,26 @@
+solid battery_compartment
+  comment Secure battery housing for 18650 cells
+  comment Weatherproof seal design
+  comment Easy access for maintenance
+  comment Compatible with standard 18650 batteries
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 72.0 0.0 0.0
+      vertex 72.0 22.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 72.0 22.0 0.0
+      vertex 0.0 22.0 0.0
+    endloop
+  endfacet
+  comment 18650 battery dimensions: 65mm x 18.6mm
+  comment Spring contacts for reliable connection
+  comment Removable lid with gasket
+endsolid battery_compartment

@@ -1,0 +1,421 @@
+solid solar_panel_mount_bracket
+  comment Bracket for solar panel attachment - ESP32-S3-CAM compatible
+  comment Dimensions: 120mm x 80mm x 15mm (fits standard 5V-6V panels)
+  comment Features: Tilt adjustment 0-45°, secure panel attachment points
+  comment Material: PETG or ASA for outdoor durability
+  comment Print settings: 0.2mm layer height, 40% infill for strength
+
+  // Main bracket base (120x80x5mm)
+  // Bottom face
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 120.0 0.0 0.0
+      vertex 120.0 80.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 120.0 80.0 0.0
+      vertex 0.0 80.0 0.0
+    endloop
+  endfacet
+
+  // Top face (panel mounting surface)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 5.0
+      vertex 120.0 80.0 5.0
+      vertex 120.0 0.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 5.0
+      vertex 0.0 80.0 5.0
+      vertex 120.0 80.0 5.0
+    endloop
+  endfacet
+
+  // Panel mounting holes (4 corners) - creating recessed areas
+  // Corner 1 (front-left) - 10x10mm recess at (10,10)
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 5.0 5.0 2.5
+      vertex 15.0 5.0 2.5
+      vertex 15.0 15.0 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 5.0 5.0 2.5
+      vertex 15.0 15.0 2.5
+      vertex 5.0 15.0 2.5
+    endloop
+  endfacet
+
+  // Corner 2 (front-right) - 10x10mm recess at (110,10)
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 105.0 5.0 2.5
+      vertex 115.0 15.0 2.5
+      vertex 105.0 15.0 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 105.0 5.0 2.5
+      vertex 115.0 5.0 2.5
+      vertex 115.0 15.0 2.5
+    endloop
+  endfacet
+
+  // Corner 3 (back-left) - 10x10mm recess at (10,70)
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 5.0 65.0 2.5
+      vertex 15.0 75.0 2.5
+      vertex 5.0 75.0 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 5.0 65.0 2.5
+      vertex 15.0 65.0 2.5
+      vertex 15.0 75.0 2.5
+    endloop
+  endfacet
+
+  // Corner 4 (back-right) - 10x10mm recess at (110,70)
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 105.0 65.0 2.5
+      vertex 115.0 75.0 2.5
+      vertex 105.0 75.0 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 105.0 65.0 2.5
+      vertex 115.0 65.0 2.5
+      vertex 115.0 75.0 2.5
+    endloop
+  endfacet
+
+  // Outer edges
+  // Front edge
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 0.0 5.0
+      vertex 120.0 0.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 120.0 0.0 5.0
+      vertex 120.0 0.0 0.0
+    endloop
+  endfacet
+
+  // Back edge
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 80.0 0.0
+      vertex 120.0 80.0 5.0
+      vertex 0.0 80.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 80.0 0.0
+      vertex 120.0 80.0 0.0
+      vertex 120.0 80.0 5.0
+    endloop
+  endfacet
+
+  // Left edge
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 80.0 5.0
+      vertex 0.0 0.0 5.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 80.0 0.0
+      vertex 0.0 80.0 5.0
+    endloop
+  endfacet
+
+  // Right edge
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 120.0 0.0 0.0
+      vertex 120.0 80.0 5.0
+      vertex 120.0 80.0 0.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 120.0 0.0 0.0
+      vertex 120.0 0.0 5.0
+      vertex 120.0 80.0 5.0
+    endloop
+  endfacet
+
+  // Tilt adjustment mechanism - hinge mount at back
+  // Hinge post 1 (left side)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 20.0 75.0 5.0
+      vertex 30.0 85.0 15.0
+      vertex 20.0 85.0 15.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 20.0 75.0 5.0
+      vertex 30.0 75.0 5.0
+      vertex 30.0 85.0 15.0
+    endloop
+  endfacet
+
+  // Hinge post 1 sides
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 20.0 85.0 5.0
+      vertex 30.0 85.0 15.0
+      vertex 20.0 85.0 15.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 20.0 85.0 5.0
+      vertex 30.0 85.0 5.0
+      vertex 30.0 85.0 15.0
+    endloop
+  endfacet
+
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 20.0 75.0 5.0
+      vertex 20.0 85.0 15.0
+      vertex 20.0 75.0 15.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 20.0 75.0 5.0
+      vertex 20.0 85.0 5.0
+      vertex 20.0 85.0 15.0
+    endloop
+  endfacet
+
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 30.0 75.0 5.0
+      vertex 30.0 85.0 15.0
+      vertex 30.0 85.0 5.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 30.0 75.0 5.0
+      vertex 30.0 75.0 15.0
+      vertex 30.0 85.0 15.0
+    endloop
+  endfacet
+
+  // Hinge post 2 (right side)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 90.0 75.0 5.0
+      vertex 100.0 85.0 15.0
+      vertex 90.0 85.0 15.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 90.0 75.0 5.0
+      vertex 100.0 75.0 5.0
+      vertex 100.0 85.0 15.0
+    endloop
+  endfacet
+
+  // Hinge post 2 sides
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 90.0 85.0 5.0
+      vertex 100.0 85.0 15.0
+      vertex 90.0 85.0 15.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 90.0 85.0 5.0
+      vertex 100.0 85.0 5.0
+      vertex 100.0 85.0 15.0
+    endloop
+  endfacet
+
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 90.0 75.0 5.0
+      vertex 90.0 85.0 15.0
+      vertex 90.0 75.0 15.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 90.0 75.0 5.0
+      vertex 90.0 85.0 5.0
+      vertex 90.0 85.0 15.0
+    endloop
+  endfacet
+
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 100.0 75.0 5.0
+      vertex 100.0 85.0 15.0
+      vertex 100.0 85.0 5.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 100.0 75.0 5.0
+      vertex 100.0 75.0 15.0
+      vertex 100.0 85.0 15.0
+    endloop
+  endfacet
+
+  // Camera mount connection points (front of bracket)
+  // Mount point 1 (left)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 10.0 -10.0 5.0
+      vertex 20.0 0.0 10.0
+      vertex 10.0 0.0 10.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 10.0 -10.0 5.0
+      vertex 20.0 -10.0 5.0
+      vertex 20.0 0.0 10.0
+    endloop
+  endfacet
+
+  // Mount point 1 sides
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 10.0 -10.0 5.0
+      vertex 10.0 -10.0 10.0
+      vertex 20.0 -10.0 10.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 10.0 -10.0 5.0
+      vertex 20.0 -10.0 10.0
+      vertex 20.0 -10.0 5.0
+    endloop
+  endfacet
+
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 10.0 -10.0 5.0
+      vertex 10.0 0.0 10.0
+      vertex 10.0 -10.0 10.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 10.0 -10.0 5.0
+      vertex 10.0 0.0 5.0
+      vertex 10.0 0.0 10.0
+    endloop
+  endfacet
+
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 20.0 -10.0 5.0
+      vertex 20.0 0.0 10.0
+      vertex 20.0 0.0 5.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 20.0 -10.0 5.0
+      vertex 20.0 -10.0 10.0
+      vertex 20.0 0.0 10.0
+    endloop
+  endfacet
+
+  // Mount point 2 (right)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 100.0 -10.0 5.0
+      vertex 110.0 0.0 10.0
+      vertex 100.0 0.0 10.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 100.0 -10.0 5.0
+      vertex 110.0 -10.0 5.0
+      vertex 110.0 0.0 10.0
+    endloop
+  endfacet
+
+  // Mount point 2 sides  
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 100.0 -10.0 5.0
+      vertex 100.0 -10.0 10.0
+      vertex 110.0 -10.0 10.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 100.0 -10.0 5.0
+      vertex 110.0 -10.0 10.0
+      vertex 110.0 -10.0 5.0
+    endloop
+  endfacet
+
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 100.0 -10.0 5.0
+      vertex 100.0 0.0 10.0
+      vertex 100.0 -10.0 10.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 100.0 -10.0 5.0
+      vertex 100.0 0.0 5.0
+      vertex 100.0 0.0 10.0
+    endloop
+  endfacet
+
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 110.0 -10.0 5.0
+      vertex 110.0 0.0 10.0
+      vertex 110.0 0.0 5.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 110.0 -10.0 5.0
+      vertex 110.0 -10.0 10.0
+      vertex 110.0 0.0 10.0
+    endloop
+  endfacet
+
+endsolid solar_panel_mount_bracket

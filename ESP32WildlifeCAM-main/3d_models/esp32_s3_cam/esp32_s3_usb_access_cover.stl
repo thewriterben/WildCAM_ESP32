@@ -1,0 +1,19 @@
+solid esp32_s3_usb_access_cover
+  comment This is a placeholder STL file for the ESP32-S3-CAM USB access cover
+  comment Dimensions: Small hinged cover for USB-C programming port
+  comment Features: Weather-tight seal when closed, easy access for programming
+  comment Features: Tether point to prevent loss in field
+  comment Features: Snap-fit closure with weatherproof gasket
+  comment Features: Clear labeling area for programming instructions
+  comment Material: Flexible TPU for gasket areas, PETG for main body
+  comment Print settings: 0.15mm layer height for precise fit
+  comment Post-processing: Install micro gasket, test USB connector clearance
+  comment Field use: Allows native USB programming without enclosure removal
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 1.0 0.0 0.0
+      vertex 0.0 1.0 0.0
+    endloop
+  endfacet
+endsolid esp32_s3_usb_access_cover

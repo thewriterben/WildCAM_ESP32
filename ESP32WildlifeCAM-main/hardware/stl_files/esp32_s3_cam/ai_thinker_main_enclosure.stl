@@ -1,0 +1,202 @@
+solid ai_thinker_main_enclosure
+  comment Main weatherproof housing for AI Thinker ESP32-S3-CAM board
+  comment Dimensions: 90mm x 70mm x 50mm external (85mm x 65mm x 45mm internal)
+  comment Features: IP65 weatherproofing, camera lens opening, USB-C access port
+  comment Features: Enhanced ventilation for AI processing heat dissipation
+  comment Features: External antenna connector access
+  comment Material: PETG or ASA recommended for outdoor use
+  comment Print settings: 0.2mm layer height, 20% infill, supports for overhangs
+  comment Post-processing: Drill mounting holes, install threaded inserts
+
+  // Bottom face
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 0.0 0.0
+      vertex 90.0 70.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 70.0 0.0
+      vertex 0.0 70.0 0.0
+    endloop
+  endfacet
+
+  // Top face
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 50.0
+      vertex 90.0 70.0 50.0
+      vertex 90.0 0.0 50.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 50.0
+      vertex 0.0 70.0 50.0
+      vertex 90.0 70.0 50.0
+    endloop
+  endfacet
+
+  // Front face (with camera opening)
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 0.0 50.0
+      vertex 30.0 0.0 50.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 30.0 0.0 50.0
+      vertex 30.0 0.0 0.0
+    endloop
+  endfacet
+  // Camera lens opening area (skip center for 12mm opening)
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 50.0 0.0 0.0
+      vertex 50.0 0.0 50.0
+      vertex 90.0 0.0 50.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 50.0 0.0 0.0
+      vertex 90.0 0.0 50.0
+      vertex 90.0 0.0 0.0
+    endloop
+  endfacet
+
+  // Back face (with USB-C access)
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 70.0 0.0
+      vertex 30.0 70.0 0.0
+      vertex 30.0 70.0 50.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 70.0 0.0
+      vertex 30.0 70.0 50.0
+      vertex 0.0 70.0 50.0
+    endloop
+  endfacet
+  // USB-C port access area (skip center for access)
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 50.0 70.0 0.0
+      vertex 90.0 70.0 0.0
+      vertex 90.0 70.0 50.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 50.0 70.0 0.0
+      vertex 90.0 70.0 50.0
+      vertex 50.0 70.0 50.0
+    endloop
+  endfacet
+
+  // Left face
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 70.0 0.0
+      vertex 0.0 70.0 50.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 70.0 50.0
+      vertex 0.0 0.0 50.0
+    endloop
+  endfacet
+
+  // Right face (with ventilation)
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 90.0 0.0 0.0
+      vertex 90.0 70.0 50.0
+      vertex 90.0 70.0 0.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 90.0 0.0 0.0
+      vertex 90.0 0.0 50.0
+      vertex 90.0 70.0 50.0
+    endloop
+  endfacet
+
+  // Internal mounting posts for ESP32-S3-CAM board (45x30mm board)
+  // Post 1 (front-left)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 22.5 15.0 2.5
+      vertex 25.5 15.0 2.5
+      vertex 25.5 18.0 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 22.5 15.0 2.5
+      vertex 25.5 18.0 2.5
+      vertex 22.5 18.0 2.5
+    endloop
+  endfacet
+
+  // Post 2 (front-right)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 64.5 15.0 2.5
+      vertex 67.5 15.0 2.5
+      vertex 67.5 18.0 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 64.5 15.0 2.5
+      vertex 67.5 18.0 2.5
+      vertex 64.5 18.0 2.5
+    endloop
+  endfacet
+
+  // Post 3 (back-left)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 22.5 52.0 2.5
+      vertex 25.5 52.0 2.5
+      vertex 25.5 55.0 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 22.5 52.0 2.5
+      vertex 25.5 55.0 2.5
+      vertex 22.5 55.0 2.5
+    endloop
+  endfacet
+
+  // Post 4 (back-right)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 64.5 52.0 2.5
+      vertex 67.5 52.0 2.5
+      vertex 67.5 55.0 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 64.5 52.0 2.5
+      vertex 67.5 55.0 2.5
+      vertex 64.5 55.0 2.5
+    endloop
+  endfacet
+
+endsolid ai_thinker_main_enclosure
