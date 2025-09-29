@@ -1,0 +1,252 @@
+name: Infrastructure Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'k8s/**'
+      - 'docker-compose.**'
+      - 'monitoring/**'
+      - 'nginx/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'k8s/**'
+      - 'docker-compose.**'
+      - 'monitoring/**'
+      - 'nginx/**'
+
+jobs:
+  validate-kubernetes:
+    runs-on: ubuntu-latest
+    name: Validate Kubernetes Manifests
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install kubeval
+      run: |
+        wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+        tar xf kubeval-linux-amd64.tar.gz
+        sudo mv kubeval /usr/local/bin
+    
+    - name: Validate base Kubernetes manifests
+      run: |
+        find k8s/base -name "*.yaml" -exec kubeval {} \;
+    
+    - name: Install kustomize
+      run: |
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+    
+    - name: Validate kustomize overlays
+      run: |
+        for env in development staging production; do
+          echo "Validating $env environment"
+          kustomize build k8s/overlays/$env > /tmp/manifests-$env.yaml
+          kubeval /tmp/manifests-$env.yaml
+        done
+
+  validate-docker-compose:
+    runs-on: ubuntu-latest
+    name: Validate Docker Compose Files
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Validate docker-compose.yml
+      run: |
+        docker compose -f docker-compose.yml config > /dev/null
+        echo "✅ docker-compose.yml is valid"
+    
+    - name: Validate docker-compose.prod.yml
+      env:
+        POSTGRES_PASSWORD: test-password
+        REDIS_PASSWORD: test-password
+        JWT_SECRET_KEY: test-jwt-secret
+        SECRET_KEY: test-secret
+        GRAFANA_ADMIN_PASSWORD: test-password
+        INFLUXDB_USERNAME: test-user
+        INFLUXDB_PASSWORD: test-password
+        INFLUXDB_TOKEN: test-token
+      run: |
+        docker compose -f docker-compose.prod.yml config > /dev/null
+        echo "✅ docker-compose.prod.yml is valid"
+
+  validate-nginx-config:
+    runs-on: ubuntu-latest
+    name: Validate Nginx Configuration
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Test nginx configuration syntax
+      run: |
+        docker run --rm -v $(pwd)/nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx:alpine nginx -t
+        echo "✅ nginx.conf is valid"
+    
+    - name: Test production nginx configuration syntax
+      run: |
+        docker run --rm -v $(pwd)/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro nginx:alpine nginx -t
+        echo "✅ nginx.prod.conf is valid"
+
+  validate-monitoring-config:
+    runs-on: ubuntu-latest
+    name: Validate Monitoring Configuration
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Validate Prometheus configuration
+      run: |
+        docker run --rm -v $(pwd)/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro prom/prometheus:latest promtool check config /etc/prometheus/prometheus.yml
+        echo "✅ prometheus.yml is valid"
+    
+    - name: Validate Prometheus alert rules
+      run: |
+        docker run --rm -v $(pwd)/monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro prom/prometheus:latest promtool check rules /etc/prometheus/alert_rules.yml
+        echo "✅ alert_rules.yml is valid"
+
+  integration-test:
+    runs-on: ubuntu-latest
+    name: Integration Test with Docker Compose
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create test environment file
+      run: |
+        cat > .env.test << EOF
+        POSTGRES_PASSWORD=test-password
+        REDIS_PASSWORD=test-password
+        JWT_SECRET_KEY=test-jwt-secret-key-for-testing-only
+        SECRET_KEY=test-secret-key-for-testing-only
+        GRAFANA_ADMIN_PASSWORD=test-grafana-password
+        INFLUXDB_USERNAME=test-user
+        INFLUXDB_PASSWORD=test-influxdb-password
+        INFLUXDB_TOKEN=test-influxdb-token
+        EOF
+    
+    - name: Start services
+      run: |
+        docker compose --env-file .env.test up -d postgres redis
+        sleep 30
+    
+    - name: Test database connectivity
+      run: |
+        docker compose --env-file .env.test exec -T postgres pg_isready -U wildlife_user -d wildlife_db
+        echo "✅ Database is accessible"
+    
+    - name: Test Redis connectivity
+      run: |
+        docker compose --env-file .env.test exec -T redis redis-cli --no-auth-warning -a test-password ping
+        echo "✅ Redis is accessible"
+    
+    - name: Start application services
+      run: |
+        docker compose --env-file .env.test up -d backend
+        sleep 60
+    
+    - name: Test backend health
+      run: |
+        timeout 120 bash -c 'until curl -f http://localhost:5000/api/health; do sleep 5; done'
+        echo "✅ Backend is healthy"
+    
+    - name: Start frontend and nginx
+      run: |
+        docker compose --env-file .env.test up -d frontend nginx
+        sleep 30
+    
+    - name: Test full stack
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost/health; do sleep 5; done'
+        echo "✅ Full stack is accessible"
+    
+    - name: Clean up
+      if: always()
+      run: |
+        docker compose --env-file .env.test down -v
+        docker system prune -f
+
+  security-baseline:
+    runs-on: ubuntu-latest
+    name: Security Baseline Check
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for hardcoded secrets
+      run: |
+        # Check for potential hardcoded secrets in configuration files
+        if grep -r "password.*=" k8s/ --include="*.yaml" | grep -v "CHANGE_ME"; then
+          echo "❌ Found potential hardcoded passwords in Kubernetes manifests"
+          exit 1
+        fi
+        echo "✅ No hardcoded secrets found in Kubernetes manifests"
+    
+    - name: Check Docker security practices
+      run: |
+        # Check if Dockerfiles use non-root users
+        for dockerfile in $(find . -name "Dockerfile*"); do
+          if ! grep -q "USER " "$dockerfile"; then
+            echo "❌ $dockerfile does not specify a non-root USER"
+            exit 1
+          fi
+        done
+        echo "✅ All Dockerfiles use non-root users"
+    
+    - name: Check for security contexts in Kubernetes
+      run: |
+        # Check if deployments have security contexts
+        for manifest in k8s/base/*.yaml; do
+          if grep -q "kind: Deployment" "$manifest"; then
+            if ! grep -q "securityContext\|runAsNonRoot" "$manifest"; then
+              echo "❌ $manifest missing security context"
+              exit 1
+            fi
+          fi
+        done
+        echo "✅ Security contexts properly configured"
+
+  performance-test:
+    runs-on: ubuntu-latest
+    name: Basic Performance Test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Apache Bench
+      run: sudo apt-get update && sudo apt-get install -y apache2-utils
+    
+    - name: Create test environment
+      run: |
+        cat > .env.test << EOF
+        POSTGRES_PASSWORD=test-password
+        REDIS_PASSWORD=test-password
+        JWT_SECRET_KEY=test-jwt-secret-key-for-testing-only
+        SECRET_KEY=test-secret-key-for-testing-only
+        EOF
+    
+    - name: Start minimal stack
+      run: |
+        docker compose --env-file .env.test up -d postgres redis backend
+        sleep 60
+    
+    - name: Run basic load test
+      run: |
+        # Test health endpoint
+        ab -n 100 -c 10 http://localhost:5000/api/health
+        
+        # Check if response time is reasonable (< 1000ms average)
+        RESPONSE_TIME=$(ab -n 50 -c 5 http://localhost:5000/api/health | grep "Time per request" | head -1 | awk '{print $4}')
+        if (( $(echo "$RESPONSE_TIME > 1000" | bc -l) )); then
+          echo "❌ Average response time too high: ${RESPONSE_TIME}ms"
+          exit 1
+        fi
+        echo "✅ Performance test passed: ${RESPONSE_TIME}ms average response time"
+    
+    - name: Clean up
+      if: always()
+      run: |
+        docker compose --env-file .env.test down -v
+        docker system prune -f

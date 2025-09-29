@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
+
+patchesStrategicMerge:
+- replica-count.yaml
+
+configMapGenerator:
+- name: wildcam-config
+  behavior: merge
+  literals:
+  - FLASK_ENV=staging
+  - NODE_ENV=staging
+  - REACT_APP_API_URL=https://api.wildcam.staging.com
+  - REACT_APP_WEBSOCKET_URL=wss://api.wildcam.staging.com
+
+namespace: wildcam-staging
+
+namePrefix: staging-
+
+commonLabels:
+  environment: staging

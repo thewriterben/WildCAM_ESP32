@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wildcam-config
+  namespace: wildcam
+data:
+  FLASK_ENV: "production"
+  POSTGRES_DB: "wildlife_db"
+  POSTGRES_USER: "wildlife_user"
+  REDIS_URL: "redis://redis-service:6379"
+  DATABASE_URL: "postgresql://wildlife_user:$(POSTGRES_PASSWORD)@postgres-service:5432/wildlife_db"
+  INFLUXDB_URL: "http://influxdb-service:8086"
+  INFLUXDB_ORG: "wildlife"
+  INFLUXDB_BUCKET: "camera_data"
+  REACT_APP_API_URL: "http://api.wildcam.local"
+  REACT_APP_WEBSOCKET_URL: "ws://api.wildcam.local"
