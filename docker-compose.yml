@@ -9,34 +9,96 @@ services:
       POSTGRES_PASSWORD: secure_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations/init_database.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./backend/migrations/sample_data.sql:/docker-entrypoint-initdb.d/02-sample-data.sql
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wildlife_user -d wildlife_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   backend:
     build: ./backend
     environment:
       DATABASE_URL: postgresql://wildlife_user:secure_password@postgres:5432/wildlife_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-jwt-secret-change-in-production}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      S3_BUCKET: wildlife-captures
+      S3_BUCKET: ${S3_BUCKET:-wildlife-captures}
+      FLASK_ENV: ${FLASK_ENV:-production}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "5000:5000"
     volumes:
       - ./backend:/app
-      - ./models:/app/models
+      - backend_uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
-    build: ./frontend
+    build: ./frontend/dashboard
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:5000}
+      REACT_APP_WEBSOCKET_URL: ${REACT_APP_WEBSOCKET_URL:-http://localhost:5000}
     ports:
       - "3000:3000"
-    environment:
-      REACT_APP_API_URL: http://localhost:5000
     volumes:
-      - ./frontend:/app
+      - ./frontend/dashboard:/app
       - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: MQTT broker for ESP32 communication
   mqtt_broker:
     image: eclipse-mosquitto:2
     ports:
@@ -45,12 +107,30 @@ services:
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/log
+    restart: unless-stopped
 
-  redis:
-    image: redis:7
+  # Optional: InfluxDB for time-series data
+  influxdb:
+    image: influxdb:2.7
     ports:
-      - "6379:6379"
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-wildcam2024}
+      DOCKER_INFLUXDB_INIT_ORG: wildlife
+      DOCKER_INFLUXDB_INIT_BUCKET: camera_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-wildcam-dev-token}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  redis_data:
+  backend_uploads:
+  nginx_logs:
   mosquitto_data:
+  mosquitto_logs:
+  influxdb_data:
