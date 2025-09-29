@@ -1,0 +1,29 @@
+{
+  "federatedLearning": {
+    "enabled": true,
+    "contributionThreshold": 0.85,
+    "minSamplesBeforeContribution": 50,
+    "maxContributionsPerDay": 20,
+    "privacyLevel": "HIGH",
+    "privacyEpsilon": 0.5,
+    "anonymizeLocation": true,
+    "anonymizeTimestamps": true
+  },
+  "training": {
+    "learningRate": 0.001,
+    "localEpochs": 3,
+    "batchSize": 4,
+    "maxTrainingTimeMs": 180000
+  },
+  "network": {
+    "topology": "MESH",
+    "maxNodes": 15,
+    "maxHops": 3,
+    "protocolPriority": ["WiFi", "LoRa", "Cellular"]
+  },
+  "power": {
+    "enablePowerManagement": true,
+    "minBatteryLevel": 0.3,
+    "solarOptimized": true
+  }
+}

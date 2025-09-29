@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Wildlife CAM - Control Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23228b22' d='M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z'/></svg>">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🦅 ESP32 Wildlife CAM</h1>
+            <p class="subtitle">Real-time Wildlife Monitoring System</p>
+            <div class="status-indicators">
+                <div class="status-item">
+                    <span class="status-label">System Status:</span>
+                    <span id="system-status" class="status-value online">Online</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Battery:</span>
+                    <span id="battery-level" class="status-value">78%</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Uptime:</span>
+                    <span id="uptime" class="status-value">2d 14h 32m</span>
+                </div>
+            </div>
+        </header>
+
+        <nav class="navigation">
+            <button class="nav-btn active" data-section="live">Live View</button>
+            <button class="nav-btn" data-section="gallery">Gallery</button>
+            <button class="nav-btn" data-section="settings">Settings</button>
+            <button class="nav-btn" data-section="analytics">Analytics</button>
+            <button class="nav-btn" data-section="system">System</button>
+        </nav>
+
+        <main class="content">
+            <!-- Live View Section -->
+            <section id="live-section" class="section active">
+                <div class="live-view">
+                    <div class="camera-feed">
+                        <div class="feed-placeholder">
+                            <h3>📷 Live Camera Feed</h3>
+                            <p>Camera feed will appear here when streaming is enabled</p>
+                            <button id="start-stream" class="btn btn-primary">Start Live Stream</button>
+                        </div>
+                        <img id="live-image" src="" alt="Live camera feed" style="display: none;">
+                    </div>
+                    <div class="live-controls">
+                        <div class="control-group">
+                            <h3>Camera Controls</h3>
+                            <button id="capture-btn" class="btn btn-success">📸 Capture Photo</button>
+                            <button id="trigger-detection" class="btn btn-warning">🎯 Test Motion Detection</button>
+                        </div>
+                        <div class="control-group">
+                            <h3>Quick Settings</h3>
+                            <label>
+                                Motion Sensitivity:
+                                <input type="range" id="motion-sensitivity" min="1" max="10" value="5">
+                                <span id="sensitivity-value">5</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" id="night-mode"> Night Mode
+                            </label>
+                            <label>
+                                <input type="checkbox" id="flash-enabled" checked> Flash Enabled
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="recent-activity">
+                    <h3>Recent Activity</h3>
+                    <div id="activity-log" class="activity-list">
+                        <div class="activity-item">
+                            <span class="timestamp">2025-09-01 14:32:15</span>
+                            <span class="event">Motion detected - Squirrel captured</span>
+                        </div>
+                        <div class="activity-item">
+                            <span class="timestamp">2025-09-01 13:45:22</span>
+                            <span class="event">Bird feeding activity</span>
+                        </div>
+                        <div class="activity-item">
+                            <span class="timestamp">2025-09-01 12:18:07</span>
+                            <span class="event">System check completed</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gallery Section -->
+            <section id="gallery-section" class="section">
+                <div class="gallery-controls">
+                    <h2>Wildlife Gallery</h2>
+                    <div class="filters">
+                        <select id="date-filter">
+                            <option value="all">All Dates</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                        <select id="species-filter">
+                            <option value="all">All Species</option>
+                            <option value="birds">Birds</option>
+                            <option value="mammals">Mammals</option>
+                            <option value="unknown">Unknown</option>
+                        </select>
+                        <button id="download-all" class="btn btn-secondary">📥 Download All</button>
+                    </div>
+                </div>
+                <div id="image-gallery" class="image-grid">
+                    <!-- Images will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings-section" class="section">
+                <div class="settings-container">
+                    <h2>System Configuration</h2>
+                    
+                    <div class="settings-group">
+                        <h3>Camera Settings</h3>
+                        <div class="setting-row">
+                            <label for="image-quality">Image Quality:</label>
+                            <select id="image-quality">
+                                <option value="low">Low (Fast)</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High (Slow)</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label for="capture-resolution">Resolution:</label>
+                            <select id="capture-resolution">
+                                <option value="vga">VGA (640x480)</option>
+                                <option value="svga">SVGA (800x600)</option>
+                                <option value="xga" selected>XGA (1024x768)</option>
+                                <option value="sxga">SXGA (1280x1024)</option>
+                                <option value="uxga">UXGA (1600x1200)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Motion Detection</h3>
+                        <div class="setting-row">
+                            <label for="pir-sensitivity">PIR Sensitivity:</label>
+                            <input type="range" id="pir-sensitivity" min="1" max="10" value="5">
+                            <span id="pir-value">5</span>
+                        </div>
+                        <div class="setting-row">
+                            <label for="trigger-delay">Trigger Delay (seconds):</label>
+                            <input type="number" id="trigger-delay" min="1" max="300" value="30">
+                        </div>
+                        <div class="setting-row">
+                            <label>
+                                <input type="checkbox" id="burst-mode"> Burst Mode (3 photos)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Power Management</h3>
+                        <div class="setting-row">
+                            <label for="sleep-mode">Sleep Mode:</label>
+                            <select id="sleep-mode">
+                                <option value="disabled">Disabled</option>
+                                <option value="light" selected>Light Sleep</option>
+                                <option value="deep">Deep Sleep</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label for="low-battery-threshold">Low Battery Alert (V):</label>
+                            <input type="number" id="low-battery-threshold" min="3.0" max="4.2" step="0.1" value="3.5">
+                        </div>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button id="save-settings" class="btn btn-primary">💾 Save Settings</button>
+                        <button id="reset-settings" class="btn btn-danger">🔄 Reset to Defaults</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics-section" class="section">
+                <div class="analytics-container">
+                    <div class="analytics-header">
+                        <h2>Wildlife Analytics Dashboard</h2>
+                        <div class="analytics-controls">
+                            <select id="analytics-timerange" class="analytics-select">
+                                <option value="today">Today</option>
+                                <option value="week" selected>This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="year">This Year</option>
+                            </select>
+                            <button id="export-analytics" class="btn btn-secondary">📊 Export Data</button>
+                            <button id="refresh-analytics" class="btn btn-primary">🔄 Refresh</button>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Navigation Tabs -->
+                    <nav class="analytics-nav">
+                        <button class="analytics-tab active" data-tab="overview">📊 Overview</button>
+                        <button class="analytics-tab" data-tab="wildlife">🦌 Wildlife</button>
+                        <button class="analytics-tab" data-tab="system">⚙️ System Health</button>
+                        <button class="analytics-tab" data-tab="historical">📈 Historical</button>
+                        <button class="analytics-tab" data-tab="performance">🎯 Performance</button>
+                    </nav>
+
+                    <!-- Overview Tab -->
+                    <div id="overview-tab" class="analytics-tab-content active">
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-icon">📸</div>
+                                <div class="metric-content">
+                                    <h3>Total Captures</h3>
+                                    <div class="metric-value" id="total-captures">Loading...</div>
+                                    <div class="metric-change" id="captures-change">Calculating...</div>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-icon">🦝</div>
+                                <div class="metric-content">
+                                    <h3>Species Identified</h3>
+                                    <div class="metric-value" id="species-count">Loading...</div>
+                                    <div class="metric-change" id="species-change">Calculating...</div>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-icon">🌅</div>
+                                <div class="metric-content">
+                                    <h3>Peak Activity</h3>
+                                    <div class="metric-value" id="peak-activity">Loading...</div>
+                                    <div class="metric-change" id="activity-pattern">Analyzing...</div>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-icon">🎯</div>
+                                <div class="metric-content">
+                                    <h3>Detection Accuracy</h3>
+                                    <div class="metric-value" id="detection-accuracy">Loading...</div>
+                                    <div class="metric-change" id="accuracy-trend">Calculating...</div>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-icon">🔋</div>
+                                <div class="metric-content">
+                                    <h3>System Health</h3>
+                                    <div class="metric-value" id="system-health">Loading...</div>
+                                    <div class="metric-change" id="health-status">Checking...</div>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-icon">⏱️</div>
+                                <div class="metric-content">
+                                    <h3>Uptime</h3>
+                                    <div class="metric-value" id="system-uptime">Loading...</div>
+                                    <div class="metric-change" id="uptime-change">Calculating...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="charts-row">
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Daily Activity Pattern</h3>
+                                    <div class="chart-controls">
+                                        <button class="chart-toggle" data-chart="hourly">Hourly</button>
+                                        <button class="chart-toggle active" data-chart="daily">Daily</button>
+                                    </div>
+                                </div>
+                                <canvas id="overview-activity-chart" width="400" height="200"></canvas>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Species Distribution</h3>
+                                    <div class="chart-controls">
+                                        <button class="chart-toggle active" data-chart="pie">Pie</button>
+                                        <button class="chart-toggle" data-chart="bar">Bar</button>
+                                    </div>
+                                </div>
+                                <canvas id="overview-species-chart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wildlife Analytics Tab -->
+                    <div id="wildlife-tab" class="analytics-tab-content">
+                        <div class="wildlife-analytics">
+                            <div class="analytics-section">
+                                <h3>Species Detection Analytics</h3>
+                                <div class="charts-row">
+                                    <div class="chart-card">
+                                        <h4>Species Frequency</h4>
+                                        <canvas id="species-frequency-chart" width="300" height="150"></canvas>
+                                    </div>
+                                    <div class="chart-card">
+                                        <h4>Detection Confidence Distribution</h4>
+                                        <canvas id="confidence-distribution-chart" width="300" height="150"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Activity Patterns</h3>
+                                <div class="charts-row">
+                                    <div class="chart-card">
+                                        <h4>Hourly Activity Heatmap</h4>
+                                        <canvas id="hourly-heatmap-chart" width="300" height="150"></canvas>
+                                    </div>
+                                    <div class="chart-card">
+                                        <h4>Motion Detection Success Rate</h4>
+                                        <canvas id="motion-success-chart" width="300" height="150"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Species Details</h3>
+                                <div class="species-table-container">
+                                    <table id="species-details-table" class="analytics-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Species</th>
+                                                <th>Detections</th>
+                                                <th>Avg Confidence</th>
+                                                <th>Activity Pattern</th>
+                                                <th>Last Seen</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="species-table-body">
+                                            <!-- Populated by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Health Tab -->
+                    <div id="system-tab" class="analytics-tab-content">
+                        <div class="system-health-analytics">
+                            <div class="analytics-section">
+                                <h3>Power Management</h3>
+                                <div class="charts-row">
+                                    <div class="chart-card">
+                                        <h4>Battery Level Trend</h4>
+                                        <canvas id="battery-trend-chart" width="300" height="150"></canvas>
+                                    </div>
+                                    <div class="chart-card">
+                                        <h4>Power Consumption</h4>
+                                        <canvas id="power-consumption-chart" width="300" height="150"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Storage & Network</h3>
+                                <div class="charts-row">
+                                    <div class="chart-card">
+                                        <h4>Storage Usage</h4>
+                                        <canvas id="storage-usage-chart" width="300" height="150"></canvas>
+                                    </div>
+                                    <div class="chart-card">
+                                        <h4>Network Performance</h4>
+                                        <canvas id="network-performance-chart" width="300" height="150"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Environmental Conditions</h3>
+                                <div class="charts-row">
+                                    <div class="chart-card">
+                                        <h4>Temperature Trend</h4>
+                                        <canvas id="temperature-trend-chart" width="300" height="150"></canvas>
+                                    </div>
+                                    <div class="chart-card">
+                                        <h4>System Load</h4>
+                                        <canvas id="system-load-chart" width="300" height="150"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Historical Trends Tab -->
+                    <div id="historical-tab" class="analytics-tab-content">
+                        <div class="historical-analytics">
+                            <div class="analytics-section">
+                                <h3>Long-term Trends</h3>
+                                <div class="trend-summary">
+                                    <div class="trend-card">
+                                        <h4>Capture Growth</h4>
+                                        <div class="trend-value" id="capture-growth">+23%</div>
+                                        <div class="trend-period">vs last period</div>
+                                    </div>
+                                    <div class="trend-card">
+                                        <h4>Accuracy Improvement</h4>
+                                        <div class="trend-value" id="accuracy-improvement">+5.2%</div>
+                                        <div class="trend-period">vs last period</div>
+                                    </div>
+                                    <div class="trend-card">
+                                        <h4>Species Discovered</h4>
+                                        <div class="trend-value" id="species-discovered">8</div>
+                                        <div class="trend-period">new species</div>
+                                    </div>
+                                    <div class="trend-card">
+                                        <h4>System Reliability</h4>
+                                        <div class="trend-value" id="system-reliability">99.2%</div>
+                                        <div class="trend-period">uptime</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Monthly Comparison</h3>
+                                <canvas id="monthly-comparison-chart" width="600" height="300"></canvas>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Seasonal Patterns</h3>
+                                <canvas id="seasonal-patterns-chart" width="600" height="300"></canvas>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Milestones & Achievements</h3>
+                                <div id="milestones-list" class="milestones-container">
+                                    <!-- Populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Tab -->
+                    <div id="performance-tab" class="analytics-tab-content">
+                        <div class="performance-analytics">
+                            <div class="analytics-section">
+                                <h3>System Performance Metrics</h3>
+                                <div class="performance-grid">
+                                    <div class="performance-card">
+                                        <h4>Overall Health Score</h4>
+                                        <div class="score-display">
+                                            <div class="score-circle">
+                                                <span id="overall-score">94</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="performance-card">
+                                        <h4>Component Status</h4>
+                                        <div class="component-status">
+                                            <div class="status-item">
+                                                <span>Camera</span>
+                                                <span class="status-badge good" id="camera-status">97%</span>
+                                            </div>
+                                            <div class="status-item">
+                                                <span>Storage</span>
+                                                <span class="status-badge warning" id="storage-status">89%</span>
+                                            </div>
+                                            <div class="status-item">
+                                                <span>Battery</span>
+                                                <span class="status-badge good" id="battery-status">92%</span>
+                                            </div>
+                                            <div class="status-item">
+                                                <span>Network</span>
+                                                <span class="status-badge excellent" id="network-status">96%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Processing Performance</h3>
+                                <div class="charts-row">
+                                    <div class="chart-card">
+                                        <h4>Response Time Trend</h4>
+                                        <canvas id="response-time-chart" width="300" height="150"></canvas>
+                                    </div>
+                                    <div class="chart-card">
+                                        <h4>Memory Utilization</h4>
+                                        <canvas id="memory-utilization-chart" width="300" height="150"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-section">
+                                <h3>Error Analysis</h3>
+                                <div class="error-metrics">
+                                    <div class="error-card">
+                                        <h4>Total Errors</h4>
+                                        <div class="error-count" id="total-errors">12</div>
+                                        <div class="error-trend">↓ 25% from last week</div>
+                                    </div>
+                                    <div class="error-card">
+                                        <h4>Critical Errors</h4>
+                                        <div class="error-count critical" id="critical-errors">0</div>
+                                        <div class="error-trend">No critical issues</div>
+                                    </div>
+                                    <div class="error-card">
+                                        <h4>Recovery Rate</h4>
+                                        <div class="error-count" id="recovery-rate">100%</div>
+                                        <div class="error-trend">Excellent reliability</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Section -->
+            <section id="system-section" class="section">
+                <div class="system-container">
+                    <h2>System Information</h2>
+                    
+                    <div class="system-grid">
+                        <div class="system-card">
+                            <h3>Hardware Status</h3>
+                            <div class="status-list">
+                                <div class="status-row">
+                                    <span>ESP32-CAM:</span>
+                                    <span class="status-ok">✅ Online</span>
+                                </div>
+                                <div class="status-row">
+                                    <span>Camera (OV2640):</span>
+                                    <span class="status-ok">✅ Functional</span>
+                                </div>
+                                <div class="status-row">
+                                    <span>PIR Sensor:</span>
+                                    <span class="status-ok">✅ Active</span>
+                                </div>
+                                <div class="status-row">
+                                    <span>SD Card:</span>
+                                    <span class="status-ok">✅ 28.3GB Free</span>
+                                </div>
+                                <div class="status-row">
+                                    <span>WiFi:</span>
+                                    <span class="status-ok">✅ Connected (-42 dBm)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="system-card">
+                            <h3>Power Status</h3>
+                            <div class="power-info">
+                                <div class="battery-indicator">
+                                    <div class="battery-bar">
+                                        <div class="battery-fill" style="width: 78%"></div>
+                                    </div>
+                                    <span>3.9V (78%)</span>
+                                </div>
+                                <div class="status-list">
+                                    <div class="status-row">
+                                        <span>Solar Panel:</span>
+                                        <span class="status-ok">⚡ Charging (45mA)</span>
+                                    </div>
+                                    <div class="status-row">
+                                        <span>Power Mode:</span>
+                                        <span>Light Sleep</span>
+                                    </div>
+                                    <div class="status-row">
+                                        <span>Est. Runtime:</span>
+                                        <span>4.2 days</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="system-card">
+                            <h3>Environmental Data</h3>
+                            <div class="env-data">
+                                <div class="env-item">
+                                    <span class="env-label">Temperature:</span>
+                                    <span class="env-value">23.4°C</span>
+                                </div>
+                                <div class="env-item">
+                                    <span class="env-label">Humidity:</span>
+                                    <span class="env-value">65.2%</span>
+                                </div>
+                                <div class="env-item">
+                                    <span class="env-label">Light Level:</span>
+                                    <span class="env-value">1,247 lux</span>
+                                </div>
+                                <div class="env-item">
+                                    <span class="env-label">Last Motion:</span>
+                                    <span class="env-value">14 min ago</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="system-actions">
+                        <button id="restart-system" class="btn btn-warning">🔄 Restart System</button>
+                        <button id="update-firmware" class="btn btn-info">⬆️ Update Firmware</button>
+                        <button id="download-logs" class="btn btn-secondary">📋 Download Logs</button>
+                        <button id="factory-reset" class="btn btn-danger">⚠️ Factory Reset</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 ESP32 Wildlife CAM Project | 
+               <a href="https://github.com/thewriterben/ESP32WildlifeCAM" target="_blank">GitHub</a> | 
+               <span id="device-info">Device: ESP32-CAM v2.0</span>
+            </p>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>

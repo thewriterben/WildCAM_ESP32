@@ -1,0 +1,26 @@
+solid ventilation_grilles
+  comment Ventilation grilles for wildlife camera enclosure
+  comment Features: Condensation prevention, insect protection
+  comment Compatibility: Breathable membrane mounting
+  comment Size: 20mm diameter openings
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 25.0 0.0 0.0
+      vertex 25.0 25.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 25.0 25.0 0.0
+      vertex 0.0 25.0 0.0
+    endloop
+  endfacet
+  comment Ventilation holes with protective mesh pattern
+  comment Multiple small holes better than few large ones
+  comment Angled design to prevent water entry
+endsolid ventilation_grilles

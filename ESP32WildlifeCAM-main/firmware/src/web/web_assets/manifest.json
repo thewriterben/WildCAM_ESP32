@@ -1,0 +1,218 @@
+{
+  "name": "ESP32 Wildlife Camera",
+  "short_name": "WildlifeCam",
+  "description": "Real-time monitoring and control for ESP32 Wildlife Camera system with mobile-optimized interface",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#2c3e50",
+  "theme_color": "#27ae60",
+  "orientation": "any",
+  "categories": ["utilities", "productivity", "photography"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/assets/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/badge-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "badge"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quick Capture",
+      "short_name": "Capture",
+      "description": "Take an instant photo with the wildlife camera",
+      "url": "/?action=capture&mode=quick",
+      "icons": [
+        {
+          "src": "/assets/capture-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Burst Mode",
+      "short_name": "Burst",
+      "description": "Capture multiple photos in burst mode",
+      "url": "/?action=capture&mode=burst",
+      "icons": [
+        {
+          "src": "/assets/burst-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "View Gallery",
+      "short_name": "Gallery",
+      "description": "Browse captured wildlife images",
+      "url": "/?action=gallery",
+      "icons": [
+        {
+          "src": "/assets/gallery-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Live Monitor",
+      "short_name": "Monitor",
+      "description": "View real-time camera monitoring dashboard",
+      "url": "/?action=monitor",
+      "icons": [
+        {
+          "src": "/assets/monitor-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/screenshot-mobile-dashboard.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile dashboard with real-time wildlife monitoring"
+    },
+    {
+      "src": "/assets/screenshot-mobile-gallery.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile image gallery with touch navigation"
+    },
+    {
+      "src": "/assets/screenshot-mobile-capture.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile camera controls and live preview"
+    },
+    {
+      "src": "/assets/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop dashboard with comprehensive controls"
+    },
+    {
+      "src": "/assets/screenshot-tablet.png",
+      "sizes": "1024x768",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Tablet interface optimized for field use"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+wildlifecam",
+      "url": "/?protocol=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "image/jpeg": [".jpg", ".jpeg"],
+        "image/png": [".png"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "image",
+          "accept": ["image/jpeg", "image/png"]
+        }
+      ]
+    }
+  },
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.wildlifecam.mobile",
+      "id": "com.wildlifecam.mobile"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/wildlife-camera-mobile/id123456789",
+      "id": "123456789"
+    }
+  ],
+  "prefer_related_applications": false,
+  "handle_links": "preferred"
+}

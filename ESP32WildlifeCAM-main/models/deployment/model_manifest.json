@@ -1,0 +1,229 @@
+{
+  "manifest_version": "1.0.0",
+  "created_date": "2025-08-21T03:45:43Z",
+  "description": "AI model manifest for ESP32 Wildlife Camera system",
+  "target_hardware": "ESP32-S3",
+  "models": [
+    {
+      "name": "species_classifier",
+      "version": "1.0.0",
+      "filename": "species_classifier_v1.0.0.tflite",
+      "model_type": "classification",
+      "description": "Wildlife species classification model",
+      "input_shape": [1, 224, 224, 3],
+      "output_shape": [1, 50],
+      "model_size_bytes": 524288,
+      "arena_size_bytes": 524288,
+      "checksum": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "accuracy": 0.92,
+      "inference_time_ms": 1200,
+      "power_consumption_ma": 180,
+      "optimization": {
+        "quantization": "INT8",
+        "pruning_ratio": 0.3,
+        "compression_ratio": 0.45
+      },
+      "training_info": {
+        "dataset_size": 50000,
+        "training_date": "2025-08-15",
+        "framework": "TensorFlow Lite",
+        "edge_impulse_project": "wildlife-classifier-v1"
+      },
+      "supported_species": [
+        "White-tailed Deer",
+        "Black Bear",
+        "Red Fox",
+        "Gray Wolf",
+        "Mountain Lion",
+        "Elk",
+        "Moose",
+        "Wild Turkey",
+        "Bald Eagle",
+        "Red-tailed Hawk",
+        "Great Blue Heron",
+        "Canada Goose",
+        "Mallard Duck",
+        "Raccoon",
+        "Opossum",
+        "Squirrel",
+        "Chipmunk",
+        "Rabbit",
+        "Skunk",
+        "Porcupine",
+        "Beaver",
+        "Otter",
+        "Mink",
+        "Coyote",
+        "Bobcat",
+        "Lynx",
+        "Fisher",
+        "Marten",
+        "Weasel",
+        "Badger",
+        "Snake",
+        "Turtle",
+        "Lizard",
+        "Frog",
+        "Salamander",
+        "Owl",
+        "Crow",
+        "Jay",
+        "Cardinal",
+        "Robin",
+        "Sparrow",
+        "Finch",
+        "Woodpecker",
+        "Hummingbird",
+        "Dove",
+        "Pigeon",
+        "Grouse",
+        "Pheasant",
+        "Quail",
+        "Human"
+      ]
+    },
+    {
+      "name": "behavior_analyzer",
+      "version": "1.0.0",
+      "filename": "behavior_analyzer_v1.0.0.tflite",
+      "model_type": "temporal_classification",
+      "description": "Animal behavior analysis model",
+      "input_shape": [1, 3, 160, 160, 3],
+      "output_shape": [1, 12],
+      "model_size_bytes": 307200,
+      "arena_size_bytes": 384000,
+      "checksum": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+      "accuracy": 0.87,
+      "inference_time_ms": 800,
+      "power_consumption_ma": 150,
+      "optimization": {
+        "quantization": "INT8",
+        "pruning_ratio": 0.25,
+        "compression_ratio": 0.4
+      },
+      "training_info": {
+        "dataset_size": 30000,
+        "training_date": "2025-08-18",
+        "framework": "TensorFlow Lite",
+        "edge_impulse_project": "behavior-analyzer-v1"
+      },
+      "supported_behaviors": [
+        "Feeding",
+        "Drinking",
+        "Resting",
+        "Moving",
+        "Alert",
+        "Grooming",
+        "Mating",
+        "Aggressive",
+        "Territorial",
+        "Social",
+        "Hunting",
+        "Playing"
+      ]
+    },
+    {
+      "name": "motion_detector",
+      "version": "1.0.0",
+      "filename": "motion_detector_v1.0.0.tflite",
+      "model_type": "detection",
+      "description": "AI-enhanced motion detection model",
+      "input_shape": [1, 96, 96, 1],
+      "output_shape": [1, 5],
+      "model_size_bytes": 102400,
+      "arena_size_bytes": 128000,
+      "checksum": "sha256:b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+      "accuracy": 0.95,
+      "inference_time_ms": 200,
+      "power_consumption_ma": 80,
+      "optimization": {
+        "quantization": "INT8",
+        "pruning_ratio": 0.5,
+        "compression_ratio": 0.6
+      },
+      "training_info": {
+        "dataset_size": 75000,
+        "training_date": "2025-08-20",
+        "framework": "TensorFlow Lite",
+        "edge_impulse_project": "motion-detector-v1"
+      },
+      "detection_capabilities": [
+        "Motion probability",
+        "Bounding box coordinates",
+        "Motion type classification",
+        "False positive filtering",
+        "Weather compensation"
+      ]
+    }
+  ],
+  "system_requirements": {
+    "min_psram_mb": 2,
+    "min_flash_mb": 4,
+    "min_cpu_frequency_mhz": 160,
+    "supported_boards": [
+      "ESP32-S3-DevKitC-1",
+      "ESP32-S3-EYE",
+      "ESP-EYE",
+      "ESP32-CAM"
+    ]
+  },
+  "deployment_config": {
+    "load_order": [
+      "motion_detector",
+      "species_classifier",
+      "behavior_analyzer"
+    ],
+    "memory_allocation": {
+      "species_classifier": "PSRAM_PREFERRED",
+      "behavior_analyzer": "PSRAM_PREFERRED",
+      "motion_detector": "INTERNAL_RAM"
+    },
+    "power_modes": {
+      "high_performance": {
+        "all_models_loaded": true,
+        "inference_interval_ms": 1000,
+        "cpu_frequency_mhz": 240
+      },
+      "balanced": {
+        "priority_models_only": true,
+        "inference_interval_ms": 2000,
+        "cpu_frequency_mhz": 160
+      },
+      "power_saving": {
+        "motion_detector_only": true,
+        "inference_interval_ms": 5000,
+        "cpu_frequency_mhz": 80
+      }
+    }
+  },
+  "update_channels": {
+    "stable": {
+      "url": "https://models.wildlifecam.org/stable/",
+      "check_interval_hours": 24,
+      "auto_update": false
+    },
+    "beta": {
+      "url": "https://models.wildlifecam.org/beta/",
+      "check_interval_hours": 6,
+      "auto_update": false
+    },
+    "edge_impulse": {
+      "project_id": "wildlife-camera-ai",
+      "api_endpoint": "https://studio.edgeimpulse.com/api/",
+      "auto_deploy": true
+    }
+  },
+  "validation": {
+    "required_tests": [
+      "model_integrity_check",
+      "memory_allocation_test",
+      "inference_speed_test",
+      "accuracy_validation"
+    ],
+    "benchmark_datasets": [
+      "validation_set_species_500.zip",
+      "validation_set_behavior_300.zip",
+      "validation_set_motion_1000.zip"
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "wildcam-mobile",
+  "version": "3.0.0",
+  "description": "WildCAM ESP32 v2.0 Mobile Companion App",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build:android": "expo build:android",
+    "build:ios": "expo build:ios"
+  },
+  "dependencies": {
+    "expo": "~49.0.0",
+    "react": "18.2.0",
+    "react-native": "0.72.6",
+    "react-native-maps": "1.7.1",
+    "react-native-camera": "^4.2.1",
+    "react-native-vector-icons": "^10.0.0",
+    "react-navigation": "^4.4.4",
+    "@react-navigation/native": "^6.1.7",
+    "@react-navigation/stack": "^6.3.17",
+    "@react-navigation/bottom-tabs": "^6.5.8",
+    "react-native-push-notification": "^8.1.1",
+    "react-native-permissions": "^3.8.0",
+    "react-native-image-picker": "^5.6.0",
+    "react-native-chart-kit": "^6.12.0",
+    "react-native-svg": "13.9.0",
+    "axios": "^1.5.0",
+    "moment": "^2.29.4",
+    "socket.io-client": "^4.7.2",
+    "react-native-super-grid": "^4.9.9",
+    "react-native-modal": "^13.0.1",
+    "react-native-animatable": "^1.3.8"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0"
+  },
+  "private": true
+}

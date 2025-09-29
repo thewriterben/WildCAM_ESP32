@@ -1,0 +1,246 @@
+solid ai_thinker_front_cover
+  comment Front panel with camera opening and LED indicators for ESP32-S3-CAM
+  comment Dimensions: 90mm x 70mm x 3mm thickness
+  comment Features: 12mm camera opening, LED status window, weatherproof seal groove
+  comment Material: Clear PETG recommended for LED visibility
+  comment Print settings: 0.15mm layer height, 30% infill for clarity
+
+  // Main cover plate (90x70x3mm)
+  // Bottom face
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 0.0 0.0
+      vertex 90.0 70.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 70.0 0.0
+      vertex 0.0 70.0 0.0
+    endloop
+  endfacet
+
+  // Top face (excluding camera opening)
+  // Left section
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 3.0
+      vertex 34.0 70.0 3.0
+      vertex 0.0 70.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 3.0
+      vertex 34.0 0.0 3.0
+      vertex 34.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Right section
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 56.0 0.0 3.0
+      vertex 90.0 70.0 3.0
+      vertex 90.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 56.0 0.0 3.0
+      vertex 56.0 70.0 3.0
+      vertex 90.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Top section (above camera)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 34.0 46.0 3.0
+      vertex 56.0 70.0 3.0
+      vertex 34.0 70.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 34.0 46.0 3.0
+      vertex 56.0 46.0 3.0
+      vertex 56.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Bottom section (below camera)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 34.0 0.0 3.0
+      vertex 56.0 24.0 3.0
+      vertex 56.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 34.0 0.0 3.0
+      vertex 34.0 24.0 3.0
+      vertex 56.0 24.0 3.0
+    endloop
+  endfacet
+
+  // Camera opening circular rim (12mm diameter centered at 45,35)
+  // Creating octagonal approximation for simplicity
+  // Point 1 (top)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 45.0 41.0 3.0
+      vertex 48.24 39.24 3.0
+      vertex 45.0 35.0 3.0
+    endloop
+  endfacet
+
+  // Point 2 (top-right)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 48.24 39.24 3.0
+      vertex 50.0 35.0 3.0
+      vertex 45.0 35.0 3.0
+    endloop
+  endfacet
+
+  // Point 3 (right)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 50.0 35.0 3.0
+      vertex 48.24 30.76 3.0
+      vertex 45.0 35.0 3.0
+    endloop
+  endfacet
+
+  // Point 4 (bottom-right)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 48.24 30.76 3.0
+      vertex 45.0 29.0 3.0
+      vertex 45.0 35.0 3.0
+    endloop
+  endfacet
+
+  // Point 5 (bottom)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 45.0 29.0 3.0
+      vertex 41.76 30.76 3.0
+      vertex 45.0 35.0 3.0
+    endloop
+  endfacet
+
+  // Point 6 (bottom-left)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 41.76 30.76 3.0
+      vertex 40.0 35.0 3.0
+      vertex 45.0 35.0 3.0
+    endloop
+  endfacet
+
+  // Point 7 (left)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 40.0 35.0 3.0
+      vertex 41.76 39.24 3.0
+      vertex 45.0 35.0 3.0
+    endloop
+  endfacet
+
+  // Point 8 (top-left)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 41.76 39.24 3.0
+      vertex 45.0 41.0 3.0
+      vertex 45.0 35.0 3.0
+    endloop
+  endfacet
+
+  // LED status window (5x5mm at position 75,60)
+  // Small rectangular opening
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 72.5 57.5 3.0
+      vertex 77.5 62.5 3.0
+      vertex 72.5 62.5 3.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 72.5 57.5 3.0
+      vertex 77.5 57.5 3.0
+      vertex 77.5 62.5 3.0
+    endloop
+  endfacet
+
+  // Outer edges
+  // Front edge
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 0.0 3.0
+      vertex 90.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 90.0 0.0 3.0
+      vertex 90.0 0.0 0.0
+    endloop
+  endfacet
+
+  // Back edge
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 70.0 0.0
+      vertex 90.0 70.0 3.0
+      vertex 0.0 70.0 3.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 70.0 0.0
+      vertex 90.0 70.0 0.0
+      vertex 90.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Left edge
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 70.0 3.0
+      vertex 0.0 0.0 3.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 70.0 0.0
+      vertex 0.0 70.0 3.0
+    endloop
+  endfacet
+
+  // Right edge
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 90.0 0.0 0.0
+      vertex 90.0 70.0 3.0
+      vertex 90.0 70.0 0.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 90.0 0.0 0.0
+      vertex 90.0 0.0 3.0
+      vertex 90.0 70.0 3.0
+    endloop
+  endfacet
+
+endsolid ai_thinker_front_cover

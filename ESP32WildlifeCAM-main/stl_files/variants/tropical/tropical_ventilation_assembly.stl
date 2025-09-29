@@ -1,0 +1,30 @@
+solid tropical_ventilation_assembly
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 30.0 30.0 0.0
+      vertex 50.0 30.0 0.0
+      vertex 50.0 50.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 30.0 30.0 0.0
+      vertex 50.0 50.0 0.0
+      vertex 30.0 50.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 30.0 30.0 15.0
+      vertex 50.0 50.0 15.0
+      vertex 50.0 30.0 15.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 30.0 30.0 15.0
+      vertex 30.0 50.0 15.0
+      vertex 50.0 50.0 15.0
+    endloop
+  endfacet
+endsolid tropical_ventilation_assembly

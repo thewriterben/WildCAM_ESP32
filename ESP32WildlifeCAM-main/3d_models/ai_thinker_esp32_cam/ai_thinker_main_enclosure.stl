@@ -1,0 +1,40 @@
+solid ai_thinker_main_enclosure
+  comment This is a placeholder STL file for the AI-Thinker ESP32-CAM main enclosure
+  comment Dimensions: 85mm x 65mm x 45mm internal volume
+  comment Features: IP65 weatherproofing, camera lens opening, antenna access
+  comment Material: PETG or ASA recommended for outdoor use
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  comment Basic rectangular enclosure definition (placeholder geometry)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 85.0 0.0 0.0
+      vertex 85.0 65.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 85.0 65.0 0.0
+      vertex 0.0 65.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 45.0
+      vertex 85.0 65.0 45.0
+      vertex 85.0 0.0 45.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 45.0
+      vertex 0.0 65.0 45.0
+      vertex 85.0 65.0 45.0
+    endloop
+  endfacet
+  comment Additional faces would be defined here for a complete enclosure
+  comment This is a minimal placeholder - actual model needs proper geometry
+endsolid ai_thinker_main_enclosure

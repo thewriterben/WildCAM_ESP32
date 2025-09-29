@@ -1,0 +1,565 @@
+solid basic_wildlife_cam_case
+  comment Simple enclosure option for basic ESP32-S3-CAM deployments
+  comment Dimensions: 70mm x 50mm x 35mm (simple rectangular design)
+  comment Features: Basic weather protection, easy assembly, cost optimization
+  comment Material: PLA or PETG for easy printing
+  comment Print settings: 0.3mm layer height, 15% infill for quick printing
+
+  // Main case body (70x50x35mm external, 65x45x30mm internal)
+  // Bottom face
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 70.0 0.0 0.0
+      vertex 70.0 50.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 70.0 50.0 0.0
+      vertex 0.0 50.0 0.0
+    endloop
+  endfacet
+
+  // Internal cavity floor (65x45mm)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 67.5 47.5 2.5
+      vertex 67.5 2.5 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 2.5 47.5 2.5
+      vertex 67.5 47.5 2.5
+    endloop
+  endfacet
+
+  // External walls
+  // Front wall (with camera opening)
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 0.0 35.0
+      vertex 25.0 0.0 35.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 25.0 0.0 35.0
+      vertex 25.0 0.0 0.0
+    endloop
+  endfacet
+  // Camera opening gap (20mm wide)
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 45.0 0.0 0.0
+      vertex 45.0 0.0 35.0
+      vertex 70.0 0.0 35.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 45.0 0.0 0.0
+      vertex 70.0 0.0 35.0
+      vertex 70.0 0.0 0.0
+    endloop
+  endfacet
+
+  // Back wall
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 50.0 0.0
+      vertex 70.0 50.0 35.0
+      vertex 0.0 50.0 35.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 50.0 0.0
+      vertex 70.0 50.0 0.0
+      vertex 70.0 50.0 35.0
+    endloop
+  endfacet
+
+  // Left wall
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 50.0 35.0
+      vertex 0.0 0.0 35.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 50.0 0.0
+      vertex 0.0 50.0 35.0
+    endloop
+  endfacet
+
+  // Right wall
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 70.0 0.0 0.0
+      vertex 70.0 50.0 35.0
+      vertex 70.0 50.0 0.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 70.0 0.0 0.0
+      vertex 70.0 0.0 35.0
+      vertex 70.0 50.0 35.0
+    endloop
+  endfacet
+
+  // Internal walls
+  // Front internal wall (with camera opening)
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 2.5 2.5 32.5
+      vertex 28.0 2.5 32.5
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 28.0 2.5 32.5
+      vertex 28.0 2.5 2.5
+    endloop
+  endfacet
+  // Camera opening in internal wall (14mm)
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 42.0 2.5 2.5
+      vertex 42.0 2.5 32.5
+      vertex 67.5 2.5 32.5
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 42.0 2.5 2.5
+      vertex 67.5 2.5 32.5
+      vertex 67.5 2.5 2.5
+    endloop
+  endfacet
+
+  // Back internal wall
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 2.5 47.5 2.5
+      vertex 67.5 47.5 32.5
+      vertex 2.5 47.5 32.5
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 2.5 47.5 2.5
+      vertex 67.5 47.5 2.5
+      vertex 67.5 47.5 32.5
+    endloop
+  endfacet
+
+  // Left internal wall
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 2.5 47.5 32.5
+      vertex 2.5 2.5 32.5
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 2.5 47.5 2.5
+      vertex 2.5 47.5 32.5
+    endloop
+  endfacet
+
+  // Right internal wall
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 67.5 2.5 2.5
+      vertex 67.5 47.5 32.5
+      vertex 67.5 47.5 2.5
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 67.5 2.5 2.5
+      vertex 67.5 2.5 32.5
+      vertex 67.5 47.5 32.5
+    endloop
+  endfacet
+
+  // ESP32-S3-CAM mounting posts (4 posts for 45x30mm board)
+  // Post 1 (front-left)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 12.5 10.0 2.5
+      vertex 15.5 13.0 5.0
+      vertex 12.5 13.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 12.5 10.0 2.5
+      vertex 15.5 10.0 2.5
+      vertex 15.5 13.0 5.0
+    endloop
+  endfacet
+
+  // Post 1 sides
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 12.5 10.0 2.5
+      vertex 12.5 10.0 5.0
+      vertex 15.5 10.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 12.5 10.0 2.5
+      vertex 15.5 10.0 5.0
+      vertex 15.5 10.0 2.5
+    endloop
+  endfacet
+
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 12.5 13.0 2.5
+      vertex 15.5 13.0 5.0
+      vertex 12.5 13.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 12.5 13.0 2.5
+      vertex 15.5 13.0 2.5
+      vertex 15.5 13.0 5.0
+    endloop
+  endfacet
+
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 12.5 10.0 2.5
+      vertex 12.5 13.0 5.0
+      vertex 12.5 10.0 5.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 12.5 10.0 2.5
+      vertex 12.5 13.0 2.5
+      vertex 12.5 13.0 5.0
+    endloop
+  endfacet
+
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 15.5 10.0 2.5
+      vertex 15.5 13.0 5.0
+      vertex 15.5 13.0 2.5
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 15.5 10.0 2.5
+      vertex 15.5 10.0 5.0
+      vertex 15.5 13.0 5.0
+    endloop
+  endfacet
+
+  // Post 2 (front-right)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 54.5 10.0 2.5
+      vertex 57.5 13.0 5.0
+      vertex 54.5 13.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 54.5 10.0 2.5
+      vertex 57.5 10.0 2.5
+      vertex 57.5 13.0 5.0
+    endloop
+  endfacet
+
+  // Post 3 (back-left)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 12.5 37.0 2.5
+      vertex 15.5 40.0 5.0
+      vertex 12.5 40.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 12.5 37.0 2.5
+      vertex 15.5 37.0 2.5
+      vertex 15.5 40.0 5.0
+    endloop
+  endfacet
+
+  // Post 4 (back-right)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 54.5 37.0 2.5
+      vertex 57.5 40.0 5.0
+      vertex 54.5 40.0 5.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 54.5 37.0 2.5
+      vertex 57.5 37.0 2.5
+      vertex 57.5 40.0 5.0
+    endloop
+  endfacet
+
+  // Simple lid mounting rim (around top edge)
+  // Front rim sections
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 35.0
+      vertex 25.0 2.5 35.0
+      vertex 25.0 0.0 35.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 35.0
+      vertex 0.0 2.5 35.0
+      vertex 25.0 2.5 35.0
+    endloop
+  endfacet
+
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 45.0 0.0 35.0
+      vertex 70.0 2.5 35.0
+      vertex 70.0 0.0 35.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 45.0 0.0 35.0
+      vertex 45.0 2.5 35.0
+      vertex 70.0 2.5 35.0
+    endloop
+  endfacet
+
+  // Back rim
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 47.5 35.0
+      vertex 70.0 50.0 35.0
+      vertex 0.0 50.0 35.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 47.5 35.0
+      vertex 70.0 47.5 35.0
+      vertex 70.0 50.0 35.0
+    endloop
+  endfacet
+
+  // Left rim
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 2.5 35.0
+      vertex 2.5 47.5 35.0
+      vertex 0.0 47.5 35.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 2.5 35.0
+      vertex 2.5 2.5 35.0
+      vertex 2.5 47.5 35.0
+    endloop
+  endfacet
+
+  // Right rim
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 67.5 2.5 35.0
+      vertex 70.0 47.5 35.0
+      vertex 70.0 2.5 35.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 67.5 2.5 35.0
+      vertex 67.5 47.5 35.0
+      vertex 70.0 47.5 35.0
+    endloop
+  endfacet
+
+  // Simple mounting lugs (for external mounting)
+  // Lug 1 (left side)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex -5.0 20.0 15.0
+      vertex 0.0 30.0 20.0
+      vertex -5.0 30.0 20.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex -5.0 20.0 15.0
+      vertex 0.0 20.0 15.0
+      vertex 0.0 30.0 20.0
+    endloop
+  endfacet
+
+  // Lug 1 sides
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex -5.0 20.0 15.0
+      vertex -5.0 30.0 20.0
+      vertex -5.0 20.0 20.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex -5.0 20.0 15.0
+      vertex -5.0 30.0 15.0
+      vertex -5.0 30.0 20.0
+    endloop
+  endfacet
+
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex -5.0 20.0 15.0
+      vertex -5.0 20.0 20.0
+      vertex 0.0 20.0 20.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex -5.0 20.0 15.0
+      vertex 0.0 20.0 20.0
+      vertex 0.0 20.0 15.0
+    endloop
+  endfacet
+
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex -5.0 30.0 15.0
+      vertex 0.0 30.0 20.0
+      vertex -5.0 30.0 20.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex -5.0 30.0 15.0
+      vertex 0.0 30.0 15.0
+      vertex 0.0 30.0 20.0
+    endloop
+  endfacet
+
+  // Lug 2 (right side)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 70.0 20.0 15.0
+      vertex 75.0 30.0 20.0
+      vertex 70.0 30.0 20.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 70.0 20.0 15.0
+      vertex 75.0 20.0 15.0
+      vertex 75.0 30.0 20.0
+    endloop
+  endfacet
+
+  // Lug 2 sides
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 75.0 20.0 15.0
+      vertex 75.0 30.0 20.0
+      vertex 75.0 30.0 15.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 75.0 20.0 15.0
+      vertex 75.0 20.0 20.0
+      vertex 75.0 30.0 20.0
+    endloop
+  endfacet
+
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 70.0 20.0 15.0
+      vertex 70.0 20.0 20.0
+      vertex 75.0 20.0 20.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 70.0 20.0 15.0
+      vertex 75.0 20.0 20.0
+      vertex 75.0 20.0 15.0
+    endloop
+  endfacet
+
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 70.0 30.0 15.0
+      vertex 75.0 30.0 20.0
+      vertex 70.0 30.0 20.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 70.0 30.0 15.0
+      vertex 75.0 30.0 15.0
+      vertex 75.0 30.0 20.0
+    endloop
+  endfacet
+
+  // Mounting holes in lugs (6mm diameter approximated)
+  // Hole 1
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex -2.5 23.0 17.5
+      vertex -2.5 27.0 17.5
+      vertex 2.5 27.0 17.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex -2.5 23.0 17.5
+      vertex 2.5 27.0 17.5
+      vertex 2.5 23.0 17.5
+    endloop
+  endfacet
+
+  // Hole 2
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 67.5 23.0 17.5
+      vertex 67.5 27.0 17.5
+      vertex 72.5 27.0 17.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 67.5 23.0 17.5
+      vertex 72.5 27.0 17.5
+      vertex 72.5 23.0 17.5
+    endloop
+  endfacet
+
+endsolid basic_wildlife_cam_case

@@ -1,0 +1,36 @@
+{
+  "motion_detection": {
+    "pir_sensitivity": 0.75,
+    "frame_analysis_threshold": 0.6,
+    "ml_confidence_threshold": 0.8,
+    "multi_zone_enabled": true,
+    "zones": {
+      "1": {
+        "pin": 16,
+        "sensitivity": 0.75,
+        "priority": 0
+      },
+      "2": {
+        "pin": 17,
+        "sensitivity": 0.75,
+        "priority": 128
+      },
+      "3": {
+        "pin": 1,
+        "sensitivity": 0.75,
+        "priority": 255
+      }
+    }
+  },
+  "wildlife_profile": "general",
+  "environmental": {
+    "wind_compensation": true,
+    "temperature_adjustment": true,
+    "lighting_adaptation": true
+  },
+  "performance": {
+    "max_processing_time_ms": 500,
+    "power_optimization": true,
+    "adaptive_mode": true
+  }
+}

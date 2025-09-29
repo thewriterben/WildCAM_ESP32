@@ -1,0 +1,27 @@
+solid mounting_hardware
+  comment Universal mounting bracket system
+  comment Compatible with tripod, wall, tree, and pole mounting
+  comment Standard 1/4"-20 tripod thread
+  comment M4 wall mounting holes at 50mm spacing
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 60.0 0.0 0.0
+      vertex 60.0 50.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 60.0 50.0 0.0
+      vertex 0.0 50.0 0.0
+    endloop
+  endfacet
+  comment Tripod thread hole at center (25, 30)
+  comment M4 mounting holes at corners
+  comment Tree strap slots on sides
+  comment Adjustable joint mechanism
+endsolid mounting_hardware

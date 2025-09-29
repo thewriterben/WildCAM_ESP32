@@ -1,0 +1,29 @@
+solid battery_compartment_ai_thinker
+  comment Secure battery housing for AI-Thinker ESP32-CAM
+  comment Accommodates 18650 Li-ion batteries
+  comment Weatherproof IP54+ seal design
+  comment Integrates with ai_thinker_main_enclosure
+  comment Easy access for maintenance and replacement
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 72.0 0.0 0.0
+      vertex 72.0 22.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 72.0 22.0 0.0
+      vertex 0.0 22.0 0.0
+    endloop
+  endfacet
+  comment 18650 battery dimensions: 65mm x 18.6mm
+  comment Spring contacts for reliable power connection
+  comment Removable lid with O-ring gasket
+  comment Cable routing for power management PCB
+  comment Compatible with solar charging circuit
+endsolid battery_compartment_ai_thinker

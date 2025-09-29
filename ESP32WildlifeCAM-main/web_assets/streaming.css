@@ -1,0 +1,347 @@
+/* ESP32 Wildlife Camera - Streaming Dashboard Styles */
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #27ae60;
+    --danger-color: #e74c3c;
+    --warning-color: #f39c12;
+    --info-color: #17a2b8;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --muted-color: #6c757d;
+}
+
+/* Stream viewer specific styles */
+.stream-viewer {
+    position: relative;
+    overflow: hidden;
+}
+
+.stream-viewer img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.stream-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+/* Enhanced button styles */
+.btn-group {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+/* Status indicators */
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-badge.online {
+    background: var(--success-color);
+    color: white;
+}
+
+.status-badge.offline {
+    background: var(--muted-color);
+    color: white;
+}
+
+.status-badge.warning {
+    background: var(--warning-color);
+    color: white;
+}
+
+/* Progress bars */
+.progress {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--success-color);
+    transition: width 0.3s ease;
+}
+
+.progress-bar.warning {
+    background: var(--warning-color);
+}
+
+.progress-bar.danger {
+    background: var(--danger-color);
+}
+
+/* Chart containers */
+.chart-container {
+    height: 200px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+/* Responsive design improvements */
+@media (max-width: 992px) {
+    .content {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        margin: 10px;
+        border-radius: 4px;
+    }
+    
+    .header {
+        padding: 15px;
+    }
+    
+    .content {
+        padding: 15px;
+    }
+    
+    .stream-controls {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+/* Loading states */
+.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Tooltips */
+.tooltip {
+    position: relative;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
+}
+
+/* Enhanced form controls */
+.form-check {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.form-check input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* Alert messages */
+.alert {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid transparent;
+}
+
+.alert-info {
+    background: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.alert-success {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+/* Card-like containers */
+.card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.card-header {
+    background: var(--light-color);
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+/* Timeline for events */
+.timeline {
+    list-style: none;
+    padding: 0;
+}
+
+.timeline-item {
+    padding: 10px 0;
+    border-left: 2px solid #ddd;
+    margin-left: 10px;
+    padding-left: 20px;
+    position: relative;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 15px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--primary-color);
+}
+
+.timeline-time {
+    font-size: 12px;
+    color: var(--muted-color);
+}
+
+/* Motion detection specific styles */
+.motion-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 5px;
+}
+
+.motion-active {
+    background: var(--success-color);
+    animation: pulse 1s infinite;
+}
+
+.motion-inactive {
+    background: var(--muted-color);
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Power level indicators */
+.power-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.battery-icon {
+    width: 20px;
+    height: 12px;
+    border: 1px solid #333;
+    border-radius: 2px;
+    position: relative;
+}
+
+.battery-icon::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    top: 3px;
+    width: 2px;
+    height: 6px;
+    background: #333;
+    border-radius: 0 1px 1px 0;
+}
+
+.battery-level {
+    height: 100%;
+    background: var(--success-color);
+    border-radius: 1px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.battery-level.low {
+    background: var(--danger-color);
+}
+
+.battery-level.medium {
+    background: var(--warning-color);
+}

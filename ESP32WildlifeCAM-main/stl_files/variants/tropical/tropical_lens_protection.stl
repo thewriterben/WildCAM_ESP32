@@ -1,0 +1,30 @@
+solid tropical_lens_protection
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 15.0 15.0 0.0
+      vertex 35.0 15.0 0.0
+      vertex 35.0 35.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 15.0 15.0 0.0
+      vertex 35.0 35.0 0.0
+      vertex 15.0 35.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 15.0 15.0 8.0
+      vertex 35.0 35.0 8.0
+      vertex 35.0 15.0 8.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 15.0 15.0 8.0
+      vertex 15.0 35.0 8.0
+      vertex 35.0 35.0 8.0
+    endloop
+  endfacet
+endsolid tropical_lens_protection

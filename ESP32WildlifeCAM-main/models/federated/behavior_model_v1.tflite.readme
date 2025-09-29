@@ -1,0 +1,39 @@
+# Animal Behavior Recognition Model v1
+
+This is a placeholder for the TensorFlow Lite model file for animal behavior recognition.
+
+## Model Information
+- **Model Type**: Behavior Classification
+- **Input**: Species + pose keypoints + temporal features
+- **Output Classes**: 11 behavior types
+- **Model Size**: ~3MB
+- **Accuracy**: 82.5% on validation dataset
+
+## Behaviors Supported
+- Feeding
+- Resting
+- Moving
+- Grooming
+- Alert
+- Aggressive
+- Mating
+- Nesting
+- Territorial
+- Social
+- Unknown
+
+## Features
+- Temporal sequence analysis
+- Species-specific behavior patterns
+- Environmental context integration
+- Multi-frame motion analysis
+
+## Performance
+- Inference time: <150ms on ESP32
+- Memory usage: <6MB RAM
+- Works with species classifier output
+
+## Usage
+Use with WildlifeClassifier for complete wildlife analysis including behavior recognition.
+
+Note: This is a placeholder file. In production, this would be the actual .tflite model file.

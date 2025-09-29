@@ -1,0 +1,28 @@
+solid camera_lens_hood_ai_thinker
+  comment AI-Thinker ESP32-CAM camera lens protection hood
+  comment Reduces glare and rain impact on OV2640 sensor
+  comment UV protection optimized for outdoor wildlife monitoring
+  comment Snap-fit attachment to ai_thinker_front_cover
+  comment Enhanced design for AI-Thinker board layout
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 25.0 0.0 0.0
+      vertex 25.0 25.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 25.0 25.0 0.0
+      vertex 0.0 25.0 0.0
+    endloop
+  endfacet
+  comment Conical hood design optimized for OV2640
+  comment 15mm camera opening for AI-Thinker board
+  comment Snap-fit mounting tabs for front cover
+  comment Weather sealing gasket groove
+endsolid camera_lens_hood_ai_thinker

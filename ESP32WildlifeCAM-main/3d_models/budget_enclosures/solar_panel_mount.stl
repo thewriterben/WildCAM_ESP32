@@ -1,0 +1,26 @@
+solid solar_panel_mount
+  comment Simple solar panel mounting bracket
+  comment Compatible with: 60-100mm solar panels
+  comment Fixed 30-degree tilt for optimal charging
+  comment Material: PLA or PETG
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 100.0 0.0 0.0
+      vertex 100.0 12.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 100.0 12.0 0.0
+      vertex 0.0 12.0 0.0
+    endloop
+  endfacet
+  comment Simple L-bracket design
+  comment Panel mounting slots
+  comment Enclosure attachment points
+endsolid solar_panel_mount

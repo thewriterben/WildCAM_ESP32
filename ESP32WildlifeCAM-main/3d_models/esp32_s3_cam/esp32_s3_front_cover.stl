@@ -1,0 +1,19 @@
+solid esp32_s3_front_cover
+  comment This is a placeholder STL file for the ESP32-S3-CAM front cover
+  comment Dimensions: Matches main enclosure front opening
+  comment Features: Clear PETG window for camera, weatherproof seal groove
+  comment Features: Optimized for OV5640 5MP sensor with larger lens diameter
+  comment Features: Anti-reflection surface treatment area
+  comment Features: Wildlife-optimized field of view protection
+  comment Material: Clear PETG for camera window, regular PETG for frame
+  comment Print settings: 0.15mm layer height for smooth surface finish
+  comment Post-processing: Polish camera window area, install O-ring seal
+  comment UV resistance: Critical for outdoor wildlife monitoring
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 1.0 0.0 0.0
+      vertex 0.0 1.0 0.0
+    endloop
+  endfacet
+endsolid esp32_s3_front_cover

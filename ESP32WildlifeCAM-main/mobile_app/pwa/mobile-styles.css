@@ -1,0 +1,522 @@
+/**
+ * Mobile-specific CSS enhancements for Wildlife Camera Dashboard
+ * Touch-optimized controls and responsive design improvements
+ */
+
+/* Mobile optimization classes */
+.mobile-optimized {
+    /* Enable hardware acceleration on mobile */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+.touch-enabled .btn,
+.touch-enabled .card,
+.touch-enabled .touch-target {
+    /* Minimum touch target size */
+    min-height: 44px;
+    min-width: 44px;
+    
+    /* Touch feedback */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.touch-enabled .btn:active,
+.touch-enabled .card:active,
+.touch-enabled .touch-target:active,
+.touch-active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile navigation */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-color);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease;
+}
+
+.mobile-menu-toggle:hover {
+    background-color: var(--surface-color);
+}
+
+.mobile-nav {
+    transition: transform 0.3s ease;
+}
+
+/* Pull-to-refresh indicator */
+.pull-refresh-indicator {
+    position: fixed;
+    top: -100px;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.pull-refresh-indicator.ready {
+    background: var(--success-color);
+}
+
+.pull-refresh-indicator.refreshing {
+    background: var(--warning-color);
+}
+
+.pull-refresh-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Install prompt */
+.install-prompt {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card-color);
+    border-top: 1px solid var(--border-color);
+    padding: var(--spacing-lg);
+    z-index: 1001;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.install-prompt.show {
+    transform: translateY(0);
+}
+
+.install-prompt-content {
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.install-prompt-icon {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.install-prompt h3 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-color);
+}
+
+.install-prompt p {
+    margin: 0 0 var(--spacing-lg) 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.install-prompt-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: center;
+}
+
+/* Context menu for long press */
+.context-menu {
+    position: absolute;
+    background: var(--card-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1002;
+    min-width: 150px;
+    padding: var(--spacing-xs) 0;
+    animation: contextMenuFadeIn 0.2s ease;
+}
+
+.mobile-context-menu {
+    font-size: var(--font-size-lg);
+}
+
+.context-option {
+    width: 100%;
+    border: none;
+    background: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-align: left;
+    color: var(--text-color);
+    font-size: var(--font-size-sm);
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    min-height: 44px; /* Touch target */
+}
+
+.context-option:hover {
+    background-color: var(--surface-color);
+}
+
+@keyframes contextMenuFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Update notification */
+.update-notification {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--primary-color);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-md);
+    z-index: 1003;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.update-notification.show {
+    transform: translateY(0);
+}
+
+.update-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Mobile responsive breakpoints */
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: block;
+    }
+    
+    .mobile-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px;
+        height: 100vh;
+        background: var(--card-color);
+        border-right: 1px solid var(--border-color);
+        transform: translateX(-100%);
+        z-index: 999;
+        padding-top: 60px;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .mobile-nav.nav-open {
+        transform: translateX(0);
+    }
+    
+    /* Overlay for mobile nav */
+    .mobile-nav.nav-open::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 280px;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+    }
+    
+    /* Adjust dashboard grid for mobile */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+    }
+    
+    .card {
+        margin-bottom: var(--spacing-md);
+        padding: var(--spacing-lg);
+    }
+    
+    /* Mobile-optimized buttons */
+    .btn {
+        min-height: 48px;
+        padding: var(--spacing-md) var(--spacing-lg);
+        font-size: var(--font-size-base);
+    }
+    
+    .btn-sm {
+        min-height: 36px;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-sm);
+    }
+    
+    /* Image grid adjustments */
+    .image-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: var(--spacing-sm);
+    }
+    
+    /* Modal adjustments for mobile */
+    .modal {
+        margin: 0;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .modal-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --spacing-xs: 0.125rem;
+        --spacing-sm: 0.375rem;
+        --spacing-md: 0.75rem;
+        --spacing-lg: 1.125rem;
+        --spacing-xl: 1.5rem;
+        --font-size-sm: 0.8125rem;
+        --font-size-base: 0.9375rem;
+    }
+    
+    .dashboard-grid {
+        padding: var(--spacing-sm);
+        gap: var(--spacing-sm);
+    }
+    
+    .card {
+        padding: var(--spacing-md);
+    }
+    
+    .image-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    
+    /* Reduce header size on very small screens */
+    .dashboard-header {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+    
+    .dashboard-title {
+        font-size: var(--font-size-lg);
+    }
+}
+
+/* Landscape orientation adjustments */
+@media (orientation: landscape) and (max-height: 500px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    
+    .install-prompt {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 400px;
+        bottom: auto;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    /* Remove hover effects on touch devices */
+    .btn:hover,
+    .card:hover,
+    .nav-item:hover {
+        transform: none;
+        box-shadow: none;
+    }
+    
+    /* Increase spacing for easier touch interaction */
+    .nav-item {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    /* Larger form controls */
+    input,
+    select,
+    textarea {
+        min-height: 44px;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+}
+
+/* Dark theme mobile adjustments */
+[data-theme="dark"] .mobile-nav {
+    background: var(--card-color);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .context-menu {
+    background: var(--card-color);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .install-prompt {
+    background: var(--card-color);
+    border-color: var(--border-color);
+}
+
+/* Performance optimizations */
+.scrolling * {
+    pointer-events: none;
+}
+
+.card,
+.btn,
+.modal {
+    will-change: transform;
+}
+
+/* Accessibility improvements for mobile */
+@media (prefers-reduced-motion: reduce) {
+    .pull-refresh-indicator,
+    .mobile-nav,
+    .install-prompt,
+    .context-menu,
+    .update-notification {
+        transition: none;
+    }
+    
+    .pull-refresh-spinner {
+        animation: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .btn {
+        border: 2px solid currentColor;
+    }
+    
+    .card {
+        border: 1px solid var(--text-color);
+    }
+}
+
+/* Reduced data mode optimizations */
+@media (prefers-reduced-data: reduce) {
+    .image-grid img {
+        loading: lazy;
+    }
+    
+    /* Disable animations in reduced data mode */
+    * {
+        animation-duration: 0s !important;
+        transition-duration: 0s !important;
+    }
+}
+
+/* PWA display mode adjustments */
+@media (display-mode: standalone) {
+    body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    
+    .dashboard-header {
+        padding-top: calc(var(--spacing-md) + env(safe-area-inset-top));
+    }
+}
+
+/* Foldable device support */
+@media (spanning: single-fold-vertical) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (spanning: single-fold-horizontal) {
+    .dashboard-grid {
+        grid-template-rows: repeat(2, 1fr);
+    }
+}
+
+/* Variable font support for better mobile performance */
+@supports (font-variation-settings: normal) {
+    body {
+        font-family: 'Inter var', var(--font-family);
+        font-variation-settings: 'wght' 400;
+    }
+    
+    .font-bold {
+        font-variation-settings: 'wght' 700;
+    }
+}
+
+/* CSS custom properties for dynamic theming */
+.mobile-optimized {
+    --touch-target-size: 44px;
+    --mobile-spacing: clamp(0.5rem, 4vw, 1rem);
+    --mobile-border-radius: clamp(0.25rem, 2vw, 0.5rem);
+}
+
+/* Dynamic viewport height fix for mobile browsers */
+.full-height {
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+}
+
+/* Smooth scrolling for mobile */
+html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+    /* iOS Safari bottom safe area */
+    .mobile-nav {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    
+    /* Fix for iOS Safari 100vh issue */
+    .full-height {
+        height: -webkit-fill-available;
+    }
+}
+
+/* Android Chrome specific fixes */
+@media screen and (-webkit-min-device-pixel-ratio: 2) and (orientation: portrait) {
+    .dashboard-grid {
+        /* Optimize for high DPI Android devices */
+        image-rendering: -webkit-optimize-contrast;
+    }
+}

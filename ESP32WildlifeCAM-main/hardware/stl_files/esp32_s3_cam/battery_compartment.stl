@@ -1,0 +1,312 @@
+solid battery_compartment
+  comment Secure battery housing with weather sealing for ESP32-S3-CAM
+  comment Dimensions: 80mm x 25mm x 25mm (fits 18650 battery)
+  comment Features: Weather sealing, easy access, safety features
+  comment Material: PETG or ASA for chemical resistance
+  comment Print settings: 0.2mm layer height, 30% infill
+
+  // Main compartment body (80x25x25mm external, 75x20x20mm internal)
+  // Bottom face
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 80.0 0.0 0.0
+      vertex 80.0 25.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 80.0 25.0 0.0
+      vertex 0.0 25.0 0.0
+    endloop
+  endfacet
+
+  // Internal battery cavity floor (75x20mm)
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 77.5 22.5 2.5
+      vertex 77.5 2.5 2.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 2.5 22.5 2.5
+      vertex 77.5 22.5 2.5
+    endloop
+  endfacet
+
+  // External walls
+  // Front wall
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 0.0 25.0
+      vertex 80.0 0.0 25.0
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 80.0 0.0 25.0
+      vertex 80.0 0.0 0.0
+    endloop
+  endfacet
+
+  // Back wall
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 25.0 0.0
+      vertex 80.0 25.0 25.0
+      vertex 0.0 25.0 25.0
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 0.0 25.0 0.0
+      vertex 80.0 25.0 0.0
+      vertex 80.0 25.0 25.0
+    endloop
+  endfacet
+
+  // Left wall (with access hatch)
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 25.0 15.0
+      vertex 0.0 0.0 15.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 0.0 25.0 0.0
+      vertex 0.0 25.0 15.0
+    endloop
+  endfacet
+  // Access hatch area (15x25x10mm opening)
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 15.0
+      vertex 0.0 25.0 25.0
+      vertex 0.0 0.0 25.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 0.0 0.0 15.0
+      vertex 0.0 25.0 15.0
+      vertex 0.0 25.0 25.0
+    endloop
+  endfacet
+
+  // Right wall
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 80.0 0.0 0.0
+      vertex 80.0 25.0 25.0
+      vertex 80.0 25.0 0.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 80.0 0.0 0.0
+      vertex 80.0 0.0 25.0
+      vertex 80.0 25.0 25.0
+    endloop
+  endfacet
+
+  // Internal walls
+  // Front internal wall
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 2.5 2.5 22.5
+      vertex 77.5 2.5 22.5
+    endloop
+  endfacet
+  facet normal 0.0 -1.0 0.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 77.5 2.5 22.5
+      vertex 77.5 2.5 2.5
+    endloop
+  endfacet
+
+  // Back internal wall
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 2.5 22.5 2.5
+      vertex 77.5 22.5 22.5
+      vertex 2.5 22.5 22.5
+    endloop
+  endfacet
+  facet normal 0.0 1.0 0.0
+    outer loop
+      vertex 2.5 22.5 2.5
+      vertex 77.5 22.5 2.5
+      vertex 77.5 22.5 22.5
+    endloop
+  endfacet
+
+  // Left internal wall
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 2.5 22.5 22.5
+      vertex 2.5 2.5 22.5
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 2.5 2.5 2.5
+      vertex 2.5 22.5 2.5
+      vertex 2.5 22.5 22.5
+    endloop
+  endfacet
+
+  // Right internal wall
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 77.5 2.5 2.5
+      vertex 77.5 22.5 22.5
+      vertex 77.5 22.5 2.5
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 77.5 2.5 2.5
+      vertex 77.5 2.5 22.5
+      vertex 77.5 22.5 22.5
+    endloop
+  endfacet
+
+  // Top rim (for lid attachment) - leaving center open
+  // Front rim
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 25.0
+      vertex 12.5 2.5 25.0
+      vertex 12.5 0.0 25.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 25.0
+      vertex 0.0 2.5 25.0
+      vertex 12.5 2.5 25.0
+    endloop
+  endfacet
+
+  // Back rim
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 22.5 25.0
+      vertex 12.5 25.0 25.0
+      vertex 0.0 25.0 25.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 22.5 25.0
+      vertex 12.5 22.5 25.0
+      vertex 12.5 25.0 25.0
+    endloop
+  endfacet
+
+  // Right rim sections
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 67.5 0.0 25.0
+      vertex 80.0 2.5 25.0
+      vertex 80.0 0.0 25.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 67.5 0.0 25.0
+      vertex 67.5 2.5 25.0
+      vertex 80.0 2.5 25.0
+    endloop
+  endfacet
+
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 67.5 22.5 25.0
+      vertex 80.0 25.0 25.0
+      vertex 67.5 25.0 25.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 67.5 22.5 25.0
+      vertex 80.0 22.5 25.0
+      vertex 80.0 25.0 25.0
+    endloop
+  endfacet
+
+  // Battery contacts (positive terminal) - small post at right end
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 75.0 10.0 5.0
+      vertex 75.0 15.0 10.0
+      vertex 75.0 15.0 5.0
+    endloop
+  endfacet
+  facet normal 1.0 0.0 0.0
+    outer loop
+      vertex 75.0 10.0 5.0
+      vertex 75.0 10.0 10.0
+      vertex 75.0 15.0 10.0
+    endloop
+  endfacet
+
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 70.0 10.0 10.0
+      vertex 75.0 15.0 10.0
+      vertex 75.0 10.0 10.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 70.0 10.0 10.0
+      vertex 70.0 15.0 10.0
+      vertex 75.0 15.0 10.0
+    endloop
+  endfacet
+
+  // Battery contacts (negative terminal) - small post at left end
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 5.0 10.0 5.0
+      vertex 5.0 15.0 10.0
+      vertex 5.0 10.0 10.0
+    endloop
+  endfacet
+  facet normal -1.0 0.0 0.0
+    outer loop
+      vertex 5.0 10.0 5.0
+      vertex 5.0 15.0 5.0
+      vertex 5.0 15.0 10.0
+    endloop
+  endfacet
+
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 5.0 10.0 10.0
+      vertex 10.0 15.0 10.0
+      vertex 10.0 10.0 10.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 5.0 10.0 10.0
+      vertex 5.0 15.0 10.0
+      vertex 10.0 15.0 10.0
+    endloop
+  endfacet
+
+endsolid battery_compartment

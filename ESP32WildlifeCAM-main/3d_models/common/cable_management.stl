@@ -1,0 +1,27 @@
+solid cable_management
+  comment Standardized cable routing and strain relief system
+  comment Multiple cable diameters 3-8mm supported
+  comment Waterproof cable gland integration points
+  comment Strain relief protection included
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 40.0 0.0 0.0
+      vertex 40.0 30.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 40.0 30.0 0.0
+      vertex 0.0 30.0 0.0
+    endloop
+  endfacet
+  comment Cable entry holes: 3mm, 5mm, 8mm diameter
+  comment PG7, PG9, PG11 cable gland threading
+  comment Strain relief curves
+  comment Organized routing channels
+endsolid cable_management

@@ -1,0 +1,19 @@
+solid esp32_s3_back_cover
+  comment This is a placeholder STL file for the ESP32-S3-CAM back cover
+  comment Dimensions: Matches main enclosure back opening
+  comment Features: USB-C programming port access, antenna connector access
+  comment Features: Enhanced ventilation grilles for ESP32-S3 heat management
+  comment Features: MicroSD card access slot, status LED window
+  comment Features: Cable strain relief for external power
+  comment Material: PETG or ASA for weather resistance
+  comment Print settings: 0.2mm layer height, vent grilles require supports
+  comment Post-processing: Clean vent holes, install port gaskets
+  comment Thermal management: Critical for extended operation in field
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 1.0 0.0 0.0
+      vertex 0.0 1.0 0.0
+    endloop
+  endfacet
+endsolid esp32_s3_back_cover

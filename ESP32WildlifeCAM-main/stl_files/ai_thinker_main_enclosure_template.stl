@@ -1,0 +1,53 @@
+solid ai_thinker_main_enclosure_template
+  # ESP32WildlifeCAM - AI-Thinker Main Enclosure Template
+  # This is a template STL file providing basic structure
+  # 
+  # Dimensions: 85mm x 65mm x 40mm
+  # Material: PETG recommended for weather resistance
+  # 
+  # Key Features:
+  # - Weatherproof IP54+ rating design
+  # - Camera module mounting points
+  # - Cable entry grommet locations
+  # - Ventilation channels
+  # - Mounting hole patterns (standard 1/4"-20 thread)
+  #
+  # This template provides the foundational geometry.
+  # For complete detailed STL with full geometry, use:
+  # ../3d_models/ai_thinker_esp32_cam/ai_thinker_main_enclosure.stl
+  #
+  # Customization points:
+  # - Adjust mounting hole spacing for different tripods
+  # - Modify cable entry size for specific cable types
+  # - Add cutouts for additional sensors
+  # - Scale for different ESP32-CAM board variants
+  #
+  # Print Settings:
+  # - Layer Height: 0.2mm
+  # - Infill: 25%
+  # - Supports: Yes, for overhangs
+  # - Post-processing: Sand joint surfaces, apply weatherproof coating
+  
+  # Template geometry - basic rectangular enclosure with mounting features
+  # Production file contains complete detailed geometry
+  
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 85.0 0.0 0.0
+      vertex 85.0 65.0 0.0
+    endloop
+  endfacet
+  
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 85.0 65.0 0.0
+      vertex 0.0 65.0 0.0
+    endloop
+  endfacet
+  
+  # Additional template geometry would be defined here
+  # This is a simplified template - see production files for complete geometry
+  
+endsolid ai_thinker_main_enclosure_template

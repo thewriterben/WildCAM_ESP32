@@ -1,0 +1,27 @@
+solid weatherproofing_gaskets
+  comment Printable rubber gasket profiles
+  comment TPU flexible filament recommended
+  comment Multiple sealing requirements supported
+  comment Shore A hardness 85-95 recommended
+  comment
+  comment REPLACE THIS PLACEHOLDER with actual 3D model
+  comment
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 80.0 0.0 0.0
+      vertex 80.0 3.0 0.0
+    endloop
+  endfacet
+  facet normal 0.0 0.0 1.0
+    outer loop
+      vertex 0.0 0.0 0.0
+      vertex 80.0 3.0 0.0
+      vertex 0.0 3.0 0.0
+    endloop
+  endfacet
+  comment Lid seal profiles: round and rectangular
+  comment Cable entry seals for various diameters
+  comment Lens protection seal rings
+  comment Ventilation membrane frames
+endsolid weatherproofing_gaskets
