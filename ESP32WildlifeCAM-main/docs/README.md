@@ -44,8 +44,12 @@ Welcome to the ESP32WildlifeCAM documentation hub! This page provides organized 
 - **[Analytics Dashboard](ANALYTICS_DASHBOARD.md)** - Data visualization
 
 ### 📡 Connectivity & Communication
-- **[Satellite Communication](SATELLITE_COMMUNICATION.md)** - Remote connectivity
-- **[Satellite Wiring](SATELLITE_WIRING_DIAGRAMS.md)** - Hardware integration
+- **🛰️ [Satellite Communication Hub](SATELLITE_README.md)** - **NEW!** Complete satellite documentation index
+- **[Satellite Quick Start](SATELLITE_QUICK_START.md)** - 5-minute setup guide
+- **[Satellite Hardware BOM](SATELLITE_HARDWARE_BOM.md)** - Complete purchasing guide
+- **[Satellite Module Comparison](SATELLITE_MODULE_COMPARISON.md)** - Choose the right module
+- **[Satellite Technical Guide](SATELLITE_COMMUNICATION.md)** - Complete technical reference
+- **[Satellite Wiring Diagrams](SATELLITE_WIRING_DIAGRAMS.md)** - Hardware integration
 - **[Streaming Implementation](STREAMING_IMPLEMENTATION.md)** - Video streaming
 - **[Burst Video Enhancement](../BURST_VIDEO_ENHANCEMENT_README.md)** - High-speed capture
 
