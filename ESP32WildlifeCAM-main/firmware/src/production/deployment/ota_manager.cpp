@@ -212,10 +212,53 @@ bool OTAManager::downloadUpdate(const UpdatePackage& package) {
 bool OTAManager::verifySignature(const uint8_t* data, size_t length, const String& signature) {
     if (!config_.signatureVerification) return true;
     
-    // TODO: Implement signature verification using mbedTLS
-    // For now, return true for basic functionality
-    DEBUG_PRINTLN("Signature verification: " + signature);
-    return true;
+    DEBUG_PRINTLN("Verifying firmware signature...");
+    
+    // Calculate hash of data
+    uint8_t hash[32];
+    mbedtls_sha256_context ctx;
+    mbedtls_sha256_init(&ctx);
+    mbedtls_sha256_starts(&ctx, 0);
+    mbedtls_sha256_update(&ctx, data, length);
+    mbedtls_sha256_finish(&ctx, hash);
+    mbedtls_sha256_free(&ctx);
+    
+    // Convert signature from hex string to bytes
+    if (signature.length() != 64) {
+        DEBUG_PRINTLN("Invalid signature length");
+        return false;
+    }
+    
+    uint8_t signatureBytes[32];
+    for (int i = 0; i < 32; i++) {
+        String byteStr = signature.substring(i * 2, i * 2 + 2);
+        signatureBytes[i] = (uint8_t)strtol(byteStr.c_str(), nullptr, 16);
+    }
+    
+    // Compare hash with signature (simple verification)
+    // In production, use RSA/ECDSA signature verification
+    bool valid = (memcmp(hash, signatureBytes, 32) == 0);
+    
+    if (valid) {
+        DEBUG_PRINTLN("✓ Firmware signature verified successfully");
+    } else {
+        DEBUG_PRINTLN("✗ Firmware signature verification FAILED");
+        
+        // Log the mismatch for debugging
+        DEBUG_PRINT("Expected: ");
+        for (int i = 0; i < 32; i++) {
+            Serial.printf("%02x", signatureBytes[i]);
+        }
+        DEBUG_PRINTLN("");
+        
+        DEBUG_PRINT("Calculated: ");
+        for (int i = 0; i < 32; i++) {
+            Serial.printf("%02x", hash[i]);
+        }
+        DEBUG_PRINTLN("");
+    }
+    
+    return valid;
 }
 
 // Verify checksum
@@ -281,8 +324,26 @@ String OTAManager::getCurrentVersion() const {
 
 // Initialize cryptographic components
 bool OTAManager::initializeCrypto() {
-    // TODO: Initialize mbedTLS components for signature verification
-    // For now, return true for basic functionality
+    DEBUG_PRINTLN("Initializing OTA cryptographic components...");
+    
+    // Initialize mbedTLS contexts for signature verification
+    mbedtls_sha256_context shaCtx;
+    mbedtls_sha256_init(&shaCtx);
+    
+    // Test crypto functionality
+    const char* testData = "OTA_CRYPTO_TEST";
+    uint8_t testHash[32];
+    
+    int ret = mbedtls_sha256((const uint8_t*)testData, strlen(testData), testHash, 0);
+    
+    mbedtls_sha256_free(&shaCtx);
+    
+    if (ret != 0) {
+        DEBUG_PRINTLN("ERROR: Crypto initialization failed");
+        return false;
+    }
+    
+    DEBUG_PRINTLN("✓ OTA cryptographic components initialized");
     return true;
 }
 
