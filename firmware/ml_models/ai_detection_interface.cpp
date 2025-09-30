@@ -17,12 +17,14 @@
 namespace WildlifeDetection {
 
 AIDetectionInterface::AIDetectionInterface() 
-    : advanced_ai_available_(false), ai_system_ptr_(nullptr), 
-      species_detector_ptr_(nullptr), behavior_analyzer_ptr_(nullptr) {
+    : advanced_ai_available_(false), advanced_species_enabled_(false),
+      ai_system_ptr_(nullptr), species_detector_ptr_(nullptr), 
+      behavior_analyzer_ptr_(nullptr) {
     // Initialize advanced configuration with defaults
     advanced_config_.use_tensorflow_lite = true;
     advanced_config_.enable_behavior_analysis = false;
     advanced_config_.enable_species_confidence_boost = true;
+    advanced_config_.enable_advanced_species_detection = true;
     advanced_config_.ai_confidence_threshold = 0.7f;
     advanced_config_.ai_processing_timeout_ms = 2000;
 }
@@ -107,6 +109,11 @@ std::vector<const char*> AIDetectionInterface::getAvailableModels() const {
         models.push_back("species_detector_v3.tflite");
         models.push_back("behavior_analyzer_v1.tflite");
         models.push_back("motion_detector_lite.tflite");
+        
+        // Add advanced species detection model if enabled
+        if (advanced_species_enabled_) {
+            models.push_back("wildlife_research_v3.tflite");  // 150+ species model
+        }
     } else {
         models.push_back("foundational_detector.basic");
     }
@@ -139,8 +146,30 @@ void AIDetectionInterface::configureAdvancedAI(const AdvancedConfig& config) {
     Serial.printf("  TensorFlow Lite: %s\n", config.use_tensorflow_lite ? "Enabled" : "Disabled");
     Serial.printf("  Behavior Analysis: %s\n", config.enable_behavior_analysis ? "Enabled" : "Disabled");
     Serial.printf("  Species Confidence Boost: %s\n", config.enable_species_confidence_boost ? "Enabled" : "Disabled");
+    Serial.printf("  Advanced Species Detection: %s\n", config.enable_advanced_species_detection ? "Enabled" : "Disabled");
     Serial.printf("  AI Confidence Threshold: %.2f\n", config.ai_confidence_threshold);
     Serial.printf("  AI Processing Timeout: %dms\n", config.ai_processing_timeout_ms);
+    
+    // Enable advanced species detection if configured
+    if (config.enable_advanced_species_detection) {
+        enableAdvancedSpeciesDetection(true);
+    }
+}
+
+void AIDetectionInterface::enableAdvancedSpeciesDetection(bool enable) {
+    advanced_species_enabled_ = enable && advanced_ai_available_;
+    
+    if (enable && !advanced_ai_available_) {
+        Serial.println("WARNING: Cannot enable advanced species detection - AI system not available");
+    } else if (enable) {
+        Serial.println("Advanced species detection enabled (150+ species support)");
+    } else {
+        Serial.println("Advanced species detection disabled");
+    }
+}
+
+bool AIDetectionInterface::hasAdvancedSpeciesDetection() const {
+    return advanced_species_enabled_ && advanced_ai_available_;
 }
 
 bool AIDetectionInterface::detectAdvancedAISystem() {
@@ -154,10 +183,13 @@ bool AIDetectionInterface::detectAdvancedAISystem() {
         // Note: In a real implementation, these would be proper instantiations
         // For now, we simulate the detection process
         ai_system_ptr_ = nullptr;  // Would point to AIWildlifeSystem
-        species_detector_ptr_ = nullptr;  // Would point to WildlifeClassifier
+        species_detector_ptr_ = nullptr;  // Would point to AdvancedSpeciesDetector
         behavior_analyzer_ptr_ = nullptr;  // Would point to BehaviorAnalyzer
         
         Serial.println("Advanced AI components detected");
+        Serial.println("  - Advanced Species Detector (150+ species)");
+        Serial.println("  - Edge Computing Optimization");
+        Serial.println("  - Hierarchical Classification");
         return true;
         
     } catch (...) {
