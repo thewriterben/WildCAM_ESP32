@@ -72,6 +72,7 @@ public:
         bool use_tensorflow_lite = true;
         bool enable_behavior_analysis = false;
         bool enable_species_confidence_boost = true;
+        bool enable_advanced_species_detection = true;  // NEW: Enable 150+ species detection
         float ai_confidence_threshold = 0.7f;
         uint32_t ai_processing_timeout_ms = 2000;
     };
@@ -81,14 +82,27 @@ public:
      * @param config Advanced configuration
      */
     void configureAdvancedAI(const AdvancedConfig& config);
+    
+    /**
+     * @brief Enable/disable advanced species detection
+     * @param enable Enable advanced 150+ species detection
+     */
+    void enableAdvancedSpeciesDetection(bool enable = true);
+    
+    /**
+     * @brief Check if advanced species detection is available
+     * @return true if advanced species detection is enabled and available
+     */
+    bool hasAdvancedSpeciesDetection() const;
 
 private:
     bool advanced_ai_available_;
+    bool advanced_species_enabled_;  // NEW: Track if advanced species detection is enabled
     AdvancedConfig advanced_config_;
     
     // Forward declarations for integration with existing AI system
     void* ai_system_ptr_;          // Points to AIWildlifeSystem if available
-    void* species_detector_ptr_;   // Points to SpeciesDetector if available
+    void* species_detector_ptr_;   // Points to AdvancedSpeciesDetector if available
     void* behavior_analyzer_ptr_;  // Points to BehaviorAnalyzer if available
     
     // Helper methods
