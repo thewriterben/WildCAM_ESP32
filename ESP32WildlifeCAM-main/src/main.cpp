@@ -31,6 +31,10 @@
 #include "utils/logger.h"
 #include "utils/time_manager.h"
 
+// Forward declarations
+void resetDailyCounts();
+void handleMotionEvent();
+
 // System components
 CameraManager cameraManager;
 HybridMotionDetector motionDetector;
@@ -114,7 +118,7 @@ void initializeTimeSystem() {
     TimeManager::initialize();
     
     // Add scheduled tasks
-    TimeManager::addScheduledTask(0, 0, 255, resetDailyCounters, "Daily Reset");
+    TimeManager::addScheduledTask(0, 0, 255, resetDailyCounts, "Daily Reset");
     TimeManager::addScheduledTask(2, 0, 255, []() {
         // Daily storage cleanup at 2 AM
         StorageManager::performCleanup(false);
