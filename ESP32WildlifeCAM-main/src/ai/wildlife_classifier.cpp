@@ -451,6 +451,12 @@ String WildlifeClassifier::getSpeciesName(SpeciesType species) {
         case SpeciesType::BALD_EAGLE: return "Bald Eagle";
         case SpeciesType::RED_TAILED_HAWK: return "Red-tailed Hawk";
         case SpeciesType::GREAT_BLUE_HERON: return "Great Blue Heron";
+        case SpeciesType::RABBIT: return "Rabbit";
+        case SpeciesType::SQUIRREL: return "Squirrel";
+        case SpeciesType::SKUNK: return "Skunk";
+        case SpeciesType::OPOSSUM: return "Opossum";
+        case SpeciesType::BEAVER: return "Beaver";
+        case SpeciesType::OTTER: return "Otter";
         case SpeciesType::HUMAN: return "Human";
         default: return "Unknown Species";
     }
