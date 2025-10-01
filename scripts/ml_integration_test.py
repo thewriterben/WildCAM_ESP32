@@ -277,7 +277,7 @@ def main():
     parser.add_argument(
         "--project-root",
         type=str,
-        default="/home/runner/work/WildCAM_ESP32/WildCAM_ESP32",
+        default=os.getcwd(),
         help="Project root directory"
     )
     
