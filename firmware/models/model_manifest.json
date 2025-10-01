@@ -1,0 +1,271 @@
+{
+  "manifest_version": "2.0.0",
+  "created_date": "2024-01-15T00:00:00Z",
+  "updated_date": "2024-01-15T00:00:00Z",
+  "description": "Model manifest for ESP32 Wildlife Camera ML models",
+  
+  "available_models": [
+    {
+      "model_id": "wildlife_classifier_v2",
+      "model_name": "wildlife_classifier_v2.tflite",
+      "version": "2.0.0",
+      "status": "production_ready",
+      "type": "species_classification",
+      "description": "Primary wildlife species classifier with environmental adaptation",
+      
+      "files": {
+        "model_file": "wildlife_classifier_v2.tflite",
+        "metadata_file": "model_metadata.json",
+        "labels_file": "class_labels.json"
+      },
+      
+      "model_specs": {
+        "input_shape": [1, 224, 224, 3],
+        "input_type": "uint8",
+        "input_range": [0, 255],
+        "output_shape": [1, 50],
+        "output_type": "uint8",
+        "quantization": "INT8",
+        "compression": "pruned"
+      },
+      
+      "performance": {
+        "model_size_mb": 1.5,
+        "inference_time_ms": 850,
+        "memory_usage_mb": 1.5,
+        "power_consumption_ma": 165,
+        "accuracy": 0.957,
+        "top5_accuracy": 0.992
+      },
+      
+      "hardware_requirements": {
+        "platform": "ESP32-S3",
+        "min_psram_mb": 8,
+        "min_flash_mb": 4,
+        "min_cpu_freq_mhz": 160,
+        "tflite_micro_version": "2.x"
+      },
+      
+      "supported_species": [
+        "white_tailed_deer",
+        "black_bear",
+        "red_fox",
+        "gray_wolf",
+        "mountain_lion",
+        "elk",
+        "moose",
+        "raccoon",
+        "coyote",
+        "bobcat"
+      ],
+      
+      "deployment_info": {
+        "load_path": "/models/wildlife_classifier_v2.tflite",
+        "auto_load": true,
+        "priority": 1,
+        "fallback_model": "wildlife_classifier_v1"
+      }
+    },
+    
+    {
+      "model_id": "behavior_analyzer_v1",
+      "model_name": "behavior_analyzer_v1.tflite",
+      "version": "1.5.0",
+      "status": "experimental",
+      "type": "behavior_analysis",
+      "description": "Analyzes animal behavior patterns from temporal sequences",
+      
+      "files": {
+        "model_file": "behavior_analyzer_v1.tflite",
+        "metadata_file": "behavior_metadata.json",
+        "labels_file": "behavior_labels.json"
+      },
+      
+      "model_specs": {
+        "input_shape": [1, 3, 160, 160, 3],
+        "input_type": "uint8",
+        "output_shape": [1, 12],
+        "output_type": "uint8",
+        "quantization": "INT8",
+        "temporal_frames": 3
+      },
+      
+      "performance": {
+        "model_size_mb": 0.8,
+        "inference_time_ms": 600,
+        "memory_usage_mb": 1.0,
+        "power_consumption_ma": 140,
+        "accuracy": 0.87
+      },
+      
+      "hardware_requirements": {
+        "platform": "ESP32-S3",
+        "min_psram_mb": 8,
+        "min_flash_mb": 4,
+        "min_cpu_freq_mhz": 160
+      },
+      
+      "supported_behaviors": [
+        "feeding",
+        "drinking",
+        "resting",
+        "moving",
+        "alert",
+        "grooming",
+        "mating",
+        "aggressive",
+        "territorial",
+        "social",
+        "hunting",
+        "playing"
+      ],
+      
+      "deployment_info": {
+        "load_path": "/models/behavior_analyzer_v1.tflite",
+        "auto_load": false,
+        "priority": 2,
+        "requires_sequence": true
+      }
+    },
+    
+    {
+      "model_id": "motion_detector_v1",
+      "model_name": "motion_detector_v1.tflite",
+      "version": "1.0.0",
+      "status": "production_ready",
+      "type": "motion_detection",
+      "description": "Lightweight motion detection for efficient triggering",
+      
+      "files": {
+        "model_file": "motion_detector_v1.tflite",
+        "metadata_file": "motion_metadata.json"
+      },
+      
+      "model_specs": {
+        "input_shape": [1, 96, 96, 1],
+        "input_type": "uint8",
+        "output_shape": [1, 5],
+        "output_type": "uint8",
+        "quantization": "INT8",
+        "grayscale": true
+      },
+      
+      "performance": {
+        "model_size_mb": 0.1,
+        "inference_time_ms": 150,
+        "memory_usage_mb": 0.3,
+        "power_consumption_ma": 80,
+        "accuracy": 0.95
+      },
+      
+      "hardware_requirements": {
+        "platform": "ESP32-S3",
+        "min_psram_mb": 2,
+        "min_flash_mb": 4,
+        "min_cpu_freq_mhz": 80
+      },
+      
+      "deployment_info": {
+        "load_path": "/models/motion_detector_v1.tflite",
+        "auto_load": true,
+        "priority": 3,
+        "use_case": "power_saving"
+      }
+    },
+    
+    {
+      "model_id": "test_classifier",
+      "model_name": "wildlife_classifier_test_quantized.tflite",
+      "version": "2.0.0-test",
+      "status": "test_only",
+      "type": "species_classification",
+      "description": "Minimal test model for integration testing (DO NOT USE IN PRODUCTION)",
+      
+      "files": {
+        "model_file": "test/wildlife_classifier_test_quantized.tflite",
+        "metadata_file": "test/model_metadata.json",
+        "labels_file": "test/class_labels.json"
+      },
+      
+      "model_specs": {
+        "input_shape": [1, 224, 224, 3],
+        "input_type": "uint8",
+        "output_shape": [1, 10],
+        "output_type": "uint8",
+        "quantization": "INT8"
+      },
+      
+      "performance": {
+        "model_size_mb": 0.5,
+        "inference_time_ms": 500,
+        "memory_usage_mb": 0.5,
+        "note": "Performance metrics for testing only"
+      },
+      
+      "hardware_requirements": {
+        "platform": "ESP32-S3",
+        "min_psram_mb": 2,
+        "min_flash_mb": 4
+      },
+      
+      "deployment_info": {
+        "load_path": "/models/test/wildlife_classifier_test_quantized.tflite",
+        "auto_load": false,
+        "priority": 999,
+        "test_mode": true
+      }
+    }
+  ],
+  
+  "deployment_strategies": {
+    "production": {
+      "primary_model": "wildlife_classifier_v2",
+      "fallback_models": ["wildlife_classifier_v1"],
+      "enable_behavior_analysis": false,
+      "enable_motion_detection": true
+    },
+    
+    "research": {
+      "primary_model": "wildlife_classifier_v2",
+      "enable_behavior_analysis": true,
+      "enable_motion_detection": true,
+      "collect_training_data": true
+    },
+    
+    "power_saving": {
+      "primary_model": "motion_detector_v1",
+      "secondary_model": "wildlife_classifier_v2",
+      "inference_on_motion_only": true,
+      "reduce_cpu_frequency": true
+    },
+    
+    "testing": {
+      "primary_model": "test_classifier",
+      "enable_debug_logging": true,
+      "collect_metrics": true
+    }
+  },
+  
+  "model_update_policy": {
+    "auto_update": false,
+    "update_check_interval_hours": 24,
+    "update_source": "https://models.wildcam.example.com/",
+    "require_manual_approval": true,
+    "rollback_on_failure": true
+  },
+  
+  "training_pipeline": {
+    "dataset_manager": "backend/ml/dataset_manager.py",
+    "model_trainer": "backend/ml/model_trainer.py",
+    "model_evaluator": "backend/ml/model_evaluator.py",
+    "deployment_pipeline": "backend/ml/deployment_pipeline.py",
+    "test_generator": "backend/ml/generate_test_model.py"
+  },
+  
+  "documentation": {
+    "integration_guide": "docs/ml_integration_guide.md",
+    "quick_start": "docs/ml_quickstart.md",
+    "workflow_guide": "docs/ML_WORKFLOW.md",
+    "architecture": "docs/ai/ai_architecture.md"
+  }
+}
