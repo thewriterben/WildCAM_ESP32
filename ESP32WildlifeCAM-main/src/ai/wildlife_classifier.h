@@ -36,6 +36,12 @@ public:
         BALD_EAGLE = 12,
         RED_TAILED_HAWK = 13,
         GREAT_BLUE_HERON = 14,
+        RABBIT = 15,
+        SQUIRREL = 16,
+        SKUNK = 17,
+        OPOSSUM = 18,
+        BEAVER = 19,
+        OTTER = 20,
         HUMAN = 50
     };
 
