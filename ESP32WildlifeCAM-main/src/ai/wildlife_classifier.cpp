@@ -1,5 +1,6 @@
 #include "wildlife_classifier.h"
 #include "../utils/logger.h"
+#include "../utils/image_utils.h"
 #include <esp_heap_caps.h>
 
 // Include TensorFlow Lite implementation
@@ -59,11 +60,12 @@ bool WildlifeClassifier::initialize() {
         }
     }
 
-    // Load TensorFlow Lite model (existing implementation)
+    // Load TensorFlow Lite model with graceful degradation
+    // System will function as a standard camera trap even if model is not present
     if (!loadModel()) {
-        LOG_ERROR("Failed to load classification model");
-        cleanup();
-        return false;
+        LOG_WARNING("AI model not loaded - system will operate as standard camera trap");
+        LOG_INFO("To enable AI classification, place model.tflite on SD card in /models/");
+        // Don't return false - allow initialization to complete without AI
     }
 
     // Initialize statistics
@@ -75,6 +77,7 @@ bool WildlifeClassifier::initialize() {
     LOG_INFO("Wildlife classifier initialized successfully");
     LOG_INFO("Arena size: " + String(arenaSize) + " bytes");
     LOG_INFO("Confidence threshold: " + String(confidenceThreshold, 2));
+    LOG_INFO("Graceful degradation: Enabled (will work without AI model)");
 
     return true;
 }
@@ -147,10 +150,6 @@ WildlifeClassifier::ClassificationResult WildlifeClassifier::classifyImage(const
     }
     
     result.inferenceTime = millis() - startTime;
-    updateStatistics(result);
-
-    return result;
-}
     updateStatistics(result);
 
     return result;
@@ -270,23 +269,47 @@ bool WildlifeClassifier::loadModel() {
 }
 
 bool WildlifeClassifier::preprocessImage(const uint8_t* imageData, size_t imageSize, float* inputTensor) {
-    // In a real implementation, this would:
-    // 1. Decode JPEG image
-    // 2. Resize to model input size (e.g., 224x224)
-    // 3. Normalize pixel values to 0-1 range
-    // 4. Convert to RGB format if needed
+    /**
+     * Image preprocessing using the image_utils module
+     * This performs:
+     * 1. JPEG decode
+     * 2. Resize to model input size (224x224)
+     * 3. Normalize pixel values to [-1, 1] range
+     * 
+     * Note: The scaling currently uses nearest-neighbor interpolation (placeholder)
+     * See image_utils.cpp for improvement notes
+     */
     
-    // Placeholder preprocessing
-    if (inputTensor == nullptr) {
+    if (!inputTensor || !imageData || imageSize == 0) {
+        LOG_ERROR("Invalid parameters for image preprocessing");
         return false;
     }
 
-    // Fill tensor with normalized dummy data
-    size_t tensorSize = MODEL_INPUT_SIZE * MODEL_INPUT_SIZE * 3; // RGB
-    for (size_t i = 0; i < tensorSize; i++) {
-        inputTensor[i] = 0.5f; // Normalized gray
+    // Create a temporary frame buffer structure for image_utils
+    camera_fb_t tempFrame;
+    tempFrame.buf = const_cast<uint8_t*>(imageData);
+    tempFrame.len = imageSize;
+    tempFrame.width = 0;   // Will be determined during decode
+    tempFrame.height = 0;
+    tempFrame.format = PIXFORMAT_JPEG;
+    
+    // Use image_utils to preprocess the frame
+    ImageUtils::PreprocessResult result = ImageUtils::preprocessFrameForModel(
+        &tempFrame, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+    
+    if (!result.success) {
+        LOG_ERROR("Image preprocessing failed: " + result.errorMessage);
+        return false;
     }
-
+    
+    // Copy preprocessed tensor data
+    size_t tensorSize = MODEL_INPUT_SIZE * MODEL_INPUT_SIZE * 3; // RGB
+    memcpy(inputTensor, result.tensorData, tensorSize * sizeof(float));
+    
+    // Free preprocessing resources
+    ImageUtils::freePreprocessResult(result);
+    
+    LOG_INFO("Image preprocessing completed successfully");
     return true;
 }
 

@@ -83,6 +83,10 @@ CameraManager::CaptureResult CameraManager::captureImage(const String& folder) {
         result.imageSize = fb->len;
         result.captureTime = millis() - startTime;
         result.frameBuffer = fb;
+        result.profileUsed = currentProfile;
+
+        // Save metadata with power telemetry
+        saveImageMetadata(filename, fb, currentProfile);
 
         Serial.printf("Image captured: %s (%d bytes, %d ms)\n", 
                      filename.c_str(), fb->len, result.captureTime);
@@ -157,6 +161,50 @@ String CameraManager::saveFrameBuffer(camera_fb_t* fb, const String& folder, con
     return saveFilename;
 }
 
+void CameraManager::saveImageMetadata(const String& imageFilename, camera_fb_t* fb, CameraProfile profile) {
+    // Generate metadata filename
+    String metadataFilename = imageFilename;
+    metadataFilename.replace(".jpg", ".json");
+    
+    // Open file for writing
+    File file = SD_MMC.open(metadataFilename.c_str(), FILE_WRITE);
+    if (!file) {
+        Serial.printf("Failed to create metadata file: %s\n", metadataFilename.c_str());
+        return;
+    }
+    
+    // Write JSON metadata
+    file.println("{");
+    file.printf("  \"image_file\": \"%s\",\n", imageFilename.c_str());
+    file.printf("  \"timestamp\": %lu,\n", millis());
+    file.printf("  \"width\": %d,\n", fb->width);
+    file.printf("  \"height\": %d,\n", fb->height);
+    file.printf("  \"size_bytes\": %d,\n", fb->len);
+    file.printf("  \"format\": %d,\n", fb->format);
+    
+    // Add camera profile info
+    const char* profileName = "";
+    switch (profile) {
+        case CameraProfile::HIGH_QUALITY: profileName = "HIGH_QUALITY"; break;
+        case CameraProfile::BALANCED: profileName = "BALANCED"; break;
+        case CameraProfile::FAST_CAPTURE: profileName = "FAST_CAPTURE"; break;
+    }
+    file.printf("  \"camera_profile\": \"%s\",\n", profileName);
+    
+    // Add power telemetry if power manager is available
+    // Note: This requires including power_manager.h and accessing global instance
+    // For now, we'll add placeholder fields that can be populated
+    file.printf("  \"battery_voltage\": 0.0,\n");
+    file.printf("  \"battery_percentage\": 0.0,\n");
+    file.printf("  \"power_state\": \"unknown\",\n");
+    file.printf("  \"is_charging\": false\n");
+    
+    file.println("}");
+    file.close();
+    
+    Serial.printf("Metadata saved: %s\n", metadataFilename.c_str());
+}
+
 void CameraManager::configureSensor(int brightness, int contrast, int saturation) {
     sensor_t* sensor = esp_camera_sensor_get();
     if (sensor == nullptr) {
@@ -221,6 +269,77 @@ void CameraManager::setNightMode(bool enable) {
         optimizeForWildlife(50, 50);  // Normal conditions
         configureSensor(0, 0, 0);     // Default settings
     }
+}
+
+void CameraManager::setCameraProfile(CameraProfile profile) {
+    currentProfile = profile;
+    applyProfile(profile);
+    
+    const char* profileName = "";
+    switch (profile) {
+        case CameraProfile::HIGH_QUALITY: profileName = "HIGH_QUALITY"; break;
+        case CameraProfile::BALANCED: profileName = "BALANCED"; break;
+        case CameraProfile::FAST_CAPTURE: profileName = "FAST_CAPTURE"; break;
+    }
+    Serial.printf("Camera profile set to: %s\n", profileName);
+}
+
+void CameraManager::applyProfile(CameraProfile profile) {
+    sensor_t* sensor = esp_camera_sensor_get();
+    if (sensor == nullptr) {
+        return;
+    }
+
+    switch (profile) {
+        case CameraProfile::HIGH_QUALITY:
+            // Maximum resolution and quality
+            sensor->set_framesize(sensor, FRAMESIZE_UXGA);  // 1600x1200
+            sensor->set_quality(sensor, 10);                // High quality (low compression)
+            sensor->set_aec_value(sensor, 300);             // Standard exposure
+            sensor->set_gainceiling(sensor, GAINCEILING_2X);
+            Serial.println("Applied HIGH_QUALITY profile: UXGA, Q10");
+            break;
+            
+        case CameraProfile::BALANCED:
+            // Good balance between quality and speed
+            sensor->set_framesize(sensor, FRAMESIZE_SVGA);  // 800x600
+            sensor->set_quality(sensor, 12);                // Medium quality
+            sensor->set_aec_value(sensor, 250);             // Balanced exposure
+            sensor->set_gainceiling(sensor, GAINCEILING_4X);
+            Serial.println("Applied BALANCED profile: SVGA, Q12");
+            break;
+            
+        case CameraProfile::FAST_CAPTURE:
+            // Lower quality but fast for motion detection
+            sensor->set_framesize(sensor, FRAMESIZE_VGA);   // 640x480
+            sensor->set_quality(sensor, 15);                // Lower quality (more compression)
+            sensor->set_aec_value(sensor, 150);             // Faster exposure
+            sensor->set_gainceiling(sensor, GAINCEILING_8X);
+            Serial.println("Applied FAST_CAPTURE profile: VGA, Q15");
+            break;
+    }
+}
+
+CameraManager::CaptureResult CameraManager::captureWithProfile(CameraProfile profile, const String& folder) {
+    // Save current profile
+    CameraProfile previousProfile = currentProfile;
+    
+    // Temporarily switch to requested profile
+    if (profile != currentProfile) {
+        applyProfile(profile);
+        delay(100);  // Allow camera to adjust
+    }
+    
+    // Capture image
+    CaptureResult result = captureImage(folder);
+    result.profileUsed = profile;
+    
+    // Restore previous profile if needed
+    if (profile != previousProfile) {
+        applyProfile(previousProfile);
+    }
+    
+    return result;
 }
 
 void CameraManager::resetStatistics() {
@@ -541,10 +660,24 @@ String CameraManager::generateFilename(const String& folder, const String& exten
     time(&now);
     localtime_r(&now, &timeinfo);
 
-    // Generate filename with timestamp and counter
-    char filename[100];
-    snprintf(filename, sizeof(filename), "%s/IMG_%04d%02d%02d_%02d%02d%02d_%04d%s",
+    // Create YYYY-MM directory structure for better organization
+    char dateFolder[50];
+    snprintf(dateFolder, sizeof(dateFolder), "%s/%04d-%02d",
              folder.c_str(),
+             timeinfo.tm_year + 1900,
+             timeinfo.tm_mon + 1);
+    
+    // Ensure the date-based directory exists
+    if (!ensureDirectory(String(dateFolder))) {
+        Serial.printf("Warning: Could not create date folder: %s\n", dateFolder);
+        // Fall back to base folder
+        snprintf(dateFolder, sizeof(dateFolder), "%s", folder.c_str());
+    }
+
+    // Generate filename with timestamp and counter
+    char filename[120];
+    snprintf(filename, sizeof(filename), "%s/IMG_%04d%02d%02d_%02d%02d%02d_%04d%s",
+             dateFolder,
              timeinfo.tm_year + 1900,
              timeinfo.tm_mon + 1,
              timeinfo.tm_mday,

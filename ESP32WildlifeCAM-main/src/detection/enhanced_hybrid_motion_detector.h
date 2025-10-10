@@ -54,6 +54,7 @@ public:
         MULTI_ZONE_PIR,         // Multi-zone PIR + basic frame analysis
         ADVANCED_ANALYSIS,      // Single PIR + advanced frame analysis  
         FULL_ENHANCED,          // Multi-zone PIR + advanced analysis
+        HYBRID_PIR_THEN_FRAME,  // PIR trigger first, then visual confirmation (reduces false positives)
         ADAPTIVE_MODE           // Automatically adjust based on conditions
     };
 
@@ -214,6 +215,13 @@ private:
      * @return Complete enhanced result
      */
     EnhancedHybridResult performFullEnhancedDetection();
+
+    /**
+     * @brief Perform hybrid PIR-then-frame detection
+     * Uses PIR as low-power trigger, then confirms with visual analysis
+     * @return Enhanced result with hybrid PIR-then-frame data
+     */
+    EnhancedHybridResult performHybridPIRThenFrame();
 
     /**
      * @brief Adaptive mode selection based on conditions

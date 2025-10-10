@@ -46,6 +46,9 @@ EnhancedHybridMotionDetector::detectMotionEnhanced() {
         case EnhancedDetectionMode::FULL_ENHANCED:
             return performFullEnhancedDetection();
             
+        case EnhancedDetectionMode::HYBRID_PIR_THEN_FRAME:
+            return performHybridPIRThenFrame();
+            
         case EnhancedDetectionMode::ADAPTIVE_MODE:
             detectionMode = selectAdaptiveMode();
             return detectMotionEnhanced(); // Recurse with selected mode
@@ -326,6 +329,100 @@ EnhancedHybridMotionDetector::performFullEnhancedDetection() {
     result.advancedAnalysisEnabled = true;
     result.totalEnhancedProcessTime = millis() - startTime;
     result.description = generateEnhancedDescription(result);
+    
+    if (analyticsEnabled) {
+        updateAnalytics(result);
+    }
+    
+    updateEnhancedStatistics(result);
+    
+    return result;
+}
+
+EnhancedHybridMotionDetector::EnhancedHybridResult 
+EnhancedHybridMotionDetector::performHybridPIRThenFrame() {
+    /**
+     * HYBRID_PIR_THEN_FRAME Mode:
+     * 1. Use PIR sensor as low-power trigger (drastically reduces false positives)
+     * 2. Only perform visual frame analysis if PIR detects motion
+     * 3. Smart profile switching: FAST_CAPTURE for initial analysis, HIGH_QUALITY for final capture
+     * 4. Reduces power consumption by avoiding unnecessary camera activations
+     */
+    EnhancedHybridResult result = {};
+    uint32_t startTime = millis();
+    
+    // Step 1: Check PIR sensor first (low power, fast check)
+    uint32_t pirStart = millis();
+    result.pirTriggered = checkPIRSensor();  // From base class
+    result.multiZoneProcessTime = millis() - pirStart;
+    
+    if (!result.pirTriggered) {
+        // No PIR motion detected - return early to save power
+        result.motionDetected = false;
+        result.confidence = ConfidenceLevel::VERY_LOW;
+        result.confidenceScore = 0.0f;
+        result.frameMotionDetected = false;
+        result.description = "No PIR trigger - skipping frame analysis (power saving)";
+        result.totalEnhancedProcessTime = millis() - startTime;
+        return result;
+    }
+    
+    // Step 2: PIR triggered - perform visual confirmation with FAST_CAPTURE profile
+    uint32_t advancedStart = millis();
+    
+    // Switch to FAST_CAPTURE profile for motion analysis
+    if (camera) {
+        CameraManager::CameraProfile previousProfile = camera->getCameraProfile();
+        camera->setCameraProfile(CameraManager::CameraProfile::FAST_CAPTURE);
+        
+        // Capture frame for motion analysis
+        camera_fb_t* frame = camera->captureToBuffer();
+        if (frame) {
+            // Perform advanced motion analysis on fast-capture frame
+            result.advancedResult = advancedMotion.analyzeFrameAdvanced(frame);
+            result.frameMotionDetected = result.advancedResult.motionDetected;
+            
+            // Extract analytics
+            result.motionDirection = result.advancedResult.dominantDirection;
+            result.motionSpeed = result.advancedResult.averageSpeed;
+            result.mlConfidence = result.advancedResult.mlConfidence;
+            result.falsePositivePrediction = result.advancedResult.falsePositivePrediction;
+            
+            camera->returnFrameBuffer(frame);
+        }
+        
+        // Restore previous profile
+        camera->setCameraProfile(previousProfile);
+    }
+    result.advancedProcessTime = millis() - advancedStart;
+    
+    // Step 3: Calculate combined confidence
+    // PIR + visual confirmation provides high confidence
+    float pirConfidence = result.pirTriggered ? 0.6f : 0.0f;
+    float visualConfidence = result.frameMotionDetected ? 0.4f : 0.0f;
+    result.confidenceScore = pirConfidence + visualConfidence;
+    
+    // Apply ML false positive filter
+    if (result.falsePositivePrediction) {
+        result.confidenceScore *= 0.3f;  // Reduce confidence if ML predicts false positive
+    }
+    
+    result.motionDetected = result.confidenceScore > 0.5f && !result.falsePositivePrediction;
+    result.confidence = scoreToConfidenceLevel(result.confidenceScore);
+    
+    // Set flags
+    result.multiZoneEnabled = false;
+    result.advancedAnalysisEnabled = true;
+    result.totalEnhancedProcessTime = millis() - startTime;
+    
+    // Generate description
+    if (result.motionDetected) {
+        result.description = "PIR trigger + visual confirmation: Motion confirmed";
+    } else if (result.pirTriggered && !result.frameMotionDetected) {
+        result.description = "PIR trigger but no visual motion: False positive avoided";
+    } else {
+        result.description = "No motion detected";
+    }
     
     if (analyticsEnabled) {
         updateAnalytics(result);
