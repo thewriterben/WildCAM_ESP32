@@ -91,9 +91,26 @@ struct PowerMetrics {
 };
 
 /**
+ * Power Hardware Configuration
+ * Describes the available hardware capabilities for power monitoring
+ */
+struct PowerHardware {
+    bool hasCurrentSensor;          // INA219 or similar current sensor available
+    bool hasVoltageDivider;         // Hardware voltage divider for monitoring
+    bool hasSolarInput;             // Solar panel input available
+    bool hasChargingController;     // Hardware charging controller present
+    
+    PowerHardware() : hasCurrentSensor(false), hasVoltageDivider(true),
+                     hasSolarInput(false), hasChargingController(false) {}
+};
+
+/**
  * Power Management Configuration
  */
 struct PowerConfig {
+    // Hardware capabilities
+    PowerHardware hardware;         // Hardware configuration
+    
     // GPIO pins for monitoring
     uint8_t batteryPin;             // GPIO pin for battery voltage (ADC1_CH7 = GPIO 33)
     uint8_t solarPin;               // GPIO pin for solar voltage (GPIO 32, shared with PWDN)

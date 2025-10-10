@@ -15,6 +15,15 @@
 class CameraManager {
 public:
     /**
+     * @brief Camera capture profiles for different use cases
+     */
+    enum class CameraProfile {
+        HIGH_QUALITY,    // Maximum resolution and quality for final captures
+        BALANCED,        // Good balance of quality and speed
+        FAST_CAPTURE     // Lower quality but fast for motion detection
+    };
+
+    /**
      * @brief Camera capture result structure
      */
     struct CaptureResult {
@@ -23,6 +32,7 @@ public:
         String filename;
         uint32_t captureTime;
         camera_fb_t* frameBuffer;
+        CameraProfile profileUsed;  // Profile used for this capture
     };
 
     /**
@@ -142,6 +152,14 @@ public:
     String saveFrameBuffer(camera_fb_t* fb, const String& folder, const String& filename = "");
 
     /**
+     * @brief Save image metadata with power telemetry
+     * @param imageFilename Image filename
+     * @param fb Frame buffer
+     * @param profile Profile used
+     */
+    void saveImageMetadata(const String& imageFilename, camera_fb_t* fb, CameraProfile profile);
+
+    /**
      * @brief Configure camera settings for specific conditions
      * @param brightness Brightness adjustment (-2 to 2)
      * @param contrast Contrast adjustment (-2 to 2)
@@ -161,6 +179,26 @@ public:
      * @param enable Enable night mode
      */
     void setNightMode(bool enable);
+
+    /**
+     * @brief Set camera profile
+     * @param profile Camera profile to use
+     */
+    void setCameraProfile(CameraProfile profile);
+
+    /**
+     * @brief Get current camera profile
+     * @return Current camera profile
+     */
+    CameraProfile getCameraProfile() const { return currentProfile; }
+
+    /**
+     * @brief Capture image with specific profile
+     * @param profile Profile to use for capture
+     * @param folder Target folder path
+     * @return Capture result with details
+     */
+    CaptureResult captureWithProfile(CameraProfile profile, const String& folder = IMAGE_FOLDER);
 
     /**
      * @brief Capture burst of images
@@ -254,6 +292,7 @@ private:
     uint32_t captureCounter = 0;
     bool nightModeEnabled = false;
     bool irLedEnabled = false;
+    CameraProfile currentProfile = CameraProfile::BALANCED;  // Default profile
     
     // Time-lapse state
     bool timeLapseActive = false;
@@ -308,6 +347,12 @@ private:
      * @brief Configure GPIO pins for advanced features
      */
     void configureAdvancedGPIOs();
+
+    /**
+     * @brief Apply camera profile settings
+     * @param profile Profile to apply
+     */
+    void applyProfile(CameraProfile profile);
 
     /**
      * @brief Generate video filename with codec extension

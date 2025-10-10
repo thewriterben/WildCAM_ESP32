@@ -307,24 +307,34 @@ void PowerManager::updateWarnings() {
 void PowerManager::checkPowerThresholds() {
     PowerState newState = m_targetPowerState;
     
-    switch (m_currentMetrics.powerStatus) {
-        case POWER_CRITICAL_BATTERY:
+    // State machine with three primary states: NORMAL, CRITICAL, CHARGING
+    // Apply appropriate power profiles based on current power status
+    
+    if (m_currentMetrics.powerStatus == POWER_CHARGING || 
+        m_currentMetrics.powerStatus == POWER_FULLY_CHARGED) {
+        // CHARGING state - can operate normally or even boost performance
+        if (m_targetPowerState != STATE_NORMAL_OPERATION) {
+            newState = STATE_NORMAL_OPERATION;
+            Logger::info("Power state: CHARGING - restoring normal operation");
+        }
+    } else if (m_currentMetrics.powerStatus == POWER_CRITICAL_BATTERY) {
+        // CRITICAL state - must enter emergency shutdown
+        if (m_targetPowerState != STATE_EMERGENCY_SHUTDOWN) {
             newState = STATE_EMERGENCY_SHUTDOWN;
-            break;
-        case POWER_LOW_BATTERY:
-            if (m_targetPowerState == STATE_NORMAL_OPERATION) {
-                newState = STATE_LOW_POWER;
-            }
-            break;
-        case POWER_NORMAL:
-        case POWER_CHARGING:
-        case POWER_FULLY_CHARGED:
-            if (m_targetPowerState == STATE_LOW_POWER) {
-                newState = STATE_NORMAL_OPERATION;
-            }
-            break;
-        default:
-            break;
+            Logger::warning("Power state: CRITICAL - entering emergency shutdown");
+        }
+    } else if (m_currentMetrics.powerStatus == POWER_LOW_BATTERY) {
+        // LOW state - transition to power saving
+        if (m_targetPowerState == STATE_NORMAL_OPERATION) {
+            newState = STATE_LOW_POWER;
+            Logger::info("Power state: LOW - entering power saving mode");
+        }
+    } else {
+        // NORMAL state - standard operation
+        if (m_targetPowerState == STATE_LOW_POWER || m_targetPowerState == STATE_POWER_SAVING) {
+            newState = STATE_NORMAL_OPERATION;
+            Logger::info("Power state: NORMAL - resuming normal operation");
+        }
     }
     
     if (newState != m_targetPowerState) {
@@ -454,11 +464,34 @@ bool PowerManager::exitLowPowerMode() {
 }
 
 bool PowerManager::enterDeepSleep(uint32_t sleepTimeMs) {
-    Logger::warning("Entering deep sleep for %d ms", sleepTimeMs);
+    // Intelligent deep sleep based on current power state
+    uint32_t actualSleepTime = sleepTimeMs;
+    
+    // Adjust sleep duration based on power state
+    if (m_targetPowerState == STATE_EMERGENCY_SHUTDOWN) {
+        // Critical battery - sleep indefinitely until external wakeup
+        actualSleepTime = 0;
+        Logger::error("Entering emergency deep sleep - critical battery %.2fV", 
+                     m_currentMetrics.batteryVoltage);
+    } else if (m_currentMetrics.powerStatus == POWER_LOW_BATTERY) {
+        // Low battery - extend sleep time to conserve power
+        if (actualSleepTime > 0 && actualSleepTime < 3600000) { // < 1 hour
+            actualSleepTime *= 2; // Double the sleep time
+            Logger::warning("Extending deep sleep to %d ms for battery conservation", actualSleepTime);
+        }
+    } else if (m_currentMetrics.powerStatus == POWER_CHARGING) {
+        // Charging - can use shorter sleep times for more frequent monitoring
+        if (actualSleepTime > 300000) { // > 5 minutes
+            actualSleepTime = 300000; // Cap at 5 minutes while charging
+            Logger::info("Reducing deep sleep to %d ms while charging", actualSleepTime);
+        }
+    }
+    
+    Logger::warning("Entering deep sleep for %d ms (state: %d)", actualSleepTime, m_targetPowerState);
     
     // Configure wakeup source
-    if (sleepTimeMs > 0) {
-        esp_sleep_enable_timer_wakeup(sleepTimeMs * 1000); // Convert to microseconds
+    if (actualSleepTime > 0) {
+        esp_sleep_enable_timer_wakeup(actualSleepTime * 1000); // Convert to microseconds
     }
     
     // Enter deep sleep
