@@ -55,9 +55,6 @@ def create_app(config_name='development'):
     # WebSocket support
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
     
-    # Initialize collaboration service
-    collab_service = CollaborationService(socketio)
-    
     # JWT token blacklist check
     jwt.token_in_blocklist_loader(check_if_token_revoked)
     
@@ -81,6 +78,10 @@ def create_app(config_name='development'):
     
     # Register authentication routes
     create_auth_routes(app)
+    
+    # Register alert routes
+    from routes import alert_bp
+    app.register_blueprint(alert_bp, url_prefix='/api')
     
     # ==== API ROUTES ====
     
