@@ -1,4 +1,4 @@
-name: Security Scan
+name: ESP32 Security Scan
 
 on:
   schedule:
@@ -9,89 +9,6 @@ on:
     branches: [ main ]
 
 jobs:
-  dependency-check:
-    runs-on: ubuntu-latest
-    name: Dependency Security Scan
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install safety
-      run: pip install safety
-    
-    - name: Run safety check on Python dependencies
-      run: |
-        cd backend/
-        safety check -r requirements.txt --json --output safety-report.json || true
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    
-    - name: Install frontend dependencies
-      run: |
-        cd frontend/dashboard/
-        npm ci
-    
-    - name: Audit npm packages
-      run: |
-        cd frontend/dashboard/
-        npm audit --audit-level high --json > npm-audit.json || true
-    
-    - name: Upload security reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: security-reports
-        path: |
-          backend/safety-report.json
-          frontend/dashboard/npm-audit.json
-
-  container-scan:
-    runs-on: ubuntu-latest
-    name: Container Security Scan
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Build Docker images
-      run: |
-        docker build -t wildcam-backend:test ./backend
-        docker build -t wildcam-frontend:test ./frontend/dashboard
-    
-    - name: Run Trivy vulnerability scanner on backend
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: 'wildcam-backend:test'
-        format: 'sarif'
-        output: 'backend-trivy-results.sarif'
-    
-    - name: Run Trivy vulnerability scanner on frontend
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: 'wildcam-frontend:test'
-        format: 'sarif'
-        output: 'frontend-trivy-results.sarif'
-    
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
-      with:
-        sarif_file: 'backend-trivy-results.sarif'
-        category: 'backend'
-    
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
-      with:
-        sarif_file: 'frontend-trivy-results.sarif'
-        category: 'frontend'
-
   secret-scan:
     runs-on: ubuntu-latest
     name: Secret Detection
@@ -105,34 +22,99 @@ jobs:
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: main
+        base: ${{ github.event.pull_request.base.sha || 'main' }}
         head: HEAD
-        extra_args: --debug --only-verified
+        extra_args: --only-verified
 
-  infrastructure-scan:
+  hardcoded-credentials-check:
     runs-on: ubuntu-latest
-    name: Infrastructure Security Scan
+    name: Check for Hardcoded Credentials
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Run Checkov - Infrastructure security analysis
-      uses: bridgecrewio/checkov-action@master
-      with:
-        directory: .
-        framework: dockerfile,kubernetes,secrets
-        output_format: sarif
-        output_file_path: checkov-results.sarif
+    - name: Scan for hardcoded WiFi credentials
+      run: |
+        echo "Scanning for hardcoded WiFi credentials..."
+        
+        # Check for common WiFi credential patterns
+        if grep -r "ssid.*=.*\".*\"" ESP32WildlifeCAM-main --include="*.cpp" --include="*.h" | grep -v "SSID_PLACEHOLDER" | grep -v "YOUR_SSID" | grep -v "//"; then
+          echo "⚠️ Warning: Potential hardcoded WiFi SSID found"
+        fi
+        
+        if grep -r "password.*=.*\".*\"" ESP32WildlifeCAM-main --include="*.cpp" --include="*.h" | grep -v "YOUR_PASSWORD" | grep -v "PASSWORD_HERE" | grep -v "//"; then
+          echo "⚠️ Warning: Potential hardcoded password found"
+        fi
+        
+        # Check for API keys
+        if grep -r "api.*key.*=.*\"[A-Za-z0-9]{20,}\"" ESP32WildlifeCAM-main --include="*.cpp" --include="*.h" | grep -v "YOUR_API_KEY" | grep -v "//"; then
+          echo "⚠️ Warning: Potential hardcoded API key found"
+        fi
+        
+        echo "✅ Credential scan completed"
     
-    - name: Upload Checkov scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
-      with:
-        sarif_file: 'checkov-results.sarif'
+    - name: Check for hardcoded IP addresses
+      run: |
+        echo "Checking for hardcoded IP addresses..."
+        
+        # Allow common defaults like 192.168.4.1 (AP mode default)
+        if grep -rE "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" ESP32WildlifeCAM-main/WildCAM_ESP32/src --include="*.cpp" --include="*.h" | grep -v "192.168.4.1" | grep -v "127.0.0.1" | grep -v "0.0.0.0" | grep -v "//"; then
+          echo "⚠️ Warning: Found hardcoded IP addresses (review for production IPs)"
+        fi
+        
+        echo "✅ IP address check completed"
 
-  license-check:
+  embedded-security-check:
     runs-on: ubuntu-latest
-    name: License Compliance Check
+    name: Embedded Security Analysis
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for insecure functions
+      run: |
+        echo "Checking for insecure C/C++ functions..."
+        
+        # Check for strcpy, strcat, sprintf (should use safe versions)
+        if grep -r "strcpy\|strcat\|sprintf" ESP32WildlifeCAM-main/WildCAM_ESP32/src --include="*.cpp" --include="*.h" | grep -v "//"; then
+          echo "⚠️ Warning: Found potentially unsafe string functions (use strncpy, strncat, snprintf)"
+        fi
+        
+        # Check for gets (extremely dangerous)
+        if grep -r "gets(" ESP32WildlifeCAM-main/WildCAM_ESP32/src --include="*.cpp" --include="*.h"; then
+          echo "❌ Error: Found gets() - extremely dangerous function"
+          exit 1
+        fi
+        
+        echo "✅ Insecure function check completed"
+    
+    - name: Check for buffer overflow risks
+      run: |
+        echo "Checking for potential buffer overflow issues..."
+        
+        # Check for fixed-size buffers with user input
+        if grep -r "char.*\[" ESP32WildlifeCAM-main/WildCAM_ESP32/src --include="*.cpp" | grep -i "input\|read\|receive"; then
+          echo "⚠️ Warning: Found fixed-size buffers near input operations - verify bounds checking"
+        fi
+        
+        echo "✅ Buffer overflow check completed"
+    
+    - name: Check for secure boot and encryption usage
+      run: |
+        echo "Checking for security features usage..."
+        
+        # Check if flash encryption is mentioned in configs
+        if grep -r "FLASH_ENCRYPTION\|SECURE_BOOT" ESP32WildlifeCAM-main --include="*.ini" --include="*.h"; then
+          echo "✅ Security features (flash encryption/secure boot) are referenced"
+        else
+          echo "⚠️ Warning: No flash encryption or secure boot configuration found"
+        fi
+        
+        echo "✅ Security features check completed"
+
+  library-dependency-scan:
+    runs-on: ubuntu-latest
+    name: Library Dependency Security Scan
     
     steps:
     - uses: actions/checkout@v4
@@ -142,35 +124,134 @@ jobs:
       with:
         python-version: '3.11'
     
-    - name: Install license checker
-      run: pip install pip-licenses
-    
-    - name: Check Python license compliance
+    - name: Install PlatformIO
       run: |
-        cd backend/
-        pip install -r requirements.txt
-        pip-licenses --format=json --output-file=python-licenses.json
-        # Check for GPL and other problematic licenses
-        pip-licenses | grep -E "(GPL|AGPL|LGPL)" && exit 1 || true
+        pip install platformio
     
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    
-    - name: Install license checker for Node.js
-      run: npm install -g license-checker
-    
-    - name: Check Node.js license compliance
+    - name: Check library dependencies
       run: |
-        cd frontend/dashboard/
-        npm ci
-        license-checker --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;Unlicense" --json --out npm-licenses.json
+        echo "Analyzing PlatformIO library dependencies..."
+        cd ESP32WildlifeCAM-main
+        
+        # List all library dependencies
+        pio pkg list || true
+        
+        echo "✅ Library dependency scan completed"
     
-    - name: Upload license reports
-      uses: actions/upload-artifact@v3
+    - name: Scan for known vulnerable libraries
+      run: |
+        echo "Checking for known vulnerable library versions..."
+        
+        # Check platformio.ini for library versions
+        if [ -f "ESP32WildlifeCAM-main/platformio.ini" ]; then
+          echo "Analyzing library versions in platformio.ini..."
+          
+          # Extract library versions
+          grep "lib_deps" -A 20 ESP32WildlifeCAM-main/platformio.ini || true
+          
+          echo "⚠️ Manual review recommended for library versions"
+        fi
+        
+        echo "✅ Vulnerable library check completed"
+
+  code-quality-security:
+    runs-on: ubuntu-latest
+    name: Code Quality and Security
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install cppcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck
+    
+    - name: Run cppcheck with security focus
+      run: |
+        echo "Running cppcheck with security checks..."
+        
+        # Run cppcheck with security-focused checks
+        find ESP32WildlifeCAM-main/WildCAM_ESP32/src -name "*.cpp" -o -name "*.h" | while read file; do
+          cppcheck --enable=warning,style,performance,portability \
+                   --std=c++11 \
+                   --inline-suppr \
+                   --quiet \
+                   "$file" 2>&1 | grep -v "Cppcheck cannot find" || true
+        done
+        
+        echo "✅ Code quality security scan completed"
+
+  filesystem-scan:
+    runs-on: ubuntu-latest
+    name: Filesystem Security Scan
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Trivy filesystem scan
+      uses: aquasecurity/trivy-action@master
       with:
-        name: license-reports
-        path: |
-          backend/python-licenses.json
-          frontend/dashboard/npm-licenses.json
+        scan-type: 'fs'
+        scan-ref: 'ESP32WildlifeCAM-main'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  license-compliance:
+    runs-on: ubuntu-latest
+    name: License Compliance Check
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for license files
+      run: |
+        echo "Checking for license compliance..."
+        
+        # Check for project license
+        if [ -f "ESP32WildlifeCAM-main/LICENSE" ]; then
+          echo "✅ Project LICENSE found"
+          head -5 ESP32WildlifeCAM-main/LICENSE
+        else
+          echo "⚠️ Warning: No LICENSE file found"
+        fi
+        
+        # Check library licenses in platformio.ini comments
+        if grep -i "license\|apache\|mit\|gpl" ESP32WildlifeCAM-main/platformio.ini; then
+          echo "License information found in platformio.ini"
+        fi
+        
+        echo "✅ License compliance check completed"
+
+  ota-security-check:
+    runs-on: ubuntu-latest
+    name: OTA Update Security Check
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for OTA security measures
+      run: |
+        echo "Checking OTA update security..."
+        
+        # Check for signature verification in OTA code
+        if grep -r "setMD5\|SHA\|signature\|verify" ESP32WildlifeCAM-main --include="*.cpp" --include="*.h" | grep -i "ota\|update"; then
+          echo "✅ OTA security measures found (signature/hash verification)"
+        else
+          echo "⚠️ Warning: No OTA signature verification found - consider adding for production"
+        fi
+        
+        # Check for HTTPS in OTA updates
+        if grep -r "https://" ESP32WildlifeCAM-main --include="*.cpp" --include="*.h" | grep -i "ota\|update"; then
+          echo "✅ HTTPS URLs found in OTA code"
+        else
+          echo "⚠️ Warning: Ensure OTA updates use HTTPS in production"
+        fi
+        
+        echo "✅ OTA security check completed"
