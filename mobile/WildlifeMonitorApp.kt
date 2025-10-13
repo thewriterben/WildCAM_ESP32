@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import retrofit2.Retrofit
 import retrofit2.http.*
 import java.util.Date
+import com.wildlife.monitor.ar.*
 
 // Data Models
 data class Camera(
@@ -125,6 +126,10 @@ class WildlifeViewModel : ViewModel() {
 @Composable
 fun WildlifeMonitorApp(viewModel: WildlifeViewModel) {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    
+    // Initialize AR app (lazy)
+    val arApp = remember { ARWildlifeApp(context) }
     
     NavHost(navController, startDestination = "dashboard") {
         composable("dashboard") {
@@ -141,6 +146,9 @@ fun WildlifeMonitorApp(viewModel: WildlifeViewModel) {
         }
         composable("species_guide") {
             SpeciesGuideScreen()
+        }
+        composable("ar_mode") {
+            ARWildlifeScreen(viewModel, arApp)
         }
     }
 }
@@ -174,11 +182,25 @@ fun DashboardScreen(
             }
         }
         
-        // Floating action button for field observations
-        FloatingActionButton(
-            onClick = { navController.navigate("field_observation") }
+        // Action buttons row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Icon(Icons.Default.CameraAlt)
+            // Field observations button
+            FloatingActionButton(
+                onClick = { navController.navigate("field_observation") }
+            ) {
+                Icon(Icons.Default.CameraAlt)
+            }
+            
+            // AR Mode button
+            FloatingActionButton(
+                onClick = { navController.navigate("ar_mode") },
+                containerColor = MaterialTheme.colorScheme.secondary
+            ) {
+                Icon(Icons.Default.ViewInAr, contentDescription = "AR Mode")
+            }
         }
     }
 }

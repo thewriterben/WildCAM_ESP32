@@ -19,8 +19,10 @@ from PIL import Image
 import boto3
 
 # Import our models and auth system
-from models import db, User, Camera, Species, WildlifeDetection, Alert, AnalyticsData, DetectionComment, Bookmark, ChatMessage
-from auth import create_auth_routes, check_if_token_revoked, verify_jwt_in_request
+from models import db, User, Camera, Species, WildlifeDetection, Alert, AnalyticsData
+from models import UserSession, Annotation, ChatMessage, SharedBookmark, Task, FieldNote
+from auth import create_auth_routes, check_if_token_revoked
+from collaboration import CollaborationService
 
 # Application factory
 def create_app(config_name='development'):
@@ -76,6 +78,10 @@ def create_app(config_name='development'):
     
     # Register authentication routes
     create_auth_routes(app)
+    
+    # Register alert routes
+    from routes import alert_bp
+    app.register_blueprint(alert_bp, url_prefix='/api')
     
     # ==== API ROUTES ====
     
@@ -541,6 +547,242 @@ def create_app(config_name='development'):
     def handle_disconnect():
         logger.info('Client disconnected from WebSocket')
     
+    # ==== COLLABORATION API ROUTES ====
+    
+    @app.route('/api/collaboration/users/active', methods=['GET'])
+    @jwt_required()
+    def get_active_users_api():
+        """Get list of currently active users"""
+        try:
+            users = collab_service.get_active_users()
+            return jsonify({'active_users': users, 'count': len(users)}), 200
+        except Exception as e:
+            logger.error(f"Get active users error: {e}")
+            return jsonify({'error': 'Failed to fetch active users'}), 500
+    
+    @app.route('/api/collaboration/annotations', methods=['GET', 'POST'])
+    @jwt_required()
+    def handle_annotations():
+        """Get or create annotations"""
+        user_id = get_jwt_identity()
+        
+        if request.method == 'GET':
+            detection_id = request.args.get('detection_id', type=int)
+            if not detection_id:
+                return jsonify({'error': 'detection_id is required'}), 400
+            
+            annotations = collab_service.get_annotations(detection_id)
+            return jsonify({'annotations': annotations}), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            required = ['detection_id', 'annotation_type', 'content', 'position']
+            if not all(k in data for k in required):
+                return jsonify({'error': 'Missing required fields'}), 400
+            
+            annotation = collab_service.create_annotation(
+                detection_id=data['detection_id'],
+                user_id=user_id,
+                annotation_type=data['annotation_type'],
+                content=data['content'],
+                position=data['position'],
+                metadata=data.get('metadata')
+            )
+            
+            if annotation:
+                return jsonify({'annotation': annotation}), 201
+            return jsonify({'error': 'Failed to create annotation'}), 500
+    
+    @app.route('/api/collaboration/chat', methods=['GET', 'POST'])
+    @jwt_required()
+    def handle_chat():
+        """Get or send chat messages"""
+        user_id = get_jwt_identity()
+        
+        if request.method == 'GET':
+            channel = request.args.get('channel', 'general')
+            limit = request.args.get('limit', 50, type=int)
+            
+            messages = collab_service.get_chat_messages(channel, limit)
+            return jsonify({'messages': messages}), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not data or not data.get('message'):
+                return jsonify({'error': 'message is required'}), 400
+            
+            message = collab_service.send_chat_message(
+                user_id=user_id,
+                channel=data.get('channel', 'general'),
+                message=data['message'],
+                parent_id=data.get('parent_id'),
+                mentions=data.get('mentions')
+            )
+            
+            if message:
+                return jsonify({'message': message}), 201
+            return jsonify({'error': 'Failed to send message'}), 500
+    
+    @app.route('/api/collaboration/bookmarks', methods=['GET', 'POST'])
+    @jwt_required()
+    def handle_bookmarks():
+        """Get or create bookmarks"""
+        user_id = get_jwt_identity()
+        
+        if request.method == 'GET':
+            bookmarks = collab_service.get_bookmarks(user_id)
+            return jsonify({'bookmarks': bookmarks}), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not data or not data.get('title'):
+                return jsonify({'error': 'title is required'}), 400
+            
+            bookmark = collab_service.create_bookmark(
+                user_id=user_id,
+                title=data['title'],
+                description=data.get('description'),
+                detection_id=data.get('detection_id'),
+                camera_id=data.get('camera_id'),
+                tags=data.get('tags'),
+                is_shared=data.get('is_shared', False),
+                shared_with=data.get('shared_with')
+            )
+            
+            if bookmark:
+                return jsonify({'bookmark': bookmark}), 201
+            return jsonify({'error': 'Failed to create bookmark'}), 500
+    
+    @app.route('/api/collaboration/tasks', methods=['GET', 'POST'])
+    @jwt_required()
+    def handle_tasks():
+        """Get or create tasks"""
+        user_id = get_jwt_identity()
+        
+        if request.method == 'GET':
+            status = request.args.get('status')
+            my_tasks = request.args.get('my_tasks', 'true').lower() == 'true'
+            
+            tasks = collab_service.get_tasks(
+                user_id=user_id if my_tasks else None,
+                status=status
+            )
+            return jsonify({'tasks': tasks}), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not data or not data.get('title'):
+                return jsonify({'error': 'title is required'}), 400
+            
+            task = collab_service.create_task(
+                title=data['title'],
+                description=data.get('description'),
+                created_by=user_id,
+                task_type=data.get('task_type'),
+                priority=data.get('priority', 'medium'),
+                assigned_to=data.get('assigned_to'),
+                camera_id=data.get('camera_id'),
+                detection_id=data.get('detection_id'),
+                due_date=datetime.fromisoformat(data['due_date']) if data.get('due_date') else None
+            )
+            
+            if task:
+                return jsonify({'task': task}), 201
+            return jsonify({'error': 'Failed to create task'}), 500
+    
+    @app.route('/api/collaboration/tasks/<int:task_id>', methods=['PATCH'])
+    @jwt_required()
+    def update_task(task_id):
+        """Update task status"""
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        if not data or not data.get('status'):
+            return jsonify({'error': 'status is required'}), 400
+        
+        task = collab_service.update_task_status(task_id, data['status'], user_id)
+        if task:
+            return jsonify({'task': task}), 200
+        return jsonify({'error': 'Failed to update task'}), 500
+    
+    @app.route('/api/collaboration/field-notes', methods=['GET', 'POST'])
+    @jwt_required()
+    def handle_field_notes():
+        """Get or create field notes"""
+        user_id = get_jwt_identity()
+        
+        if request.method == 'GET':
+            camera_id = request.args.get('camera_id', type=int)
+            detection_id = request.args.get('detection_id', type=int)
+            
+            notes = collab_service.get_field_notes(camera_id, detection_id)
+            return jsonify({'notes': notes}), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            required = ['title', 'content']
+            if not all(k in data for k in required):
+                return jsonify({'error': 'title and content are required'}), 400
+            
+            note = collab_service.create_field_note(
+                user_id=user_id,
+                title=data['title'],
+                content=data['content'],
+                note_type=data.get('note_type'),
+                camera_id=data.get('camera_id'),
+                detection_id=data.get('detection_id'),
+                tags=data.get('tags'),
+                attachments=data.get('attachments')
+            )
+            
+            if note:
+                return jsonify({'note': note}), 201
+            return jsonify({'error': 'Failed to create field note'}), 500
+    
+    # ==== WEBSOCKET EVENTS FOR COLLABORATION ====
+    
+    @socketio.on('user_presence')
+    def handle_user_presence(data):
+        """Handle user presence updates"""
+        try:
+            session_id = data.get('session_id')
+            user_id = data.get('user_id')
+            
+            if data.get('action') == 'connect':
+                collab_service.user_connected(
+                    user_id=user_id,
+                    session_id=session_id,
+                    socket_id=request.sid,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent', '')
+                )
+            elif data.get('action') == 'disconnect':
+                collab_service.user_disconnected(session_id)
+            elif data.get('action') == 'update':
+                collab_service.update_user_activity(
+                    session_id=session_id,
+                    current_page=data.get('current_page'),
+                    cursor_position=data.get('cursor_position')
+                )
+        except Exception as e:
+            logger.error(f"User presence error: {e}")
+    
+    @socketio.on('join_channel')
+    def handle_join_channel(data):
+        """Join a chat channel or page room"""
+        channel = data.get('channel')
+        if channel:
+            join_room(channel)
+            logger.info(f"Client {request.sid} joined channel: {channel}")
+    
+    @socketio.on('leave_channel')
+    def handle_leave_channel(data):
+        """Leave a chat channel or page room"""
+        channel = data.get('channel')
+        if channel:
+            leave_room(channel)
+            logger.info(f"Client {request.sid} left channel: {channel}")
+    
     # Return the app instance
     return app, socketio
 
@@ -798,204 +1040,6 @@ def activity_patterns():
         'period_days': days,
         'hourly_activity': hourly_activity
     })
-
-    # ==== COLLABORATION ENDPOINTS ====
-    
-    @app.route('/api/collaboration/comments', methods=['GET', 'POST'])
-    @jwt_required()
-    def detection_comments():
-        """Get or create comments on detections"""
-        from models import DetectionComment
-        
-        if request.method == 'GET':
-            detection_id = request.args.get('detection_id')
-            if not detection_id:
-                return jsonify({'error': 'detection_id required'}), 400
-            
-            comments = DetectionComment.query.filter_by(
-                detection_id=detection_id
-            ).order_by(DetectionComment.created_at.desc()).all()
-            
-            return jsonify({
-                'comments': [c.to_dict() for c in comments]
-            }), 200
-        
-        elif request.method == 'POST':
-            data = request.get_json()
-            detection_id = data.get('detection_id')
-            comment_text = data.get('comment')
-            
-            if not detection_id or not comment_text:
-                return jsonify({'error': 'detection_id and comment required'}), 400
-            
-            user_id = get_jwt_identity()
-            comment = DetectionComment(
-                detection_id=detection_id,
-                user_id=user_id,
-                comment=comment_text
-            )
-            
-            db.session.add(comment)
-            db.session.commit()
-            
-            # Emit via WebSocket
-            socketio.emit('new_comment', comment.to_dict())
-            
-            return jsonify({
-                'message': 'Comment added',
-                'comment': comment.to_dict()
-            }), 201
-    
-    @app.route('/api/collaboration/bookmarks', methods=['GET', 'POST'])
-    @jwt_required()
-    def bookmarks():
-        """Get or create bookmarks"""
-        from models import Bookmark
-        
-        if request.method == 'GET':
-            user_id = get_jwt_identity()
-            shared_only = request.args.get('shared', 'false').lower() == 'true'
-            
-            query = Bookmark.query
-            if shared_only:
-                query = query.filter_by(shared=True)
-            else:
-                query = query.filter_by(user_id=user_id)
-            
-            bookmarks = query.order_by(Bookmark.created_at.desc()).all()
-            
-            return jsonify({
-                'bookmarks': [b.to_dict() for b in bookmarks]
-            }), 200
-        
-        elif request.method == 'POST':
-            data = request.get_json()
-            detection_id = data.get('detection_id')
-            title = data.get('title')
-            
-            if not detection_id or not title:
-                return jsonify({'error': 'detection_id and title required'}), 400
-            
-            user_id = get_jwt_identity()
-            bookmark = Bookmark(
-                detection_id=detection_id,
-                user_id=user_id,
-                title=title,
-                description=data.get('description'),
-                shared=data.get('shared', False)
-            )
-            
-            db.session.add(bookmark)
-            db.session.commit()
-            
-            if bookmark.shared:
-                socketio.emit('new_bookmark', bookmark.to_dict())
-            
-            return jsonify({
-                'message': 'Bookmark created',
-                'bookmark': bookmark.to_dict()
-            }), 201
-    
-    @app.route('/api/collaboration/chat', methods=['GET', 'POST'])
-    @jwt_required()
-    def chat_messages():
-        """Get or send chat messages"""
-        from models import ChatMessage
-        
-        if request.method == 'GET':
-            detection_id = request.args.get('detection_id')
-            limit = int(request.args.get('limit', 50))
-            
-            query = ChatMessage.query
-            if detection_id:
-                query = query.filter_by(detection_id=detection_id)
-            
-            messages = query.order_by(
-                ChatMessage.created_at.desc()
-            ).limit(limit).all()
-            
-            return jsonify({
-                'messages': [m.to_dict() for m in reversed(messages)]
-            }), 200
-        
-        elif request.method == 'POST':
-            data = request.get_json()
-            message_text = data.get('message')
-            
-            if not message_text:
-                return jsonify({'error': 'message required'}), 400
-            
-            user_id = get_jwt_identity()
-            message = ChatMessage(
-                user_id=user_id,
-                message=message_text,
-                detection_id=data.get('detection_id')
-            )
-            
-            db.session.add(message)
-            db.session.commit()
-            
-            # Emit via WebSocket
-            socketio.emit('chat_message', message.to_dict())
-            
-            return jsonify({
-                'message': 'Message sent',
-                'chat_message': message.to_dict()
-            }), 201
-    
-    @app.route('/api/collaboration/presence', methods=['GET'])
-    @jwt_required()
-    def active_users():
-        """Get list of currently active users"""
-        from models import User
-        
-        # Get users who have logged in within last 5 minutes
-        active_threshold = datetime.utcnow() - timedelta(minutes=5)
-        users = User.query.filter(
-            User.last_login != None,
-            User.last_login >= active_threshold,
-            User.is_active == True
-        ).all()
-        
-        return jsonify({
-            'active_users': [u.to_dict() for u in users],
-            'count': len(users)
-        }), 200
-    
-    # WebSocket handlers for real-time collaboration
-    @socketio.on('connect')
-    def handle_connect():
-        """Handle user connection"""
-        logger.info('Client connected')
-        try:
-            verify_jwt_in_request()
-            user_id = get_jwt_identity()
-            user = User.query.get(user_id)
-            if user:
-                user.last_login = datetime.utcnow()
-                db.session.commit()
-                emit('user_connected', {'user_id': user_id, 'username': user.username}, broadcast=True)
-        except:
-            pass
-    
-    @socketio.on('disconnect')
-    def handle_disconnect():
-        """Handle user disconnection"""
-        logger.info('Client disconnected')
-    
-    @socketio.on('cursor_move')
-    def handle_cursor_move(data):
-        """Handle cursor position updates for collaborative viewing"""
-        try:
-            verify_jwt_in_request()
-            user_id = get_jwt_identity()
-            emit('cursor_update', {
-                'user_id': user_id,
-                'position': data.get('position'),
-                'page': data.get('page')
-            }, broadcast=True, include_self=False)
-        except:
-            pass
 
 # Async Tasks
 @celery.task

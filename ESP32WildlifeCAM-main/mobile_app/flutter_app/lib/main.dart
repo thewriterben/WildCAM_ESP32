@@ -9,6 +9,7 @@ import 'screens/gallery_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/notification_service.dart';
 import 'config/theme_config.dart';
+import 'ar/screens/ar_main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +77,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = [
     HomeScreen(),
     DashboardScreen(),
+    ARMainScreen(),
     CameraScreen(),
     GalleryScreen(),
     SettingsScreen(),
@@ -120,6 +122,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.view_in_ar),
+            label: 'AR',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.camera_alt),
