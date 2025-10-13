@@ -12,6 +12,7 @@ from ..models import db, Alert, AlertFeedback, AlertPreference, User, WildlifeDe
 from ..ml.alert_ml_engine import MLAlertEngine, AlertLevel
 from ..ml.alert_analytics import AlertAnalytics
 from ..services.notification_service import NotificationService, NotificationChannel
+from ..services.websocket_service import websocket_service
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,14 @@ def acknowledge_alert(alert_id):
         
         db.session.commit()
         
+        # Broadcast update via WebSocket
+        if websocket_service:
+            websocket_service.notify_alert_update(
+                alert_id,
+                'acknowledged',
+                {'user_id': user_id, 'timestamp': alert.acknowledged_at.isoformat()}
+            )
+        
         return jsonify({
             'message': 'Alert acknowledged',
             'alert': alert.to_dict()
@@ -129,6 +138,14 @@ def resolve_alert(alert_id):
         alert.resolved_at = datetime.utcnow()
         
         db.session.commit()
+        
+        # Broadcast update via WebSocket
+        if websocket_service:
+            websocket_service.notify_alert_update(
+                alert_id,
+                'resolved',
+                {'timestamp': alert.resolved_at.isoformat()}
+            )
         
         return jsonify({
             'message': 'Alert resolved',
@@ -177,6 +194,18 @@ def submit_alert_feedback(alert_id):
             species_correction=data.get('species_correction'),
             notes=data.get('notes')
         )
+        
+        # Broadcast update via WebSocket
+        if websocket_service:
+            websocket_service.notify_alert_update(
+                alert_id,
+                'feedback',
+                {
+                    'is_accurate': data['is_accurate'],
+                    'user_id': user_id,
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+            )
         
         return jsonify({
             'message': 'Feedback submitted successfully',

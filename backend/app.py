@@ -53,6 +53,10 @@ def create_app(config_name='development'):
     # WebSocket support
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
     
+    # Initialize WebSocket service
+    from services.websocket_service import init_websocket_service
+    ws_service = init_websocket_service(socketio)
+    
     # JWT token blacklist check
     jwt.token_in_blocklist_loader(check_if_token_revoked)
     
