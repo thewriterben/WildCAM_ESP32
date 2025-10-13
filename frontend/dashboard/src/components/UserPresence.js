@@ -72,7 +72,9 @@ function UserPresence() {
                   bgcolor: 'secondary.main' 
                 }}
               >
-                {user.username?.charAt(0).toUpperCase() || '?'}
+                {user.username && user.username.length > 0
+                  ? user.username.charAt(0).toUpperCase()
+                  : '?'}
               </Avatar>
             </Badge>
           </Tooltip>
