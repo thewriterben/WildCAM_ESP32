@@ -77,6 +77,10 @@ def create_app(config_name='development'):
     # Register authentication routes
     create_auth_routes(app)
     
+    # Register alert routes
+    from routes import alert_bp
+    app.register_blueprint(alert_bp, url_prefix='/api')
+    
     # ==== API ROUTES ====
     
     @app.route('/api/health', methods=['GET'])
