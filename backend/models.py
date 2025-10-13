@@ -190,22 +190,11 @@ class Alert(db.Model):
     detection_id = db.Column(db.Integer, db.ForeignKey('wildlife_detections.id'))
     alert_type = db.Column(db.String(50), nullable=False)  # rare_species, low_battery, offline, etc.
     severity = db.Column(db.String(20), default='info')  # emergency, critical, warning, info
-    priority = db.Column(db.String(20), default='normal')  # high, normal, low
     title = db.Column(db.String(200), nullable=False)
     message = db.Column(db.Text)
     data = db.Column(db.JSON)  # Additional alert data
     
     # ML-enhanced fields
-    ml_confidence = db.Column(db.Float, default=0.5)  # ML confidence score
-    false_positive_score = db.Column(db.Float, default=0.0)  # Probability of false positive
-    anomaly_score = db.Column(db.Float, default=0.0)  # Anomaly detection score
-    context_data = db.Column(db.JSON)  # Environmental and temporal context
-    
-    # Alert filtering and deduplication
-    is_filtered = db.Column(db.Boolean, default=False)  # Whether alert was filtered out
-    filter_reason = db.Column(db.String(200))  # Reason for filtering
-    duplicate_of = db.Column(db.Integer, db.ForeignKey('alerts.id'))  # Reference to original alert
-    correlation_group = db.Column(db.String(50))  # Group ID for correlated alerts
     
     # Status tracking
     acknowledged = db.Column(db.Boolean, default=False)
@@ -213,17 +202,14 @@ class Alert(db.Model):
     acknowledged_at = db.Column(db.DateTime)
     resolved = db.Column(db.Boolean, default=False)
     resolved_at = db.Column(db.DateTime)
-    
-    # User feedback for learning
-    user_rating = db.Column(db.Integer)  # 1-5 rating of alert usefulness
-    is_false_positive = db.Column(db.Boolean)  # User-confirmed false positive
-    feedback_notes = db.Column(db.Text)
-    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     feedback = db.relationship('AlertFeedback', backref='alert', lazy='dynamic')
+    
+    # User feedback for learning
+    user_feedback = db.relationship('AlertFeedback', backref='alert', lazy='dynamic')
     
     def to_dict(self):
         return {
@@ -237,23 +223,89 @@ class Alert(db.Model):
             'message': self.message,
             'data': self.data,
             'ml_confidence': self.ml_confidence,
-            'false_positive_score': self.false_positive_score,
-            'anomaly_score': self.anomaly_score,
-            'context_data': self.context_data,
-            'is_filtered': self.is_filtered,
-            'filter_reason': self.filter_reason,
-            'duplicate_of': self.duplicate_of,
-            'correlation_group': self.correlation_group,
             'acknowledged': self.acknowledged,
             'acknowledged_by': self.acknowledged_by,
             'acknowledged_at': self.acknowledged_at.isoformat() if self.acknowledged_at else None,
             'resolved': self.resolved,
             'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
-            'user_rating': self.user_rating,
-            'is_false_positive': self.is_false_positive,
-            'feedback_notes': self.feedback_notes,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class AlertFeedback(db.Model):
+    """User feedback on alert accuracy for continuous learning"""
+    __tablename__ = 'alert_feedback'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    alert_id = db.Column(db.Integer, db.ForeignKey('alerts.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    is_accurate = db.Column(db.Boolean, nullable=False)
+    species_correction = db.Column(db.String(100))  # Corrected species if wrong
+    confidence_rating = db.Column(db.Integer)  # User's confidence rating 1-5
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'alert_id': self.alert_id,
+            'user_id': self.user_id,
+            'is_accurate': self.is_accurate,
+            'species_correction': self.species_correction,
+            'confidence_rating': self.confidence_rating,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class AlertPreference(db.Model):
+    """User alert notification preferences"""
+    __tablename__ = 'alert_preferences'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
+    
+    # Channel preferences
+    email_enabled = db.Column(db.Boolean, default=True)
+    sms_enabled = db.Column(db.Boolean, default=False)
+    push_enabled = db.Column(db.Boolean, default=True)
+    slack_webhook = db.Column(db.String(500))
+    discord_webhook = db.Column(db.String(500))
+    custom_webhook = db.Column(db.String(500))
+    
+    # Alert level filters
+    min_severity = db.Column(db.String(20), default='info')  # emergency, critical, warning, info
+    dangerous_species_only = db.Column(db.Boolean, default=False)
+    min_confidence = db.Column(db.Float, default=0.7)
+    
+    # Quiet hours
+    quiet_hours_enabled = db.Column(db.Boolean, default=False)
+    quiet_start_hour = db.Column(db.Integer, default=22)  # 10 PM
+    quiet_end_hour = db.Column(db.Integer, default=7)  # 7 AM
+    
+    # Rate limiting
+    max_alerts_per_hour = db.Column(db.Integer, default=10)
+    batch_alerts = db.Column(db.Boolean, default=False)
+    
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'email_enabled': self.email_enabled,
+            'sms_enabled': self.sms_enabled,
+            'push_enabled': self.push_enabled,
+            'slack_webhook': self.slack_webhook[:20] + '...' if self.slack_webhook else None,
+            'discord_webhook': self.discord_webhook[:20] + '...' if self.discord_webhook else None,
+            'custom_webhook': self.custom_webhook[:20] + '...' if self.custom_webhook else None,
+            'min_severity': self.min_severity,
+            'dangerous_species_only': self.dangerous_species_only,
+            'min_confidence': self.min_confidence,
+            'quiet_hours_enabled': self.quiet_hours_enabled,
+            'quiet_start_hour': self.quiet_start_hour,
+            'quiet_end_hour': self.quiet_end_hour,
+            'max_alerts_per_hour': self.max_alerts_per_hour,
+            'batch_alerts': self.batch_alerts
         }
 
 class AnalyticsData(db.Model):
@@ -283,137 +335,18 @@ class AnalyticsData(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
-class AlertFeedback(db.Model):
-    """User feedback on alerts for machine learning improvement"""
-    __tablename__ = 'alert_feedback'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    alert_id = db.Column(db.Integer, db.ForeignKey('alerts.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    feedback_type = db.Column(db.String(50), nullable=False)  # false_positive, useful, not_useful, etc.
-    rating = db.Column(db.Integer)  # 1-5 rating
-    is_correct = db.Column(db.Boolean)  # Was the alert classification correct
-    notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
         return {
             'id': self.id,
-            'alert_id': self.alert_id,
-            'user_id': self.user_id,
-            'feedback_type': self.feedback_type,
-            'rating': self.rating,
-            'is_correct': self.is_correct,
-            'notes': self.notes,
-            'created_at': self.created_at.isoformat() if self.created_at else None
-        }
-
-class AlertRule(db.Model):
-    """Customizable alert rules and preferences"""
-    __tablename__ = 'alert_rules'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    camera_id = db.Column(db.Integer, db.ForeignKey('cameras.id'))  # Optional: specific camera
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    
-    # Rule conditions
-    species_filter = db.Column(db.JSON)  # List of species to alert on
-    min_confidence = db.Column(db.Float, default=0.7)
-    severity_levels = db.Column(db.JSON)  # List of severity levels to include
-    time_of_day = db.Column(db.JSON)  # Time windows for alerts
-    days_of_week = db.Column(db.JSON)  # Days to receive alerts
-    
-    # Alert delivery preferences
-    email_enabled = db.Column(db.Boolean, default=True)
-    sms_enabled = db.Column(db.Boolean, default=False)
-    push_enabled = db.Column(db.Boolean, default=True)
-    webhook_url = db.Column(db.String(500))
-    
-    # Smart filtering
-    enable_ml_filtering = db.Column(db.Boolean, default=True)
-    suppress_false_positives = db.Column(db.Boolean, default=True)
-    batch_similar_alerts = db.Column(db.Boolean, default=True)
-    batch_window_minutes = db.Column(db.Integer, default=30)
-    
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def to_dict(self):
         return {
             'id': self.id,
             'user_id': self.user_id,
-            'camera_id': self.camera_id,
-            'name': self.name,
-            'description': self.description,
-            'species_filter': self.species_filter,
-            'min_confidence': self.min_confidence,
-            'severity_levels': self.severity_levels,
-            'time_of_day': self.time_of_day,
-            'days_of_week': self.days_of_week,
-            'email_enabled': self.email_enabled,
-            'sms_enabled': self.sms_enabled,
-            'push_enabled': self.push_enabled,
-            'webhook_url': self.webhook_url,
-            'enable_ml_filtering': self.enable_ml_filtering,
-            'suppress_false_positives': self.suppress_false_positives,
-            'batch_similar_alerts': self.batch_similar_alerts,
-            'batch_window_minutes': self.batch_window_minutes,
-            'is_active': self.is_active,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
-
-class AlertMetrics(db.Model):
-    """Alert effectiveness metrics and analytics"""
-    __tablename__ = 'alert_metrics'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
-    camera_id = db.Column(db.Integer, db.ForeignKey('cameras.id'))
-    
-    # Volume metrics
-    total_alerts = db.Column(db.Integer, default=0)
-    filtered_alerts = db.Column(db.Integer, default=0)
-    sent_alerts = db.Column(db.Integer, default=0)
-    
-    # Quality metrics
-    false_positive_count = db.Column(db.Integer, default=0)
-    true_positive_count = db.Column(db.Integer, default=0)
-    user_confirmed_count = db.Column(db.Integer, default=0)
-    
-    # Response metrics
-    avg_acknowledgment_time_seconds = db.Column(db.Float)
-    avg_resolution_time_seconds = db.Column(db.Float)
-    unacknowledged_count = db.Column(db.Integer, default=0)
-    
-    # ML performance
-    ml_accuracy = db.Column(db.Float)
-    false_positive_rate = db.Column(db.Float)
-    false_negative_rate = db.Column(db.Float)
-    
-    metadata = db.Column(db.JSON)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
         return {
             'id': self.id,
-            'date': self.date.isoformat() if self.date else None,
-            'camera_id': self.camera_id,
-            'total_alerts': self.total_alerts,
-            'filtered_alerts': self.filtered_alerts,
-            'sent_alerts': self.sent_alerts,
-            'false_positive_count': self.false_positive_count,
-            'true_positive_count': self.true_positive_count,
-            'user_confirmed_count': self.user_confirmed_count,
-            'avg_acknowledgment_time_seconds': self.avg_acknowledgment_time_seconds,
-            'avg_resolution_time_seconds': self.avg_resolution_time_seconds,
-            'unacknowledged_count': self.unacknowledged_count,
-            'ml_accuracy': self.ml_accuracy,
-            'false_positive_rate': self.false_positive_rate,
-            'false_negative_rate': self.false_negative_rate,
-            'metadata': self.metadata,
-            'created_at': self.created_at.isoformat() if self.created_at else None
         }

@@ -72,6 +72,35 @@ dependencies:
   
   # Security
   flutter_secure_storage: ^9.0.0
+  
+  # AR and 3D Visualization
+  arcore_flutter_plugin: ^0.1.0
+  ar_flutter_plugin: ^0.7.3
+  vector_math: ^2.1.4
+  flutter_cube: ^0.1.1
+  model_viewer_plus: ^1.7.0
+  
+  # GPS and Location
+  geolocator: ^10.1.0
+  location: ^5.0.3
+  geocoding: ^2.1.1
+  google_maps_flutter: ^2.5.0
+  flutter_compass: ^0.8.0
+  
+  # ML and AI
+  tflite_flutter: ^0.10.4
+  tflite_flutter_helper: ^0.3.1
+  
+  # Audio and Speech
+  speech_to_text: ^6.5.1
+  flutter_tts: ^3.8.5
+  just_audio: ^0.9.36
+  audio_waveforms: ^1.0.5
+  
+  # Gesture and Interaction
+  flutter_gesture_recognizer: ^0.2.0
+  sensors_plus: ^3.1.0
+  vibration: ^1.8.4
 
 dev_dependencies:
   flutter_test:

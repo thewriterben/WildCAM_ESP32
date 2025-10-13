@@ -1,0 +1,133 @@
+{
+  "version": "1.0.0",
+  "ar_config": {
+    "enable_depth": true,
+    "enable_light_estimation": true,
+    "enable_cloud_anchors": true,
+    "enable_occlusion": true,
+    "enable_slam": true,
+    "target_frame_rate": 30,
+    "min_frame_rate": 20,
+    "max_models_in_memory": 10
+  },
+  "performance": {
+    "adaptive_quality": true,
+    "battery_optimization": true,
+    "quality_levels": {
+      "ultra": {
+        "lod_level": 0,
+        "enable_shadows": true,
+        "enable_reflections": true,
+        "target_fps": 60
+      },
+      "high": {
+        "lod_level": 1,
+        "enable_shadows": true,
+        "enable_reflections": false,
+        "target_fps": 60
+      },
+      "medium": {
+        "lod_level": 2,
+        "enable_shadows": false,
+        "enable_reflections": false,
+        "target_fps": 30
+      },
+      "low": {
+        "lod_level": 3,
+        "enable_shadows": false,
+        "enable_reflections": false,
+        "target_fps": 30
+      }
+    }
+  },
+  "species_identification": {
+    "min_confidence_threshold": 0.75,
+    "enable_offline_mode": true,
+    "enable_size_estimation": true,
+    "enable_age_estimation": true,
+    "enable_audio_analysis": true,
+    "max_concurrent_detections": 5,
+    "offline_field_guide_enabled": true
+  },
+  "model_management": {
+    "max_cache_size_mb": 500,
+    "auto_cleanup_enabled": true,
+    "preload_common_species": true,
+    "common_species": [
+      "white_tailed_deer",
+      "black_bear",
+      "raccoon",
+      "coyote",
+      "wild_turkey",
+      "red_fox"
+    ],
+    "cdn_base_url": "https://cdn.wildlife-monitor.com/models/"
+  },
+  "navigation": {
+    "show_terrain_visualization": true,
+    "show_weather_overlay": true,
+    "show_sighting_heatmap": true,
+    "magnetic_declination_correction": true,
+    "waypoint_visibility_radius_m": 1000,
+    "terrain_tile_size_m": 256,
+    "terrain_resolution_m": 10
+  },
+  "camera_placement": {
+    "enable_hazard_detection": true,
+    "enable_camouflage_analysis": true,
+    "enable_solar_optimization": true,
+    "enable_network_analysis": true,
+    "fov_visualization_enabled": true
+  },
+  "collaboration": {
+    "enable_offline_sync": true,
+    "cloud_sync_interval_ms": 30000,
+    "max_participants_per_session": 10,
+    "enable_live_streaming": true,
+    "enable_voice_chat": false,
+    "websocket_url": "wss://api.wildlife-monitor.com/ar/ws"
+  },
+  "field_assistant": {
+    "enable_auto_capture": false,
+    "enable_voice_to_text": true,
+    "enable_auto_field_notes": true,
+    "enable_equipment_monitoring": true,
+    "ml_inference_interval_ms": 500,
+    "behavior_prediction_enabled": true
+  },
+  "education": {
+    "enable_gamification": true,
+    "enable_citizen_science": true,
+    "enable_tutorials": true,
+    "enable_challenges": true,
+    "enable_certifications": true,
+    "default_language": "en",
+    "supported_languages": ["en", "es", "fr", "de"]
+  },
+  "api": {
+    "base_url": "https://api.wildlife-monitor.com/v1/",
+    "timeout_ms": 30000,
+    "retry_attempts": 3,
+    "enable_caching": true,
+    "cache_duration_hours": 24
+  },
+  "offline": {
+    "enable_offline_queue": true,
+    "max_queue_size": 1000,
+    "sync_on_wifi_only": true,
+    "auto_download_models": false,
+    "offline_maps_enabled": true
+  },
+  "privacy": {
+    "strip_exif_from_photos": true,
+    "anonymize_location_data": false,
+    "require_user_consent": true,
+    "data_retention_days": 365
+  },
+  "experimental": {
+    "enable_depth_occlusion": true,
+    "enable_semantic_understanding": false,
+    "enable_hand_tracking": false,
+    "enable_face_tracking": false
+  }
+}

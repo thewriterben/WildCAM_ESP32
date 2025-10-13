@@ -17,6 +17,7 @@ A comprehensive mobile application suite for remote control and monitoring of th
 - **Comprehensive UI**: Dashboard, camera control, gallery, and settings
 - **Push Notifications**: Multi-channel notification system
 - **Theme Support**: Light/dark modes with system preference detection
+- **AR Interface**: Augmented Reality features for enhanced field research (iOS 11+/Android 7.0+)
 
 ### Backend Integration
 - **Mobile API Endpoints**: Bandwidth-optimized APIs for mobile devices
@@ -28,6 +29,7 @@ A comprehensive mobile application suite for remote control and monitoring of th
 
 ### Screens
 - **Dashboard**: Real-time system monitoring with live charts and status cards
+- **AR Interface**: Augmented reality wildlife identification and field research tools
 - **Camera**: Live preview, capture controls, and camera settings
 - **Gallery**: Image management with grid/list view and filtering
 - **Settings**: Configuration, notifications, and connection management
@@ -199,15 +201,48 @@ config.maxBurstCount = 10;
 4. Flutter app receives updates and triggers appropriate UI changes
 5. Push notifications alert users of important events
 
+## 🚀 AR Features (New!)
+
+### Enhanced Mobile AR Interface
+The mobile app now includes cutting-edge Augmented Reality capabilities:
+
+#### AR Wildlife Identification
+- Real-time camera-based species identification
+- 3D AR overlays with species information
+- Confidence scoring and behavior analysis
+- AR measurement tools for animal size estimation
+
+#### Interactive Field Guide
+- Immersive 3D species models in AR space
+- Interactive behavior demonstrations
+- Sound visualization for animal calls
+- Comparative species analysis
+
+#### Advanced Data Visualization
+- Camera network status in AR
+- 3D heat maps of wildlife activity
+- Time-lapse movement patterns
+- Environmental data overlays
+
+#### Field Research Tools
+- AR-assisted camera placement optimization
+- GPS-based AR navigation to cameras
+- Voice-controlled data entry
+- Real-time collaboration features
+
+**See AR_FEATURES.md in flutter_app/ for complete documentation**
+
 ## 🚀 Future Enhancements
 
 ### Planned Features
-- Video streaming support
+- Video streaming support with AR annotations
 - Cloud backup integration
-- Machine learning model updates
+- OTA machine learning model updates
 - Advanced analytics dashboard
 - Multi-camera support
-- Geographic mapping integration
+- Enhanced geographic mapping integration
+- Thermal imaging AR overlay
+- Drone integration for aerial AR visualization
 
 ### Technical Improvements
 - WebRTC integration for video streaming
