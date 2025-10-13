@@ -9,7 +9,6 @@ import {
 } from '@mui/material';
 import { Send } from '@mui/icons-material';
 import WebSocketService from '../services/WebSocketService';
-import APIService from '../services/api';
 
 function TeamChat({ detectionId = null }) {
   const [messages, setMessages] = useState([]);
