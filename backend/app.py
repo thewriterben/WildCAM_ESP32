@@ -952,6 +952,7 @@ def activity_patterns():
         # Get users who have logged in within last 5 minutes
         active_threshold = datetime.utcnow() - timedelta(minutes=5)
         users = User.query.filter(
+            User.last_login != None,
             User.last_login >= active_threshold,
             User.is_active == True
         ).all()
