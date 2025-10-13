@@ -1,3 +1,0 @@
-"""
-Backend services package
-"""
