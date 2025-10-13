@@ -5,7 +5,7 @@ Identifies unusual patterns and behaviors for enhanced alerting
 
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
 import logging
 
