@@ -346,3 +346,195 @@ class AnalyticsData(db.Model):
             'metadata': self.metadata,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+# ===== COLLABORATION MODELS =====
+
+class UserSession(db.Model):
+    """Track active user sessions for presence awareness"""
+    __tablename__ = 'user_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    session_id = db.Column(db.String(100), unique=True, nullable=False)
+    socket_id = db.Column(db.String(100))
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(500))
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+    current_page = db.Column(db.String(200))  # Current page/view
+    cursor_position = db.Column(db.JSON)  # {x, y, page}
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'session_id': self.session_id,
+            'last_activity': self.last_activity.isoformat() if self.last_activity else None,
+            'current_page': self.current_page,
+            'cursor_position': self.cursor_position,
+            'is_active': self.is_active
+        }
+
+class Annotation(db.Model):
+    """Collaborative annotations on wildlife detections"""
+    __tablename__ = 'annotations'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    detection_id = db.Column(db.Integer, db.ForeignKey('wildlife_detections.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    annotation_type = db.Column(db.String(30), nullable=False)  # comment, marker, region, correction
+    content = db.Column(db.Text)
+    position = db.Column(db.JSON)  # {x, y, width, height} or {x, y} for markers
+    metadata = db.Column(db.JSON)  # Color, shape, additional data
+    is_public = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'detection_id': self.detection_id,
+            'user_id': self.user_id,
+            'annotation_type': self.annotation_type,
+            'content': self.content,
+            'position': self.position,
+            'metadata': self.metadata,
+            'is_public': self.is_public,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class ChatMessage(db.Model):
+    """Team chat messages for collaboration"""
+    __tablename__ = 'chat_messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    channel = db.Column(db.String(50), default='general')  # general, detection-{id}, camera-{id}
+    message = db.Column(db.Text, nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('chat_messages.id'))  # For threaded replies
+    mentions = db.Column(db.JSON)  # List of user IDs mentioned
+    attachments = db.Column(db.JSON)  # File attachments
+    metadata = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    edited_at = db.Column(db.DateTime)
+    deleted = db.Column(db.Boolean, default=False)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'channel': self.channel,
+            'message': self.message,
+            'parent_id': self.parent_id,
+            'mentions': self.mentions,
+            'attachments': self.attachments,
+            'metadata': self.metadata,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'edited_at': self.edited_at.isoformat() if self.edited_at else None,
+            'deleted': self.deleted
+        }
+
+class SharedBookmark(db.Model):
+    """Shared bookmarks and favorites for team collaboration"""
+    __tablename__ = 'shared_bookmarks'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    detection_id = db.Column(db.Integer, db.ForeignKey('wildlife_detections.id'))
+    camera_id = db.Column(db.Integer, db.ForeignKey('cameras.id'))
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    tags = db.Column(db.JSON)  # List of tags
+    is_shared = db.Column(db.Boolean, default=False)
+    shared_with = db.Column(db.JSON)  # List of user IDs or 'all'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'detection_id': self.detection_id,
+            'camera_id': self.camera_id,
+            'title': self.title,
+            'description': self.description,
+            'tags': self.tags,
+            'is_shared': self.is_shared,
+            'shared_with': self.shared_with,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class Task(db.Model):
+    """Project tasks for field work coordination"""
+    __tablename__ = 'tasks'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    task_type = db.Column(db.String(30))  # maintenance, data_collection, verification, analysis
+    priority = db.Column(db.String(20), default='medium')  # low, medium, high, urgent
+    status = db.Column(db.String(20), default='pending')  # pending, in_progress, completed, cancelled
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    camera_id = db.Column(db.Integer, db.ForeignKey('cameras.id'))
+    detection_id = db.Column(db.Integer, db.ForeignKey('wildlife_detections.id'))
+    due_date = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    metadata = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'task_type': self.task_type,
+            'priority': self.priority,
+            'status': self.status,
+            'assigned_to': self.assigned_to,
+            'created_by': self.created_by,
+            'camera_id': self.camera_id,
+            'detection_id': self.detection_id,
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'metadata': self.metadata,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class FieldNote(db.Model):
+    """Shared field notes and observations"""
+    __tablename__ = 'field_notes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    camera_id = db.Column(db.Integer, db.ForeignKey('cameras.id'))
+    detection_id = db.Column(db.Integer, db.ForeignKey('wildlife_detections.id'))
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    note_type = db.Column(db.String(30))  # observation, analysis, maintenance, incident
+    tags = db.Column(db.JSON)
+    attachments = db.Column(db.JSON)  # Photos, videos, files
+    is_shared = db.Column(db.Boolean, default=True)
+    metadata = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'camera_id': self.camera_id,
+            'detection_id': self.detection_id,
+            'title': self.title,
+            'content': self.content,
+            'note_type': self.note_type,
+            'tags': self.tags,
+            'attachments': self.attachments,
+            'is_shared': self.is_shared,
+            'metadata': self.metadata,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

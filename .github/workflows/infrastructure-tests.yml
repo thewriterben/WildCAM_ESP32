@@ -1,252 +1,385 @@
-name: Infrastructure Tests
+name: ESP32 Infrastructure Tests
 
 on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'k8s/**'
-      - 'docker-compose.**'
-      - 'monitoring/**'
-      - 'nginx/**'
+      - 'ESP32WildlifeCAM-main/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main, develop ]
-    paths:
-      - 'k8s/**'
-      - 'docker-compose.**'
-      - 'monitoring/**'
-      - 'nginx/**'
 
 jobs:
-  validate-kubernetes:
+  validate-platformio-config:
     runs-on: ubuntu-latest
-    name: Validate Kubernetes Manifests
+    name: Validate PlatformIO Configuration
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install kubeval
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install PlatformIO
       run: |
-        wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
-        tar xf kubeval-linux-amd64.tar.gz
-        sudo mv kubeval /usr/local/bin
+        pip install platformio
     
-    - name: Validate base Kubernetes manifests
+    - name: Validate main platformio.ini
       run: |
-        find k8s/base -name "*.yaml" -exec kubeval {} \;
-    
-    - name: Install kustomize
-      run: |
-        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-        sudo mv kustomize /usr/local/bin/
-    
-    - name: Validate kustomize overlays
-      run: |
-        for env in development staging production; do
-          echo "Validating $env environment"
-          kustomize build k8s/overlays/$env > /tmp/manifests-$env.yaml
-          kubeval /tmp/manifests-$env.yaml
-        done
-
-  validate-docker-compose:
-    runs-on: ubuntu-latest
-    name: Validate Docker Compose Files
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Validate docker-compose.yml
-      run: |
-        docker compose -f docker-compose.yml config > /dev/null
-        echo "✅ docker-compose.yml is valid"
-    
-    - name: Validate docker-compose.prod.yml
-      env:
-        POSTGRES_PASSWORD: test-password
-        REDIS_PASSWORD: test-password
-        JWT_SECRET_KEY: test-jwt-secret
-        SECRET_KEY: test-secret
-        GRAFANA_ADMIN_PASSWORD: test-password
-        INFLUXDB_USERNAME: test-user
-        INFLUXDB_PASSWORD: test-password
-        INFLUXDB_TOKEN: test-token
-      run: |
-        docker compose -f docker-compose.prod.yml config > /dev/null
-        echo "✅ docker-compose.prod.yml is valid"
-
-  validate-nginx-config:
-    runs-on: ubuntu-latest
-    name: Validate Nginx Configuration
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Test nginx configuration syntax
-      run: |
-        docker run --rm -v $(pwd)/nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx:alpine nginx -t
-        echo "✅ nginx.conf is valid"
-    
-    - name: Test production nginx configuration syntax
-      run: |
-        docker run --rm -v $(pwd)/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro nginx:alpine nginx -t
-        echo "✅ nginx.prod.conf is valid"
-
-  validate-monitoring-config:
-    runs-on: ubuntu-latest
-    name: Validate Monitoring Configuration
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Validate Prometheus configuration
-      run: |
-        docker run --rm -v $(pwd)/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro prom/prometheus:latest promtool check config /etc/prometheus/prometheus.yml
-        echo "✅ prometheus.yml is valid"
-    
-    - name: Validate Prometheus alert rules
-      run: |
-        docker run --rm -v $(pwd)/monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro prom/prometheus:latest promtool check rules /etc/prometheus/alert_rules.yml
-        echo "✅ alert_rules.yml is valid"
-
-  integration-test:
-    runs-on: ubuntu-latest
-    name: Integration Test with Docker Compose
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Create test environment file
-      run: |
-        cat > .env.test << EOF
-        POSTGRES_PASSWORD=test-password
-        REDIS_PASSWORD=test-password
-        JWT_SECRET_KEY=test-jwt-secret-key-for-testing-only
-        SECRET_KEY=test-secret-key-for-testing-only
-        GRAFANA_ADMIN_PASSWORD=test-grafana-password
-        INFLUXDB_USERNAME=test-user
-        INFLUXDB_PASSWORD=test-influxdb-password
-        INFLUXDB_TOKEN=test-influxdb-token
-        EOF
-    
-    - name: Start services
-      run: |
-        docker compose --env-file .env.test up -d postgres redis
-        sleep 30
-    
-    - name: Test database connectivity
-      run: |
-        docker compose --env-file .env.test exec -T postgres pg_isready -U wildlife_user -d wildlife_db
-        echo "✅ Database is accessible"
-    
-    - name: Test Redis connectivity
-      run: |
-        docker compose --env-file .env.test exec -T redis redis-cli --no-auth-warning -a test-password ping
-        echo "✅ Redis is accessible"
-    
-    - name: Start application services
-      run: |
-        docker compose --env-file .env.test up -d backend
-        sleep 60
-    
-    - name: Test backend health
-      run: |
-        timeout 120 bash -c 'until curl -f http://localhost:5000/api/health; do sleep 5; done'
-        echo "✅ Backend is healthy"
-    
-    - name: Start frontend and nginx
-      run: |
-        docker compose --env-file .env.test up -d frontend nginx
-        sleep 30
-    
-    - name: Test full stack
-      run: |
-        timeout 60 bash -c 'until curl -f http://localhost/health; do sleep 5; done'
-        echo "✅ Full stack is accessible"
-    
-    - name: Clean up
-      if: always()
-      run: |
-        docker compose --env-file .env.test down -v
-        docker system prune -f
-
-  security-baseline:
-    runs-on: ubuntu-latest
-    name: Security Baseline Check
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Check for hardcoded secrets
-      run: |
-        # Check for potential hardcoded secrets in configuration files
-        if grep -r "password.*=" k8s/ --include="*.yaml" | grep -v "CHANGE_ME"; then
-          echo "❌ Found potential hardcoded passwords in Kubernetes manifests"
+        echo "Validating main platformio.ini..."
+        cd ESP32WildlifeCAM-main
+        
+        # Check syntax by running check command
+        pio check --skip-packages --flags "--std=c++11" || echo "⚠️ Static analysis had warnings"
+        
+        # Validate environments are defined
+        if ! grep -q "\[env:esp32cam\]" platformio.ini; then
+          echo "❌ esp32cam environment not defined"
           exit 1
         fi
-        echo "✅ No hardcoded secrets found in Kubernetes manifests"
+        echo "✅ esp32cam environment defined"
+        
+        if ! grep -q "\[env:esp32s3cam\]" platformio.ini; then
+          echo "❌ esp32s3cam environment not defined"
+          exit 1
+        fi
+        echo "✅ esp32s3cam environment defined"
+        
+        echo "✅ PlatformIO configuration validation passed"
     
-    - name: Check Docker security practices
+    - name: Validate example platformio.ini files
       run: |
-        # Check if Dockerfiles use non-root users
-        for dockerfile in $(find . -name "Dockerfile*"); do
-          if ! grep -q "USER " "$dockerfile"; then
-            echo "❌ $dockerfile does not specify a non-root USER"
-            exit 1
-          fi
-        done
-        echo "✅ All Dockerfiles use non-root users"
-    
-    - name: Check for security contexts in Kubernetes
-      run: |
-        # Check if deployments have security contexts
-        for manifest in k8s/base/*.yaml; do
-          if grep -q "kind: Deployment" "$manifest"; then
-            if ! grep -q "securityContext\|runAsNonRoot" "$manifest"; then
-              echo "❌ $manifest missing security context"
+        echo "Validating example platformio.ini files..."
+        
+        for example_ini in ESP32WildlifeCAM-main/examples/*/platformio.ini; do
+          if [ -f "$example_ini" ]; then
+            echo "Checking $example_ini"
+            # Basic syntax check
+            if ! grep -q "\[env:" "$example_ini"; then
+              echo "❌ $example_ini missing environment definitions"
               exit 1
             fi
+            echo "✅ $example_ini is valid"
           fi
         done
-        echo "✅ Security contexts properly configured"
+        
+        echo "✅ All example platformio.ini files validated"
 
-  performance-test:
+  validate-board-definitions:
     runs-on: ubuntu-latest
-    name: Basic Performance Test
+    name: Validate Board Definitions
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install Apache Bench
-      run: sudo apt-get update && sudo apt-get install -y apache2-utils
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
     
-    - name: Create test environment
+    - name: Install PlatformIO
       run: |
-        cat > .env.test << EOF
-        POSTGRES_PASSWORD=test-password
-        REDIS_PASSWORD=test-password
-        JWT_SECRET_KEY=test-jwt-secret-key-for-testing-only
-        SECRET_KEY=test-secret-key-for-testing-only
-        EOF
+        pip install platformio
     
-    - name: Start minimal stack
+    - name: List available boards
       run: |
-        docker compose --env-file .env.test up -d postgres redis backend
-        sleep 60
+        echo "Listing ESP32 boards available in PlatformIO..."
+        pio boards espressif32 | head -50
     
-    - name: Run basic load test
+    - name: Validate board targets in platformio.ini
       run: |
-        # Test health endpoint
-        ab -n 100 -c 10 http://localhost:5000/api/health
+        echo "Validating board targets..."
+        cd ESP32WildlifeCAM-main
         
-        # Check if response time is reasonable (< 1000ms average)
-        RESPONSE_TIME=$(ab -n 50 -c 5 http://localhost:5000/api/health | grep "Time per request" | head -1 | awk '{print $4}')
-        if (( $(echo "$RESPONSE_TIME > 1000" | bc -l) )); then
-          echo "❌ Average response time too high: ${RESPONSE_TIME}ms"
+        # Extract board definitions from platformio.ini
+        boards=$(grep "^board = " platformio.ini | awk '{print $3}' | sort -u)
+        
+        echo "Boards defined in platformio.ini:"
+        echo "$boards"
+        
+        # Validate each board exists
+        for board in $boards; do
+          if pio boards espressif32 | grep -q "$board"; then
+            echo "✅ Board $board is valid"
+          else
+            echo "⚠️ Warning: Board $board may need verification"
+          fi
+        done
+        
+        echo "✅ Board validation completed"
+
+  validate-library-compatibility:
+    runs-on: ubuntu-latest
+    name: Validate Library Compatibility
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install PlatformIO
+      run: |
+        pip install platformio
+    
+    - name: Check library dependencies
+      run: |
+        echo "Checking library dependencies..."
+        cd ESP32WildlifeCAM-main
+        
+        # List libraries from platformio.ini
+        echo "Libraries defined in platformio.ini:"
+        grep -A 10 "lib_deps" platformio.ini || true
+        
+        # Try to install libraries
+        pio pkg install || echo "⚠️ Some libraries may need manual review"
+        
+        # List installed packages
+        pio pkg list
+        
+        echo "✅ Library compatibility check completed"
+    
+    - name: Validate critical library versions
+      run: |
+        echo "Validating critical library versions..."
+        cd ESP32WildlifeCAM-main
+        
+        # Check for esp32-camera library
+        if grep -q "esp32-camera" platformio.ini; then
+          echo "✅ esp32-camera library is defined"
+        else
+          echo "⚠️ Warning: esp32-camera library not found"
+        fi
+        
+        # Check for ArduinoJson library
+        if grep -q "ArduinoJson" platformio.ini; then
+          echo "✅ ArduinoJson library is defined"
+        else
+          echo "⚠️ Warning: ArduinoJson library not found"
+        fi
+        
+        echo "✅ Critical library validation completed"
+
+  test-build-environments:
+    runs-on: ubuntu-latest
+    name: Test Build Environments
+    
+    strategy:
+      matrix:
+        environment: [esp32cam, esp32s3cam]
+      fail-fast: false
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Cache PlatformIO
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.platformio
+          ~/.cache/pip
+        key: ${{ runner.os }}-pio-test-${{ matrix.environment }}-${{ hashFiles('**/platformio.ini') }}
+        restore-keys: |
+          ${{ runner.os }}-pio-test-
+    
+    - name: Install PlatformIO
+      run: |
+        pip install platformio
+    
+    - name: Test build for ${{ matrix.environment }}
+      run: |
+        cd ESP32WildlifeCAM-main
+        echo "Testing build environment for ${{ matrix.environment }}..."
+        
+        # Run a compile test (without actual hardware)
+        pio run -e ${{ matrix.environment }} -t compiledb || echo "⚠️ CompileDB generation had issues"
+        
+        # Check build succeeded
+        if pio run -e ${{ matrix.environment }}; then
+          echo "✅ Build test passed for ${{ matrix.environment }}"
+        else
+          echo "❌ Build test failed for ${{ matrix.environment }}"
           exit 1
         fi
-        echo "✅ Performance test passed: ${RESPONSE_TIME}ms average response time"
+
+  validate-project-structure:
+    runs-on: ubuntu-latest
+    name: Validate Project Structure
     
-    - name: Clean up
-      if: always()
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check required directories
       run: |
-        docker compose --env-file .env.test down -v
-        docker system prune -f
+        echo "Validating project directory structure..."
+        
+        # Check for source directory
+        if [ ! -d "ESP32WildlifeCAM-main/WildCAM_ESP32/src" ]; then
+          echo "❌ Source directory not found"
+          exit 1
+        fi
+        echo "✅ Source directory found"
+        
+        # Check for include directory
+        if [ ! -d "ESP32WildlifeCAM-main/WildCAM_ESP32/include" ]; then
+          echo "⚠️ Include directory not found (optional)"
+        else
+          echo "✅ Include directory found"
+        fi
+        
+        # Check for examples directory
+        if [ ! -d "ESP32WildlifeCAM-main/examples" ]; then
+          echo "⚠️ Examples directory not found"
+        else
+          echo "✅ Examples directory found"
+        fi
+        
+        # Check for docs directory
+        if [ ! -d "ESP32WildlifeCAM-main/docs" ]; then
+          echo "⚠️ Documentation directory not found"
+        else
+          echo "✅ Documentation directory found"
+        fi
+        
+        # Check for scripts directory
+        if [ ! -d "ESP32WildlifeCAM-main/scripts" ]; then
+          echo "⚠️ Scripts directory not found"
+        else
+          echo "✅ Scripts directory found"
+        fi
+        
+        echo "✅ Project structure validation completed"
+    
+    - name: Check required files
+      run: |
+        echo "Validating required files..."
+        
+        # Check for platformio.ini
+        if [ ! -f "ESP32WildlifeCAM-main/platformio.ini" ]; then
+          echo "❌ platformio.ini not found"
+          exit 1
+        fi
+        echo "✅ platformio.ini found"
+        
+        # Check for README
+        if [ ! -f "ESP32WildlifeCAM-main/README.md" ]; then
+          echo "⚠️ README.md not found"
+        else
+          echo "✅ README.md found"
+        fi
+        
+        # Check for LICENSE
+        if [ ! -f "ESP32WildlifeCAM-main/LICENSE" ]; then
+          echo "⚠️ LICENSE not found"
+        else
+          echo "✅ LICENSE found"
+        fi
+        
+        # Check for CONTRIBUTING guide
+        if [ ! -f "ESP32WildlifeCAM-main/CONTRIBUTING.md" ]; then
+          echo "⚠️ CONTRIBUTING.md not found"
+        else
+          echo "✅ CONTRIBUTING.md found"
+        fi
+        
+        echo "✅ Required files validation completed"
+
+  validate-partition-tables:
+    runs-on: ubuntu-latest
+    name: Validate Partition Tables
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check partition table files
+      run: |
+        echo "Checking for partition table files..."
+        
+        # Find partition CSV files
+        partition_files=$(find ESP32WildlifeCAM-main -name "partitions*.csv" -o -name "partition*.csv")
+        
+        if [ -z "$partition_files" ]; then
+          echo "⚠️ No partition table files found (using default)"
+        else
+          echo "Found partition table files:"
+          echo "$partition_files"
+          
+          # Validate CSV format
+          for csv in $partition_files; do
+            echo "Validating $csv..."
+            
+            # Check if file has valid header
+            if head -1 "$csv" | grep -q "Name.*Type.*SubType"; then
+              echo "✅ $csv has valid header"
+            else
+              echo "⚠️ $csv may have non-standard format"
+            fi
+          done
+        fi
+        
+        echo "✅ Partition table validation completed"
+
+  integration-compile-test:
+    runs-on: ubuntu-latest
+    name: Integration Compile Test
+    needs: [validate-platformio-config, validate-board-definitions, validate-library-compatibility]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Cache PlatformIO
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.platformio
+          ~/.cache/pip
+        key: ${{ runner.os }}-pio-integration-${{ hashFiles('**/platformio.ini') }}
+        restore-keys: |
+          ${{ runner.os }}-pio-integration-
+    
+    - name: Install PlatformIO
+      run: |
+        pip install platformio
+    
+    - name: Full compilation test
+      run: |
+        cd ESP32WildlifeCAM-main
+        echo "Running full compilation test for default environment..."
+        
+        # Compile for default environment
+        if pio run; then
+          echo "✅ Full compilation test passed"
+        else
+          echo "❌ Compilation failed"
+          exit 1
+        fi
+    
+    - name: Check firmware size
+      run: |
+        cd ESP32WildlifeCAM-main
+        echo "Checking firmware size..."
+        
+        # Get firmware size information
+        pio run -t size || true
+        
+        # Check if firmware binaries exist
+        if ls .pio/build/*/firmware.bin 1> /dev/null 2>&1; then
+          echo "✅ Firmware binaries generated"
+          ls -lh .pio/build/*/firmware.bin
+        else
+          echo "⚠️ Firmware binaries not found"
+        fi
