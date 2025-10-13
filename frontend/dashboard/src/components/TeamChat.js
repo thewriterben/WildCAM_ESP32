@@ -111,7 +111,12 @@ function TeamChat({ detectionId = null }) {
                       {message.message}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(message.created_at).toLocaleString()}
+                      {(() => {
+                        const date = new Date(message.created_at);
+                        return message.created_at && !isNaN(date.getTime())
+                          ? date.toLocaleString()
+                          : "Unknown time";
+                      })()}
                     </Typography>
                   </>
                 }
