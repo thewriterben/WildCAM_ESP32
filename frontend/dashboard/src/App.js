@@ -19,6 +19,8 @@ import DashboardHome from './components/DashboardHome';
 import LiveDetections from './components/LiveDetections';
 import SpeciesAnalytics from './components/SpeciesAnalytics';
 import CameraManagement from './components/CameraManagement';
+import TeamChat from './components/TeamChat';
+import UserPresence from './components/UserPresence';
 
 // Import WebSocket service
 import WebSocketService from './services/WebSocketService';
@@ -150,6 +152,7 @@ function App() {
     { id: 'detections', label: 'Live Detections', icon: <PhotoCamera /> },
     { id: 'analytics', label: 'Species Analytics', icon: <Analytics /> },
     { id: 'devices', label: 'Device Management', icon: <DeviceHub /> },
+    { id: 'collaboration', label: 'Team Chat', icon: <Assessment /> },
     { id: 'map', label: 'Map View', icon: <Map /> },
     { id: 'timeline', label: 'Activity Timeline', icon: <Timeline /> },
     { id: 'settings', label: 'Settings', icon: <Settings /> },
@@ -172,6 +175,8 @@ function App() {
         return <SpeciesAnalytics />;
       case 'devices':
         return <CameraManagement />;
+      case 'collaboration':
+        return <TeamChat />;
       case 'map':
         return <div>Map View - Geographic distribution of wildlife detections</div>;
       case 'timeline':
@@ -270,6 +275,7 @@ function App() {
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Recent Detections: {realtimeData.detections.length}
                 </Typography>
+                <UserPresence />
               </Box>
             </Toolbar>
           </AppBar>

@@ -19,8 +19,8 @@ from PIL import Image
 import boto3
 
 # Import our models and auth system
-from models import db, User, Camera, Species, WildlifeDetection, Alert, AnalyticsData
-from auth import create_auth_routes, check_if_token_revoked
+from models import db, User, Camera, Species, WildlifeDetection, Alert, AnalyticsData, DetectionComment, Bookmark, ChatMessage
+from auth import create_auth_routes, check_if_token_revoked, verify_jwt_in_request
 
 # Application factory
 def create_app(config_name='development'):
@@ -798,6 +798,203 @@ def activity_patterns():
         'period_days': days,
         'hourly_activity': hourly_activity
     })
+
+    # ==== COLLABORATION ENDPOINTS ====
+    
+    @app.route('/api/collaboration/comments', methods=['GET', 'POST'])
+    @jwt_required()
+    def detection_comments():
+        """Get or create comments on detections"""
+        from models import DetectionComment
+        
+        if request.method == 'GET':
+            detection_id = request.args.get('detection_id')
+            if not detection_id:
+                return jsonify({'error': 'detection_id required'}), 400
+            
+            comments = DetectionComment.query.filter_by(
+                detection_id=detection_id
+            ).order_by(DetectionComment.created_at.desc()).all()
+            
+            return jsonify({
+                'comments': [c.to_dict() for c in comments]
+            }), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            detection_id = data.get('detection_id')
+            comment_text = data.get('comment')
+            
+            if not detection_id or not comment_text:
+                return jsonify({'error': 'detection_id and comment required'}), 400
+            
+            user_id = get_jwt_identity()
+            comment = DetectionComment(
+                detection_id=detection_id,
+                user_id=user_id,
+                comment=comment_text
+            )
+            
+            db.session.add(comment)
+            db.session.commit()
+            
+            # Emit via WebSocket
+            socketio.emit('new_comment', comment.to_dict())
+            
+            return jsonify({
+                'message': 'Comment added',
+                'comment': comment.to_dict()
+            }), 201
+    
+    @app.route('/api/collaboration/bookmarks', methods=['GET', 'POST'])
+    @jwt_required()
+    def bookmarks():
+        """Get or create bookmarks"""
+        from models import Bookmark
+        
+        if request.method == 'GET':
+            user_id = get_jwt_identity()
+            shared_only = request.args.get('shared', 'false').lower() == 'true'
+            
+            query = Bookmark.query
+            if shared_only:
+                query = query.filter_by(shared=True)
+            else:
+                query = query.filter_by(user_id=user_id)
+            
+            bookmarks = query.order_by(Bookmark.created_at.desc()).all()
+            
+            return jsonify({
+                'bookmarks': [b.to_dict() for b in bookmarks]
+            }), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            detection_id = data.get('detection_id')
+            title = data.get('title')
+            
+            if not detection_id or not title:
+                return jsonify({'error': 'detection_id and title required'}), 400
+            
+            user_id = get_jwt_identity()
+            bookmark = Bookmark(
+                detection_id=detection_id,
+                user_id=user_id,
+                title=title,
+                description=data.get('description'),
+                shared=data.get('shared', False)
+            )
+            
+            db.session.add(bookmark)
+            db.session.commit()
+            
+            if bookmark.shared:
+                socketio.emit('new_bookmark', bookmark.to_dict())
+            
+            return jsonify({
+                'message': 'Bookmark created',
+                'bookmark': bookmark.to_dict()
+            }), 201
+    
+    @app.route('/api/collaboration/chat', methods=['GET', 'POST'])
+    @jwt_required()
+    def chat_messages():
+        """Get or send chat messages"""
+        from models import ChatMessage
+        
+        if request.method == 'GET':
+            detection_id = request.args.get('detection_id')
+            limit = int(request.args.get('limit', 50))
+            
+            query = ChatMessage.query
+            if detection_id:
+                query = query.filter_by(detection_id=detection_id)
+            
+            messages = query.order_by(
+                ChatMessage.created_at.desc()
+            ).limit(limit).all()
+            
+            return jsonify({
+                'messages': [m.to_dict() for m in reversed(messages)]
+            }), 200
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            message_text = data.get('message')
+            
+            if not message_text:
+                return jsonify({'error': 'message required'}), 400
+            
+            user_id = get_jwt_identity()
+            message = ChatMessage(
+                user_id=user_id,
+                message=message_text,
+                detection_id=data.get('detection_id')
+            )
+            
+            db.session.add(message)
+            db.session.commit()
+            
+            # Emit via WebSocket
+            socketio.emit('chat_message', message.to_dict())
+            
+            return jsonify({
+                'message': 'Message sent',
+                'chat_message': message.to_dict()
+            }), 201
+    
+    @app.route('/api/collaboration/presence', methods=['GET'])
+    @jwt_required()
+    def active_users():
+        """Get list of currently active users"""
+        from models import User
+        
+        # Get users who have logged in within last 5 minutes
+        active_threshold = datetime.utcnow() - timedelta(minutes=5)
+        users = User.query.filter(
+            User.last_login >= active_threshold,
+            User.is_active == True
+        ).all()
+        
+        return jsonify({
+            'active_users': [u.to_dict() for u in users],
+            'count': len(users)
+        }), 200
+    
+    # WebSocket handlers for real-time collaboration
+    @socketio.on('connect')
+    def handle_connect():
+        """Handle user connection"""
+        logger.info('Client connected')
+        try:
+            verify_jwt_in_request()
+            user_id = get_jwt_identity()
+            user = User.query.get(user_id)
+            if user:
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+                emit('user_connected', {'user_id': user_id, 'username': user.username}, broadcast=True)
+        except:
+            pass
+    
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        """Handle user disconnection"""
+        logger.info('Client disconnected')
+    
+    @socketio.on('cursor_move')
+    def handle_cursor_move(data):
+        """Handle cursor position updates for collaborative viewing"""
+        try:
+            verify_jwt_in_request()
+            user_id = get_jwt_identity()
+            emit('cursor_update', {
+                'user_id': user_id,
+                'position': data.get('position'),
+                'page': data.get('page')
+            }, broadcast=True, include_self=False)
+        except:
+            pass
 
 # Async Tasks
 @celery.task

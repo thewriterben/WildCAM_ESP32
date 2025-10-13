@@ -247,3 +247,81 @@ class AnalyticsData(db.Model):
             'metadata': self.metadata,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+class DetectionComment(db.Model):
+    """Collaborative comments on wildlife detections"""
+    __tablename__ = 'detection_comments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    detection_id = db.Column(db.Integer, db.ForeignKey('wildlife_detections.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='comments')
+    detection = db.relationship('WildlifeDetection', backref='comments')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'detection_id': self.detection_id,
+            'user_id': self.user_id,
+            'user_name': self.user.username if self.user else None,
+            'comment': self.comment,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class Bookmark(db.Model):
+    """Shared bookmarks for important detections"""
+    __tablename__ = 'bookmarks'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    detection_id = db.Column(db.Integer, db.ForeignKey('wildlife_detections.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    shared = db.Column(db.Boolean, default=False)  # Share with team
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='bookmarks')
+    detection = db.relationship('WildlifeDetection', backref='bookmarks')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'detection_id': self.detection_id,
+            'user_id': self.user_id,
+            'user_name': self.user.username if self.user else None,
+            'title': self.title,
+            'description': self.description,
+            'shared': self.shared,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class ChatMessage(db.Model):
+    """Team chat messages"""
+    __tablename__ = 'chat_messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    detection_id = db.Column(db.Integer, db.ForeignKey('wildlife_detections.id'))  # Optional: thread to detection
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='messages')
+    detection = db.relationship('WildlifeDetection', backref='chat_messages')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'user_name': self.user.username if self.user else None,
+            'message': self.message,
+            'detection_id': self.detection_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }

@@ -7,6 +7,8 @@ from flask_jwt_extended import (
     create_access_token, create_refresh_token, get_jwt_identity,
     jwt_required, get_jwt, verify_jwt_in_request
 )
+# Make verify_jwt_in_request available for import by other modules
+__all__ = ['verify_jwt_in_request']
 from functools import wraps
 from datetime import datetime, timedelta
 from models import User, db
