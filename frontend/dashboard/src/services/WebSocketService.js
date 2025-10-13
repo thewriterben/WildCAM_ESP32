@@ -168,6 +168,70 @@ class WebSocketService {
     this.on('device_status_update', callback);
   }
 
+  // ===== COLLABORATION METHODS =====
+  
+  // User presence
+  sendPresence(action, sessionId, userId, currentPage = null, cursorPosition = null) {
+    this.send('user_presence', {
+      action,
+      session_id: sessionId,
+      user_id: userId,
+      current_page: currentPage,
+      cursor_position: cursorPosition
+    });
+  }
+
+  subscribeToPresenceUpdates(callback) {
+    this.on('presence_update', callback);
+  }
+
+  subscribeToCursorUpdates(callback) {
+    this.on('cursor_update', callback);
+  }
+
+  // Channels (chat rooms/pages)
+  joinChannel(channel) {
+    this.send('join_channel', { channel });
+  }
+
+  leaveChannel(channel) {
+    this.send('leave_channel', { channel });
+  }
+
+  // Annotations
+  subscribeToAnnotations(callback) {
+    this.on('annotation_created', callback);
+  }
+
+  // Chat
+  subscribeToChatMessages(callback) {
+    this.on('chat_message', callback);
+  }
+
+  subscribeToMentions(callback) {
+    this.on('mention_notification', callback);
+  }
+
+  // Bookmarks
+  subscribeToBookmarks(callback) {
+    this.on('bookmark_created', callback);
+  }
+
+  // Tasks
+  subscribeToTasks(callback) {
+    this.on('task_created', callback);
+    this.on('task_updated', callback);
+  }
+
+  subscribeToTaskAssignments(callback) {
+    this.on('task_assigned', callback);
+  }
+
+  // Field notes
+  subscribeToFieldNotes(callback) {
+    this.on('field_note_created', callback);
+  }
+
   subscribeToAlerts(callback) {
     this.on('new_alert', callback);
   }
