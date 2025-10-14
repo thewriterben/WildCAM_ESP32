@@ -83,9 +83,21 @@ void DiscoveryProtocol::processMessages() {
         lastAdvertisement_ = now;
     }
     
-    // Cleanup inactive nodes
+    // Cleanup inactive nodes and detect topology changes
     if (now - lastCleanup_ >= CLEANUP_INTERVAL) {
+        int nodeCountBefore = topology_.nodes.size();
         cleanupInactiveNodes();
+        int nodeCountAfter = topology_.nodes.size();
+        
+        // If topology changed, mark as unstable and broadcast update
+        if (nodeCountBefore != nodeCountAfter) {
+            topology_.isStable = false;
+            topology_.lastUpdate = now;
+            Serial.printf("Topology changed: %d -> %d nodes, broadcasting update\n", 
+                         nodeCountBefore, nodeCountAfter);
+            sendTopologyUpdate();
+        }
+        
         lastCleanup_ = now;
     }
     
@@ -99,6 +111,19 @@ void DiscoveryProtocol::processMessages() {
             
             // Send topology update to network
             sendTopologyUpdate();
+        }
+    } else if (state_ == DISCOVERY_COMPLETE) {
+        // Continue monitoring for new devices even after discovery is complete
+        // This enables real-time mesh formation when new devices join
+        if ((now - topology_.lastUpdate) > advertisementInterval_ * 3) {
+            // Re-check topology stability periodically
+            topology_.isStable = true;
+            for (const auto& node : topology_.nodes) {
+                if (!isNodeActive(node)) {
+                    topology_.isStable = false;
+                    break;
+                }
+            }
         }
     }
 }
@@ -192,27 +217,44 @@ DiscoveryState DiscoveryProtocol::getDiscoveryState() const {
 void DiscoveryProtocol::updateNode(const NetworkNode& node) {
     // Find existing node or add new one
     NetworkNode* existingNode = findNode(node.nodeId);
+    bool isNewNode = (existingNode == nullptr);
     
     if (existingNode) {
         // Update existing node
         existingNode->role = node.role;
+        existingNode->capabilities = node.capabilities;
         existingNode->signalStrength = node.signalStrength;
         existingNode->hopCount = node.hopCount;
         existingNode->lastSeen = millis();
         existingNode->isActive = true;
         existingNode->coordinatorScore = node.coordinatorScore;
     } else {
-        // Add new node
+        // Add new node - automatic device joining
         NetworkNode newNode = node;
         newNode.lastSeen = millis();
         newNode.isActive = true;
         topology_.nodes.push_back(newNode);
         
-        Serial.printf("Added new node %d to topology\n", node.nodeId);
+        // Mark topology as unstable when new device joins
+        topology_.isStable = false;
+        topology_.lastUpdate = millis();
+        
+        Serial.printf("✓ New device joined network: Node %d (role: %s, score: %.1f)\n", 
+                     node.nodeId, MessageProtocol::roleToString(node.role), 
+                     node.coordinatorScore);
+        
+        // Broadcast topology update to inform all nodes
+        sendTopologyUpdate();
     }
     
     // Update coordinator selection
     selectCoordinator();
+    
+    // If new node joined and we're in SCANNING state, reset discovery timer
+    // to allow more time for other nodes to respond
+    if (isNewNode && state_ == DISCOVERY_SCANNING) {
+        lastDiscovery_ = millis();
+    }
 }
 
 void DiscoveryProtocol::cleanupInactiveNodes() {
@@ -306,7 +348,7 @@ bool DiscoveryProtocol::isNodeActive(const NetworkNode& node) const {
 }
 
 void DiscoveryProtocol::selectCoordinator() {
-    if (topology_.nodes.empty()) {
+    if (topology_.nodes.empty() && nodeId_ == 0) {
         topology_.coordinatorNode = -1;
         return;
     }
@@ -315,6 +357,7 @@ void DiscoveryProtocol::selectCoordinator() {
     float bestScore = -1.0;
     int bestNode = -1;
     
+    // Check all active nodes in topology
     for (const auto& node : topology_.nodes) {
         if (node.isActive && node.coordinatorScore > bestScore) {
             bestScore = node.coordinatorScore;
@@ -324,17 +367,82 @@ void DiscoveryProtocol::selectCoordinator() {
     
     // Include our own node in coordinator selection
     float ourScore = MessageProtocol::calculateCoordinatorScore(capabilities_);
-    if (ourScore > bestScore) {
+    if (ourScore > bestScore || (topology_.nodes.empty() && nodeId_ > 0)) {
+        bestScore = ourScore;
         bestNode = nodeId_;
     }
     
+    // Dynamic coordinator assignment with role transition
     if (bestNode != topology_.coordinatorNode) {
+        int previousCoordinator = topology_.coordinatorNode;
         topology_.coordinatorNode = bestNode;
-        Serial.printf("Coordinator selected: Node %d (score: %.1f)\n", 
-                      bestNode, bestScore);
+        topology_.lastUpdate = millis();
+        
+        Serial.printf("⚡ Coordinator change: Node %d -> Node %d (score: %.1f)\n", 
+                      previousCoordinator, bestNode, bestScore);
+        
+        // If we became coordinator, announce to network
+        if (bestNode == nodeId_) {
+            Serial.println("✓ This node is now coordinator");
+        }
+        
+        // Mark topology as updated to trigger coordination
+        topology_.isStable = false;
     }
 }
 
 float DiscoveryProtocol::calculateNodeScore(const NetworkNode& node) const {
     return node.coordinatorScore;
+}
+
+float DiscoveryProtocol::getNetworkHealth() const {
+    if (topology_.nodes.empty()) {
+        return 0.0;
+    }
+    
+    int activeNodes = 0;
+    int totalSignalStrength = 0;
+    int totalHopCount = 0;
+    
+    for (const auto& node : topology_.nodes) {
+        if (isNodeActive(node)) {
+            activeNodes++;
+            totalSignalStrength += node.signalStrength;
+            totalHopCount += node.hopCount;
+        }
+    }
+    
+    if (activeNodes == 0) {
+        return 0.0;
+    }
+    
+    // Calculate health based on:
+    // 1. Percentage of active nodes (0-40%)
+    // 2. Average signal strength (0-40%)
+    // 3. Network hop efficiency (0-20%)
+    
+    float activeNodeScore = (float)activeNodes / topology_.nodes.size() * 0.4;
+    
+    int avgSignalStrength = totalSignalStrength / activeNodes;
+    // RSSI typically ranges from -120 (worst) to -30 (best)
+    float signalScore = ((avgSignalStrength + 120.0) / 90.0) * 0.4;
+    signalScore = constrain(signalScore, 0.0, 0.4);
+    
+    float avgHopCount = (float)totalHopCount / activeNodes;
+    // Lower hop count is better (max reasonable hops = 5)
+    float hopScore = (1.0 - (avgHopCount / 5.0)) * 0.2;
+    hopScore = constrain(hopScore, 0.0, 0.2);
+    
+    float totalHealth = activeNodeScore + signalScore + hopScore;
+    return constrain(totalHealth, 0.0, 1.0);
+}
+
+void DiscoveryProtocol::broadcastTopologyNow() {
+    if (!initialized_) {
+        return;
+    }
+    
+    Serial.println("⚡ Broadcasting topology update (forced)");
+    sendTopologyUpdate();
+    topology_.lastUpdate = millis();
 }
