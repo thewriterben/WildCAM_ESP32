@@ -290,6 +290,8 @@ bool BoardNode::executeTask(const NodeTask& task) {
         success = executeSystemStatusTask(task);
     } else if (task.taskType == "ai_analysis") {
         success = executeAIAnalysisTask(task);
+    } else if (task.taskType == "3d_capture") {
+        success = execute3DCaptureTask(task);
     } else {
         Serial.printf("Unknown task type: %s\n", task.taskType.c_str());
         return false;
@@ -754,6 +756,135 @@ bool BoardNode::executeAIAnalysisTask(const NodeTask& task) {
     }
     
     return true;
+}
+
+bool BoardNode::execute3DCaptureTask(const NodeTask& task) {
+    Serial.println("Executing synchronized 3D capture task");
+    
+    // Initialize camera if not already done
+    if (!cameraHandler_.isInitialized()) {
+        Serial.println("Initializing camera for 3D capture task...");
+        if (!cameraHandler_.init()) {
+            Serial.println("Camera initialization failed");
+            return false;
+        }
+    }
+    
+    // Extract parameters from task
+    String capture_session_id = "";
+    if (task.parameters.containsKey("session_id")) {
+        capture_session_id = task.parameters["session_id"].as<String>();
+    }
+    
+    float camera_position_x = 0.0;
+    float camera_position_y = 0.0;
+    float camera_position_z = 0.0;
+    if (task.parameters.containsKey("position_x")) {
+        camera_position_x = task.parameters["position_x"];
+    }
+    if (task.parameters.containsKey("position_y")) {
+        camera_position_y = task.parameters["position_y"];
+    }
+    if (task.parameters.containsKey("position_z")) {
+        camera_position_z = task.parameters["position_z"];
+    }
+    
+    float camera_orientation_pitch = 0.0;
+    float camera_orientation_yaw = 0.0;
+    float camera_orientation_roll = 0.0;
+    if (task.parameters.containsKey("orientation_pitch")) {
+        camera_orientation_pitch = task.parameters["orientation_pitch"];
+    }
+    if (task.parameters.containsKey("orientation_yaw")) {
+        camera_orientation_yaw = task.parameters["orientation_yaw"];
+    }
+    if (task.parameters.containsKey("orientation_roll")) {
+        camera_orientation_roll = task.parameters["orientation_roll"];
+    }
+    
+    uint32_t sync_delay_ms = 0;
+    if (task.parameters.containsKey("sync_delay_ms")) {
+        sync_delay_ms = task.parameters["sync_delay_ms"];
+    }
+    
+    String save_folder = "/3d_captures";
+    if (task.parameters.containsKey("folder")) {
+        save_folder = task.parameters["folder"].as<String>();
+    }
+    
+    // Wait for synchronized timing if specified
+    if (sync_delay_ms > 0) {
+        Serial.printf("Waiting %dms for synchronized capture...\n", sync_delay_ms);
+        delay(sync_delay_ms);
+    }
+    
+    // Capture frame
+    Serial.printf("Capturing frame for 3D session: %s\n", capture_session_id.c_str());
+    esp_err_t result = cameraHandler_.captureFrame(5000); // 5 second timeout
+    if (result != ESP_OK) {
+        Serial.printf("3D capture: Frame capture failed with error: 0x%x\n", result);
+        return false;
+    }
+    
+    // Get the captured frame
+    camera_fb_t* fb = cameraHandler_.getFrameBuffer();
+    if (!fb) {
+        Serial.println("3D capture: Failed to get frame buffer");
+        return false;
+    }
+    
+    // Save the image with 3D metadata
+    String filename = cameraHandler_.saveImage(fb, save_folder.c_str());
+    
+    if (filename.length() > 0) {
+        // Save additional 3D reconstruction metadata
+        String metadata_filename = filename;
+        metadata_filename.replace(".jpg", "_3d_meta.json");
+        
+        // Create metadata JSON
+        DynamicJsonDocument metadata_doc(1024);
+        metadata_doc["session_id"] = capture_session_id;
+        metadata_doc["node_id"] = nodeId_;
+        metadata_doc["timestamp"] = millis();
+        metadata_doc["image_filename"] = filename;
+        
+        JsonObject camera_pos = metadata_doc.createNestedObject("camera_position");
+        camera_pos["x"] = camera_position_x;
+        camera_pos["y"] = camera_position_y;
+        camera_pos["z"] = camera_position_z;
+        
+        JsonObject camera_orient = metadata_doc.createNestedObject("camera_orientation");
+        camera_orient["pitch"] = camera_orientation_pitch;
+        camera_orient["yaw"] = camera_orientation_yaw;
+        camera_orient["roll"] = camera_orientation_roll;
+        
+        JsonObject image_props = metadata_doc.createNestedObject("image_properties");
+        image_props["width"] = fb->width;
+        image_props["height"] = fb->height;
+        image_props["format"] = fb->format;
+        image_props["size_bytes"] = fb->len;
+        
+        // Save metadata to file
+        File metadata_file = SD_MMC.open(metadata_filename.c_str(), FILE_WRITE);
+        if (metadata_file) {
+            serializeJsonPretty(metadata_doc, metadata_file);
+            metadata_file.close();
+            Serial.printf("3D metadata saved: %s\n", metadata_filename.c_str());
+        } else {
+            Serial.printf("Warning: Could not save 3D metadata to %s\n", metadata_filename.c_str());
+        }
+    }
+    
+    // Return frame buffer
+    cameraHandler_.returnFrameBuffer(fb);
+    
+    if (filename.length() > 0) {
+        Serial.printf("3D capture successful: %s\n", filename.c_str());
+        return true;
+    } else {
+        Serial.println("3D capture: Image save failed");
+        return false;
+    }
 }
 
 void BoardNode::triggerDetectionEvent(const WildlifeDetection::DetectionResult& detection) {

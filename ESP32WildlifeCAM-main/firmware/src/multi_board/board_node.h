@@ -272,6 +272,7 @@ private:
     bool executeDataTransmissionTask(const NodeTask& task);
     bool executeSystemStatusTask(const NodeTask& task);
     bool executeAIAnalysisTask(const NodeTask& task);
+    bool execute3DCaptureTask(const NodeTask& task);
     
     void updateTaskStatus(int taskId, TaskStatus status, const String& error = "");
     void cleanupCompletedTasks();
