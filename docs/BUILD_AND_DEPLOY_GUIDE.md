@@ -42,7 +42,7 @@ cd WildCAM_ESP32
    platformio device monitor
    ```
 
-The firmware sources live in `firmware/` with hardware abstraction, sensor drivers, networking, and power-management modules grouped into dedicated folders for clarity.【F:firmware/platformio.ini†L1-L39】【F:firmware/main.cpp†L1-L40】
+The firmware sources live in `firmware/` with hardware abstraction, sensor drivers, networking, and power-management modules grouped into dedicated folders for clarity. See [`firmware/platformio.ini`](../firmware/platformio.ini) and [`firmware/main.cpp`](../firmware/main.cpp) for entry points.
 
 ## 3. Backend Application (Python / Flask)
 
