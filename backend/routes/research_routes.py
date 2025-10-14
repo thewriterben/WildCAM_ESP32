@@ -6,6 +6,7 @@ Endpoints for scientific research, university partnerships, and data management
 from flask import Blueprint, request, jsonify
 from auth import researcher_required, admin_required
 from research_platform import research_platform
+from research_analytics import research_analytics
 import logging
 
 logger = logging.getLogger(__name__)
@@ -161,6 +162,150 @@ def get_research_statistics():
         'verified_researchers': len(research_platform.researcher_credentials)
     }
     return jsonify(stats), 200
+
+
+# ===== ECOSYSTEM DYNAMICS =====
+
+@research_bp.route('/ecosystem/food-web', methods=['POST'])
+@researcher_required
+def analyze_food_web():
+    """Analyze food web structure"""
+    data = request.get_json()
+    ecosystem_id = data.get('ecosystem_id')
+    species_interactions = data.get('species_interactions', [])
+    result, status = research_analytics.analyze_food_web(ecosystem_id, species_interactions)
+    return jsonify(result), status
+
+
+@research_bp.route('/ecosystem/connectivity', methods=['POST'])
+@researcher_required
+def assess_habitat_connectivity():
+    """Assess habitat connectivity"""
+    data = request.get_json()
+    region_data = data.get('region', {})
+    corridors = data.get('corridors', [])
+    result, status = research_analytics.assess_habitat_connectivity(region_data, corridors)
+    return jsonify(result), status
+
+
+@research_bp.route('/ecosystem/pollination', methods=['POST'])
+@researcher_required
+def analyze_pollination_network():
+    """Analyze pollination networks"""
+    data = request.get_json()
+    plants = data.get('plant_species', [])
+    pollinators = data.get('pollinator_species', [])
+    observations = data.get('observations', [])
+    result, status = research_analytics.analyze_pollination_network(plants, pollinators, observations)
+    return jsonify(result), status
+
+
+# ===== PREDICTIVE MODELING =====
+
+@research_bp.route('/prediction/distribution', methods=['POST'])
+@researcher_required
+def predict_species_distribution():
+    """Predict species distribution under climate scenarios"""
+    data = request.get_json()
+    species = data.get('species')
+    environmental_data = data.get('environmental_data', {})
+    climate_scenario = data.get('climate_scenario', 'rcp4.5')
+    result, status = research_analytics.predict_species_distribution(
+        species, environmental_data, climate_scenario
+    )
+    return jsonify(result), status
+
+
+@research_bp.route('/prediction/extinction-risk', methods=['POST'])
+@researcher_required
+def predict_extinction_risk():
+    """Predict extinction risk assessment"""
+    data = request.get_json()
+    species = data.get('species')
+    population_data = data.get('population_data', {})
+    threats = data.get('threats', [])
+    result, status = research_analytics.predict_extinction_risk(species, population_data, threats)
+    return jsonify(result), status
+
+
+@research_bp.route('/prediction/migration', methods=['POST'])
+@researcher_required
+def predict_migration_timing():
+    """Predict migration timing"""
+    data = request.get_json()
+    species = data.get('species')
+    historical_data = data.get('historical_data', [])
+    climate_data = data.get('climate_data', {})
+    result, status = research_analytics.predict_migration_timing(species, historical_data, climate_data)
+    return jsonify(result), status
+
+
+# ===== BEHAVIORAL ECOLOGY =====
+
+@research_bp.route('/behavior/social-structure', methods=['POST'])
+@researcher_required
+def analyze_social_structure():
+    """Analyze social structure and networks"""
+    data = request.get_json()
+    species = data.get('species')
+    individual_sightings = data.get('individual_sightings', [])
+    associations = data.get('associations', [])
+    result, status = research_analytics.analyze_social_structure(
+        species, individual_sightings, associations
+    )
+    return jsonify(result), status
+
+
+@research_bp.route('/behavior/stress-indicators', methods=['POST'])
+@researcher_required
+def analyze_stress_indicators():
+    """Analyze stress indicators in wildlife"""
+    data = request.get_json()
+    species = data.get('species')
+    observations = data.get('observations', [])
+    environmental_factors = data.get('environmental_factors', [])
+    result, status = research_analytics.analyze_stress_indicators(
+        species, observations, environmental_factors
+    )
+    return jsonify(result), status
+
+
+# ===== CLIMATE CHANGE IMPACT =====
+
+@research_bp.route('/climate/impact-assessment', methods=['POST'])
+@researcher_required
+def assess_climate_impact():
+    """Assess climate change impacts"""
+    data = request.get_json()
+    region = data.get('region')
+    species_list = data.get('species_list', [])
+    climate_data = data.get('climate_data', {})
+    result, status = research_analytics.assess_climate_impact(region, species_list, climate_data)
+    return jsonify(result), status
+
+
+# ===== STATISTICAL ANALYSIS =====
+
+@research_bp.route('/statistics/power-analysis', methods=['POST'])
+@researcher_required
+def perform_power_analysis():
+    """Perform statistical power analysis"""
+    data = request.get_json()
+    study_design = data.get('study_design', {})
+    result, status = research_analytics.perform_power_analysis(study_design)
+    return jsonify(result), status
+
+
+@research_bp.route('/statistics/outlier-detection', methods=['POST'])
+@researcher_required
+def detect_outliers():
+    """Detect statistical outliers"""
+    data = request.get_json()
+    dataset_id = data.get('dataset_id')
+    variable = data.get('variable')
+    method = data.get('method', 'iqr')
+    result, status = research_analytics.detect_outliers(dataset_id, variable, method)
+    return jsonify(result), status
 
 
 def create_research_routes(app):
