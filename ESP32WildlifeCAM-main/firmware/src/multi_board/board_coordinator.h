@@ -144,6 +144,11 @@ public:
      */
     void handleCoordinatorFailover();
     
+    /**
+     * Get discovery protocol instance
+     */
+    DiscoveryProtocol* getDiscoveryProtocol() const;
+    
 private:
     // Core state
     int nodeId_;

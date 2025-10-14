@@ -160,7 +160,7 @@ private:
     
     // Internal methods
     void broadcastDiscovery();
-    void updateTopology(const DiscoveryMessage& discovery);
+    void updateTopology(const DiscoveryMessage& discovery, int hopCount = 0);
     bool isNodeActive(const NetworkNode& node) const;
     void selectCoordinator();
     float calculateNodeScore(const NetworkNode& node) const;

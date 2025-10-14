@@ -470,3 +470,7 @@ bool BoardCoordinator::isElectionWinner() const {
     
     return true;
 }
+
+DiscoveryProtocol* BoardCoordinator::getDiscoveryProtocol() const {
+    return discoveryProtocol_;
+}

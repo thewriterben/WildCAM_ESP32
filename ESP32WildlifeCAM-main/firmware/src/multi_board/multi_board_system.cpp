@@ -219,8 +219,23 @@ void MultiboardSystem::triggerDiscovery() {
     lastDiscovery_ = millis();
     
     if (coordinator_) {
-        // Coordinator can trigger network-wide discovery
-        // TODO: Implement coordinator discovery trigger
+        // Coordinator triggers network-wide discovery
+        Serial.println("Coordinator triggering network-wide discovery");
+        
+        // Get discovery protocol from coordinator
+        auto discoveryProtocol = coordinator_->getDiscoveryProtocol();
+        if (discoveryProtocol) {
+            // Broadcast topology update to inform all nodes
+            discoveryProtocol->sendTopologyUpdate();
+            
+            // Send discovery advertisement to trigger responses from nodes
+            discoveryProtocol->sendDiscoveryAdvertisement();
+        }
+        
+        // Trigger coordinator election to ensure network stability
+        coordinator_->triggerElection();
+        
+        Serial.println("Network-wide discovery initiated by coordinator");
     }
     
     if (node_) {

@@ -596,10 +596,55 @@ bool BoardNode::executeMotionDetectionTask(const NodeTask& task) {
 }
 
 bool BoardNode::executeDataTransmissionTask(const NodeTask& task) {
-    // TODO: Implement data transmission
     Serial.println("Executing data transmission task");
-    delay(2000); // Simulate transmission time
-    return true;
+    
+    // Extract data from task parameters
+    if (!task.parameters.containsKey("data")) {
+        Serial.println("Error: No data provided in transmission task");
+        return false;
+    }
+    
+    // Get target node (default to coordinator if not specified)
+    int targetNode = coordinatorNode_;
+    if (task.parameters.containsKey("target_node")) {
+        targetNode = task.parameters["target_node"].as<int>();
+    }
+    
+    // Get message type (default to data)
+    MessageType msgType = MSG_DATA;
+    if (task.parameters.containsKey("message_type")) {
+        msgType = static_cast<MessageType>(task.parameters["message_type"].as<int>());
+    }
+    
+    // Create transmission message
+    DynamicJsonDocument doc(2048);
+    doc["type"] = msgType;
+    doc["source_node"] = nodeId_;
+    doc["target_node"] = targetNode;
+    doc["timestamp"] = millis();
+    doc["hop_count"] = 0;
+    
+    // Copy data payload from task parameters
+    JsonObject data = doc.createNestedObject("data");
+    JsonObject taskData = task.parameters["data"];
+    for (JsonPair kv : taskData) {
+        data[kv.key()] = kv.value();
+    }
+    
+    // Serialize and queue message for transmission
+    String message;
+    serializeJson(doc, message);
+    
+    bool success = LoraMesh::queueMessage(message);
+    
+    if (success) {
+        Serial.printf("Data transmission queued to node %d (type: %d, size: %d bytes)\n",
+                     targetNode, msgType, message.length());
+    } else {
+        Serial.println("Error: Failed to queue data transmission message");
+    }
+    
+    return success;
 }
 
 bool BoardNode::executeSystemStatusTask(const NodeTask& task) {
