@@ -113,9 +113,9 @@ pio lib install "ESP32Servo@^0.13.0"
 
 2. **Download v2.5 Release:**
 ```bash
-git clone https://github.com/thewriterben/ESP32WildlifeCAM.git esp32wildcam_v25
-cd esp32wildcam_v25
-git checkout v2.5-production
+git clone https://github.com/thewriterben/WildCAM_ESP32.git wildcam_esp32
+cd wildcam_esp32/ESP32WildlifeCAM-main
+# The v2.5 content is in this directory
 ```
 
 ### Phase 2: Configuration Migration (60 minutes)

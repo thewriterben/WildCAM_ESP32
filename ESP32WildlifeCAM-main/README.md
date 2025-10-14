@@ -1,5 +1,19 @@
 # 🦌 ESP32WildlifeCAM
 
+> **📢 IMPORTANT NOTICE - REPOSITORY CONSOLIDATION**
+>
+> **ESP32WildlifeCAM has been consolidated into [WildCAM_ESP32](../README.md)**
+> 
+> - ✅ **All content preserved** - This directory contains the complete ESP32WildlifeCAM project
+> - ✅ **Backward compatible** - All features and functionality maintained
+> - 📚 **Migration guide** - See [CONSOLIDATION_MIGRATION_GUIDE.md](../CONSOLIDATION_MIGRATION_GUIDE.md)
+> - 🏠 **Main repository** - [WildCAM_ESP32](https://github.com/thewriterben/WildCAM_ESP32)
+> - 📖 **Documentation** - Continue using this directory for simple DIY setups
+>
+> **Quick Links**: [Migration Guide](../CONSOLIDATION_MIGRATION_GUIDE.md) | [Main Platform README](../README.md) | [Full Documentation](docs/README.md)
+
+---
+
 **Advanced Solar-Powered AI Wildlife Monitoring Platform**
 
 Created by: @thewriterben  
@@ -108,8 +122,8 @@ Choose from multiple supported platforms:
 
 #### 1. Repository Setup
 ```bash
-git clone https://github.com/thewriterben/ESP32WildlifeCAM.git
-cd ESP32WildlifeCAM
+git clone https://github.com/thewriterben/WildCAM_ESP32.git
+cd WildCAM_ESP32/ESP32WildlifeCAM-main
 
 # Run validation to check project integrity
 python3 validate_fixes.py
@@ -465,8 +479,8 @@ python3 validate_fixes.py
 ```
 
 ## 🚨 Troubleshooting
-- **Real-time Help**: [GitHub Discussions](https://github.com/thewriterben/ESP32WildlifeCAM/discussions)
-- **Bug Reports**: [GitHub Issues](https://github.com/thewriterben/ESP32WildlifeCAM/issues)
+- **Real-time Help**: [GitHub Discussions](https://github.com/thewriterben/WildCAM_ESP32/discussions)
+- **Bug Reports**: [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues)
 - **Hardware Problems**: Check `docs/troubleshooting.md` for detailed solutions
 
 ## 📝 License
@@ -484,8 +498,8 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ### 💬 Get Help
 - **Discord Community**: [Join our Discord Server](https://discord.gg/7cmrkFKx) - Real-time collaboration, assistance, and community support
-- **Community Discussions**: [GitHub Discussions](https://github.com/thewriterben/ESP32WildlifeCAM/discussions) - General questions and community support
-- **Bug Reports**: [GitHub Issues](https://github.com/thewriterben/ESP32WildlifeCAM/issues) - Technical issues and feature requests
+- **Community Discussions**: [GitHub Discussions](https://github.com/thewriterben/WildCAM_ESP32/discussions) - General questions and community support
+- **Bug Reports**: [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues) - Technical issues and feature requests
 - **Documentation**: Comprehensive guides in `docs/` directory
 - **Email Support**: benjamin.j.snider@gmail.com - Project maintainer
 

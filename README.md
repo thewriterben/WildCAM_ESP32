@@ -8,6 +8,12 @@
 [![AI](https://img.shields.io/badge/AI-YOLO--tiny-red.svg)](https://github.com/ultralytics/yolov5)
 [![Security](https://img.shields.io/badge/security-Quantum--Safe-brightgreen.svg)](QUANTUM_SAFE_SECURITY.md)
 
+> **🎯 NEW TO WILDCAM?** Choose your path:
+> - **👤 Simple DIY Setup**: [Start with ESP32WildlifeCAM](ESP32WildlifeCAM-main/QUICK_START.md) - Basic monitoring in 30 minutes
+> - **🏢 Enterprise Platform**: Continue below for full platform with AI, cloud, and advanced features
+> - **🔄 Migrating?**: See [Consolidation Migration Guide](CONSOLIDATION_MIGRATION_GUIDE.md)
+> - **✅ Existing User?**: Check [Backward Compatibility Guide](BACKWARD_COMPATIBILITY.md) - Your setup works as-is!
+
 ## 🌟 Revolutionary Wildlife Monitoring Platform
 
 Transform wildlife research and conservation with cutting-edge technology that combines:
@@ -303,7 +309,47 @@ Seamlessly integrates with:
 
 **Join the worldwide conservation network and make a global impact on wildlife protection!** 🌍🦁🐘🐯
 
-## ⚡ Quick Start Guide
+## 🎯 Choose Your Path
+
+WildCAM_ESP32 supports both **simple DIY setups** and **enterprise deployments**. Pick the path that matches your needs:
+
+### 👤 Path 1: Simple DIY / Budget Setup (30 minutes)
+
+**Perfect for**: Beginners, hobbyists, educational projects, budget-conscious deployments
+
+**Features**: Basic camera, motion detection, solar power, local storage
+
+**Documentation**: All content in `ESP32WildlifeCAM-main/` directory
+
+```bash
+# Clone repository
+git clone https://github.com/thewriterben/WildCAM_ESP32.git
+cd WildCAM_ESP32/ESP32WildlifeCAM-main/
+
+# Follow the simple setup guide
+cat QUICK_START.md
+
+# Build and deploy
+pio run -e esp32cam -t upload
+```
+
+📚 **Quick Links**:
+- [Simple Quick Start Guide](ESP32WildlifeCAM-main/QUICK_START.md)
+- [Hardware Requirements](ESP32WildlifeCAM-main/docs/HARDWARE_REQUIREMENTS.md)
+- [Assembly Instructions](ESP32WildlifeCAM-main/docs/ASSEMBLY_INSTRUCTIONS.md)
+- [Documentation Index](ESP32WildlifeCAM-main/docs/README.md)
+
+---
+
+### 🏢 Path 2: Enterprise Platform (Full Features)
+
+**Perfect for**: Research organizations, conservation projects, professional deployments
+
+**Features**: Edge AI, satellite communication, cloud analytics, global network integration
+
+**Documentation**: Root level docs and platform guides
+
+## ⚡ Quick Start Guide - Enterprise Platform
 
 ### 1. Firmware Setup
 ```bash
@@ -392,6 +438,35 @@ npx react-native run-android  # or run-ios
 | **Network Uptime** | 99.9% | ✅ 99.94% |
 | **Data Compression** | 10:1 ratio | ✅ 12:1 |
 | **False Positive Rate** | <5% | ✅ 2.1% |
+
+## 🔄 Repository Consolidation Notice
+
+**ESP32WildlifeCAM** has been consolidated into **WildCAM_ESP32** to provide a unified, actively maintained platform.
+
+### What This Means
+
+✅ **All ESP32WildlifeCAM content preserved** in `ESP32WildlifeCAM-main/` directory  
+✅ **Backward compatible** - Existing setups work without changes  
+✅ **Enhanced features** - Access to enterprise platform capabilities when needed  
+✅ **Single repository** - Easier maintenance and updates  
+✅ **Clear documentation** - Separate guides for simple and advanced users
+
+### For Users
+
+- **Simple DIY users**: Continue using `ESP32WildlifeCAM-main/` - no changes needed
+- **Enterprise users**: Access full platform features in root directories
+- **Migrating users**: See [Consolidation Migration Guide](CONSOLIDATION_MIGRATION_GUIDE.md)
+- **Existing setups**: See [Backward Compatibility Guide](BACKWARD_COMPATIBILITY.md) - Everything works as-is!
+
+### Legacy Repository
+
+If you were using the standalone ESP32WildlifeCAM repository:
+- All features and documentation are preserved here
+- Update your git remotes to point to WildCAM_ESP32
+- Follow the [migration guide](CONSOLIDATION_MIGRATION_GUIDE.md) for smooth transition
+- Check [backward compatibility](BACKWARD_COMPATIBILITY.md) for testing your existing setup
+
+---
 
 ## 🤝 Contributing
 

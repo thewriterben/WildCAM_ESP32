@@ -244,8 +244,8 @@ ESP32WildlifeCAM/
 ## 📞 Getting Help
 
 ### Communication Channels
-- **GitHub Discussions** - [General questions and community support](https://github.com/thewriterben/ESP32WildlifeCAM/discussions)
-- **GitHub Issues** - [Technical issues and bug reports](https://github.com/thewriterben/ESP32WildlifeCAM/issues)
+- **GitHub Discussions** - [General questions and community support](https://github.com/thewriterben/WildCAM_ESP32/discussions)
+- **GitHub Issues** - [Technical issues and bug reports](https://github.com/thewriterben/WildCAM_ESP32/issues)
 - **Discord** - [Real-time chat and collaboration](https://discord.gg/7cmrkFKx)
 - **Email** - benjamin.j.snider@gmail.com for direct contact
 

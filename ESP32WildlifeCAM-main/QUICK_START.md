@@ -68,8 +68,8 @@ pip install platformio
 ### Download and Setup Project
 ```bash
 # Clone the repository
-git clone https://github.com/thewriterben/ESP32WildlifeCAM.git
-cd ESP32WildlifeCAM
+git clone https://github.com/thewriterben/WildCAM_ESP32.git
+cd WildCAM_ESP32/ESP32WildlifeCAM-main
 
 # Validate environment
 python3 validate_fixes.py
@@ -252,7 +252,7 @@ pio device monitor
 - **3D Printed Enclosures** - [3d_models/](3d_models/)
 
 ### Join the Community
-- **GitHub Discussions** - [Ask questions and share experiences](https://github.com/thewriterben/ESP32WildlifeCAM/discussions)
+- **GitHub Discussions** - [Ask questions and share experiences](https://github.com/thewriterben/WildCAM_ESP32/discussions)
 - **Discord Community** - [Real-time help and collaboration](https://discord.gg/7cmrkFKx)
 - **Contribute** - See our [Contributing Guide](CONTRIBUTING.md)
 
