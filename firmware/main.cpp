@@ -41,6 +41,7 @@
 // Core system components
 #include "core/system_manager.h"
 #include "utils/logger.h"
+#include "src/camera/camera_manager.h"
 
 // Configuration
 #define FIRMWARE_VERSION "3.0.0"
@@ -52,6 +53,7 @@ YOLOTinyDetector* g_yolo_detector = nullptr;
 MPPTController* g_mppt_controller = nullptr;
 SecurityManager* g_security_manager = nullptr;
 EnvironmentalSuite* g_env_sensors = nullptr;
+CameraManager* g_camera_manager = nullptr;
 
 // Task handles for multi-core processing
 TaskHandle_t ai_processing_task = NULL;
@@ -84,17 +86,41 @@ void aiProcessingTask(void* parameter) {
     BoundingBox detections[10];
     
     while (true) {
-        if (system_state.ai_initialized && g_yolo_detector && g_yolo_detector->isInitialized()) {
-            // Get camera frame (implement camera capture logic)
-            uint8_t* image_data = nullptr; // Placeholder for camera data
+        if (system_state.ai_initialized && g_yolo_detector && g_yolo_detector->isInitialized() && g_camera_manager) {
+            // Capture camera frame with error handling
             int image_width = 0, image_height = 0;
+            uint8_t* image_data = nullptr;
             
-            // TODO: Implement camera frame capture
-            // camera_manager->captureFrame(&image_data, &image_width, &image_height);
+            // Retry logic for transient camera errors
+            int retry_count = 0;
+            const int max_retries = 3;
+            
+            while (retry_count < max_retries && !image_data) {
+                image_data = g_camera_manager->captureFrame(&image_width, &image_height);
+                
+                if (!image_data) {
+                    Logger::warning("Camera capture failed (attempt %d/%d): %s", 
+                                  retry_count + 1, max_retries, 
+                                  g_camera_manager->getLastError().c_str());
+                    retry_count++;
+                    if (retry_count < max_retries) {
+                        vTaskDelay(pdMS_TO_TICKS(100)); // Brief delay before retry
+                    }
+                }
+            }
             
             if (image_data) {
-                // Run YOLO detection
-                int num_detections = g_yolo_detector->detect(image_data, detections, 10);
+                // Run YOLO detection with error handling
+                int num_detections = 0;
+                
+                try {
+                    num_detections = g_yolo_detector->detect(image_data, detections, 10);
+                } catch (...) {
+                    Logger::error("AI detection exception occurred");
+                    g_camera_manager->releaseFrame(image_data);
+                    vTaskDelay(xDelay);
+                    continue;
+                }
                 
                 if (num_detections > 0) {
                     system_state.last_detection = millis();
@@ -108,8 +134,11 @@ void aiProcessingTask(void* parameter) {
                     }
                 }
                 
-                // Release camera frame
-                // camera_manager->releaseFrame(image_data);
+                // Always release camera frame
+                g_camera_manager->releaseFrame(image_data);
+            } else {
+                // Camera capture failed after retries - graceful degradation
+                Logger::error("Camera capture failed after %d retries, continuing...", max_retries);
             }
         }
         
@@ -211,6 +240,45 @@ void networkManagementTask(void* parameter) {
  * @brief Initialize all system components
  * @return true if initialization successful
  */
+/**
+ * @brief Cleanup system resources on initialization failure
+ */
+void cleanupSystemResources() {
+    Logger::info("Cleaning up system resources...");
+    
+    if (g_camera_manager) {
+        delete g_camera_manager;
+        g_camera_manager = nullptr;
+    }
+    
+    if (g_system_manager) {
+        delete g_system_manager;
+        g_system_manager = nullptr;
+    }
+    
+    if (g_yolo_detector) {
+        delete g_yolo_detector;
+        g_yolo_detector = nullptr;
+    }
+    
+    if (g_env_sensors) {
+        delete g_env_sensors;
+        g_env_sensors = nullptr;
+    }
+    
+    if (g_mppt_controller) {
+        delete g_mppt_controller;
+        g_mppt_controller = nullptr;
+    }
+    
+    if (g_security_manager) {
+        delete g_security_manager;
+        g_security_manager = nullptr;
+    }
+    
+    Logger::info("System resources cleaned up");
+}
+
 bool initializeSystem() {
     Logger::info("Initializing WildCAM ESP32 v2.0 Advanced System...");
     
@@ -219,59 +287,102 @@ bool initializeSystem() {
     esp_task_wdt_add(NULL);
     
     // Initialize security manager first
-    g_security_manager = new SecurityManager(SecurityLevel::ENHANCED, true);
+    g_security_manager = new (std::nothrow) SecurityManager(SecurityLevel::ENHANCED, true);
+    if (!g_security_manager) {
+        Logger::error("Security manager allocation failed - out of memory");
+        cleanupSystemResources();
+        return false;
+    }
+    
     if (!g_security_manager->begin()) {
         Logger::error("Security manager initialization failed");
+        cleanupSystemResources();
         return false;
     }
     system_state.security_active = true;
     Logger::info("✓ Security system initialized");
     
     // Initialize power management
-    g_mppt_controller = new MPPTController(
+    g_mppt_controller = new (std::nothrow) MPPTController(
         36, 39, 34, 35, 25, // ADC pins for voltage/current sensing, PWM pin
         MPPTAlgorithm::PERTURB_OBSERVE
     );
+    if (!g_mppt_controller) {
+        Logger::error("MPPT controller allocation failed - out of memory");
+        cleanupSystemResources();
+        return false;
+    }
+    
     if (!g_mppt_controller->begin()) {
         Logger::error("MPPT controller initialization failed");
+        cleanupSystemResources();
         return false;
     }
     system_state.power_system_ok = true;
     Logger::info("✓ Power management system initialized");
     
-    // Initialize environmental sensors
-    g_env_sensors = new EnvironmentalSuite();
-    if (!g_env_sensors->begin()) {
+    // Initialize environmental sensors (non-critical)
+    g_env_sensors = new (std::nothrow) EnvironmentalSuite();
+    if (!g_env_sensors) {
+        Logger::warning("Environmental sensors allocation failed - continuing without sensors");
+    } else if (!g_env_sensors->begin()) {
         Logger::warning("Environmental sensors initialization failed (non-critical)");
+        delete g_env_sensors;
+        g_env_sensors = nullptr;
     } else {
         Logger::info("✓ Environmental sensors initialized");
     }
     
-    // Initialize AI detection system
-    g_yolo_detector = new YOLOTinyDetector();
-    // TODO: Load model data from flash memory
-    // const unsigned char* model_data = load_yolo_model();
-    // if (g_yolo_detector->initialize(model_data)) {
-    //     system_state.ai_initialized = true;
-    //     Logger::info("✓ YOLO-tiny AI detector initialized");
-    // } else {
-    //     Logger::error("YOLO-tiny detector initialization failed");
-    //     return false;
-    // }
+    // Initialize camera manager
+    g_camera_manager = new (std::nothrow) CameraManager();
+    if (!g_camera_manager) {
+        Logger::error("Camera manager allocation failed - out of memory");
+        cleanupSystemResources();
+        return false;
+    }
     
-    // For now, mark AI as initialized (will be implemented with actual model)
-    system_state.ai_initialized = true;
-    Logger::info("✓ AI detection system ready");
+    if (!g_camera_manager->initialize()) {
+        Logger::error("Camera initialization failed: %s", g_camera_manager->getLastError().c_str());
+        cleanupSystemResources();
+        return false;
+    }
+    Logger::info("✓ Camera system initialized");
+    
+    // Initialize AI detection system
+    g_yolo_detector = new (std::nothrow) YOLOTinyDetector();
+    if (!g_yolo_detector) {
+        Logger::warning("YOLO detector allocation failed - AI features disabled");
+        system_state.ai_initialized = false;
+    } else {
+        // TODO: Load model data from flash memory
+        // const unsigned char* model_data = load_yolo_model();
+        // if (g_yolo_detector->initialize(model_data)) {
+        //     system_state.ai_initialized = true;
+        //     Logger::info("✓ YOLO-tiny AI detector initialized");
+        // } else {
+        //     Logger::error("YOLO-tiny detector initialization failed");
+        //     delete g_yolo_detector;
+        //     g_yolo_detector = nullptr;
+        //     cleanupSystemResources();
+        //     return false;
+        // }
+        
+        // For now, mark AI as initialized (will be implemented with actual model)
+        system_state.ai_initialized = true;
+        Logger::info("✓ AI detection system ready");
+    }
     
     // Initialize system manager
-    g_system_manager = new SystemManager();
+    g_system_manager = new (std::nothrow) SystemManager();
     if (!g_system_manager) {
-        Logger::error("System manager initialization failed");
+        Logger::error("System manager allocation failed - out of memory");
+        cleanupSystemResources();
         return false;
     }
     Logger::info("✓ System manager initialized");
     
     Logger::info("WildCAM ESP32 v2.0 system initialization complete!");
+    Logger::info("Free heap: %d bytes", ESP.getFreeHeap());
     return true;
 }
 
