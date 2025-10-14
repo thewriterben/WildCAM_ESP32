@@ -8,6 +8,29 @@
 [![AI](https://img.shields.io/badge/AI-YOLO--tiny-red.svg)](https://github.com/ultralytics/yolov5)
 [![Security](https://img.shields.io/badge/security-Quantum--Safe-brightgreen.svg)](QUANTUM_SAFE_SECURITY.md)
 
+## 🚧 Project Status Overview
+
+### ✅ Working Now: Core Wildlife Camera System
+**Location**: `ESP32WildlifeCAM-main/`  
+**Status**: Production-ready core (68% complete)  
+**What Works**: Motion detection, camera capture, power management, SD storage, multi-board support  
+**Get Started**: See [ESP32WildlifeCAM-main/QUICK_START.md](ESP32WildlifeCAM-main/QUICK_START.md)
+
+### 🔄 In Development: Enterprise Platform
+**Location**: Root-level `/firmware/`, `/backend/`, `/frontend/`  
+**Status**: Architectural framework (12-18 months to completion)  
+**What's Ready**: Code frameworks, system architecture, development roadmap  
+**Timeline**: See [ROADMAP.md](ROADMAP.md) for phased development plan
+
+**Quick Decision Guide**:
+- 🎯 **Need a working wildlife camera now?** → Start with `ESP32WildlifeCAM-main/`
+- 🏗️ **Want to contribute to enterprise features?** → See root platform development tasks
+- 📚 **Exploring architecture and vision?** → Review root-level documentation
+
+**Detailed Status**: See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for complete feature-by-feature breakdown
+
+---
+
 > **🎯 NEW TO WILDCAM?** Choose your path:
 > - **👤 Simple DIY Setup**: [Start with ESP32WildlifeCAM](ESP32WildlifeCAM-main/QUICK_START.md) - Basic monitoring in 30 minutes
 > - **🏢 Enterprise Platform**: Continue below for full platform with AI, cloud, and advanced features
@@ -53,55 +76,57 @@ WildCAM_ESP32_v2.0/
 
 ## 🚀 Key Features & Performance
 
+**Status Legend**: ✅ **Working** (functional and tested) | 🔄 **Framework** (code exists, needs implementation/testing) | 📋 **Planned** (documented vision, not yet implemented)
+
 ### 🤖 Edge AI & Computer Vision
-- **YOLO-tiny Detection**: Real-time wildlife detection with 95%+ accuracy
-- **Species Classification**: 20+ wildlife species with behavioral analysis
-- **Inference Speed**: <200ms on ESP32-S3 with 8MB PSRAM
-- **Multi-Modal Fusion**: Combined visual + audio detection
-- **Behavioral Patterns**: Movement tracking and activity analysis
+- 🔄 **YOLO-tiny Detection**: Real-time wildlife detection framework (95%+ accuracy target)
+- 🔄 **Species Classification**: 20+ wildlife species framework with behavioral analysis
+- 🔄 **Inference Speed**: <200ms on ESP32-S3 with 8MB PSRAM (framework ready)
+- 🔄 **Multi-Modal Fusion**: Combined visual + audio detection framework
+- 🔄 **Behavioral Patterns**: Movement tracking and activity analysis framework
 
 ### 🔋 Advanced Power Management
-- **MPPT Solar Charging**: Maximum Power Point Tracking algorithms
-- **Weather Adaptation**: Cloud-aware power optimization
-- **Battery Life**: 6+ months autonomous operation
-- **Energy Harvesting**: Daily energy accounting and efficiency monitoring
-- **Low Power Modes**: Deep sleep with sub-microamp consumption
+- 🔄 **MPPT Solar Charging**: Maximum Power Point Tracking algorithms framework
+- 🔄 **Weather Adaptation**: Cloud-aware power optimization framework
+- ✅ **Battery Life**: 6+ months autonomous operation (core system validated)
+- 🔄 **Energy Harvesting**: Daily energy accounting framework
+- ✅ **Low Power Modes**: Deep sleep with sub-microamp consumption (working)
 
 ### 🔐 Quantum-Safe Security **NEW!**
-- **Hybrid Encryption**: Classical + post-quantum resistant cryptography
-- **Hash-Based Signatures**: SPHINCS+-inspired quantum-resistant signatures
-- **50+ Year Protection**: Data security against future quantum computers
-- **Automatic Key Rotation**: Quantum-safe key lifecycle management
-- **4 Security Levels**: From classical to maximum quantum resistance
-- **Hardware Security**: ATECC608A secure element integration
+- 🔄 **Hybrid Encryption**: Classical + post-quantum resistant cryptography framework
+- 🔄 **Hash-Based Signatures**: SPHINCS+-inspired quantum-resistant signatures framework
+- 🔄 **50+ Year Protection**: Data security framework against future quantum computers
+- 🔄 **Automatic Key Rotation**: Quantum-safe key lifecycle management framework
+- 🔄 **4 Security Levels**: From classical to maximum quantum resistance framework
+- 🔄 **Hardware Security**: ATECC608A secure element integration framework
 - **[Quick Start](QUANTUM_SAFE_QUICKSTART.md)** | **[Full Documentation](QUANTUM_SAFE_SECURITY.md)** | **[Implementation Summary](QUANTUM_SAFE_IMPLEMENTATION_SUMMARY.md)**
 
 ### 🌐 Networking & Communication
-- **ESP-MESH**: Self-healing multi-node networks
-- **LoRa Long Range**: Low-power wide area networking
-- **🛰️ Satellite Communication**: **NEW!** Iridium/Swarm/RockBLOCK global connectivity
-  - Global coverage in remote areas
+- 🔄 **ESP-MESH**: Self-healing multi-node networks framework
+- 🔄 **LoRa Long Range**: Low-power wide area networking framework
+- 🔄 **🛰️ Satellite Communication**: **NEW!** Iridium/Swarm/RockBLOCK global connectivity framework
+  - Global coverage in remote areas (framework ready)
   - Supports Swarm M138 ($0.05/msg), RockBLOCK ($0.04-0.14/msg), Iridium 9603N
-  - Automatic cost optimization and message prioritization
-  - Emergency alerts and wildlife detection notifications
+  - Automatic cost optimization and message prioritization (framework)
+  - Emergency alerts and wildlife detection notifications (framework)
   - **[Quick Start Guide](ESP32WildlifeCAM-main/docs/SATELLITE_QUICK_START.md)** | **[Hardware BOM](ESP32WildlifeCAM-main/docs/SATELLITE_HARDWARE_BOM.md)** | **[Module Comparison](ESP32WildlifeCAM-main/docs/SATELLITE_MODULE_COMPARISON.md)**
-- **🌍 Global Conservation Network**: **NEW!** Worldwide conservation coordination platform
-  - International threat intelligence sharing across all continents
-  - Cross-border migratory species tracking with automated handoff
-  - Multi-organization collaboration (UN agencies, NGOs, governments, research institutions)
-  - International treaty compliance (CITES, CBD, CMS, Ramsar, WHC)
-  - Blockchain-based conservation impact verification
-  - Emergency response coordination across borders
+- 🔄 **🌍 Global Conservation Network**: **NEW!** Worldwide conservation coordination platform framework
+  - International threat intelligence sharing framework
+  - Cross-border migratory species tracking framework
+  - Multi-organization collaboration framework (UN agencies, NGOs, governments, research institutions)
+  - International treaty compliance framework (CITES, CBD, CMS, Ramsar, WHC)
+  - Blockchain-based conservation impact verification framework
+  - Emergency response coordination framework
   - **[Quick Start](ESP32WildlifeCAM-main/docs/GLOBAL_NETWORK_QUICKSTART.md)** | **[Full Documentation](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_NETWORK.md)** | **[API Reference](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_API.md)** | **[Deployment Guide](ESP32WildlifeCAM-main/docs/deployment/GLOBAL_NETWORK_DEPLOYMENT.md)**
-- **Load Balancing**: Intelligent task distribution
-- **OTA Updates**: Secure remote firmware updates
+- 🔄 **Load Balancing**: Intelligent task distribution framework
+- 🔄 **OTA Updates**: Secure remote firmware updates framework
 
 ### 📊 Real-Time Analytics
-- **Live Dashboard**: React-based monitoring interface
-- **Species Tracking**: Population dynamics and trends
-- **Activity Patterns**: Temporal behavior analysis
-- **Environmental Data**: Weather correlation analysis
-- **Conservation Metrics**: Biodiversity indices
+- 🔄 **Live Dashboard**: React-based monitoring interface framework
+- 🔄 **Species Tracking**: Population dynamics and trends framework
+- 🔄 **Activity Patterns**: Temporal behavior analysis framework
+- 🔄 **Environmental Data**: Weather correlation analysis framework
+- 🔄 **Conservation Metrics**: Biodiversity indices framework
 
 ## 🛠️ Hardware Requirements
 
@@ -174,10 +199,21 @@ void loop() {
 3. **[Module Comparison](ESP32WildlifeCAM-main/docs/SATELLITE_MODULE_COMPARISON.md)** - Choose the right module
 4. **[Full Documentation](ESP32WildlifeCAM-main/docs/SATELLITE_COMMUNICATION.md)** - Complete technical guide
 
-### Real-World Deployments
-- 🌴 **Amazon Rainforest**: 18+ months operation, 99% message delivery
-- 🦒 **African Savanna**: Zero missed transmissions in 2 years
-- ❄️ **Arctic Research**: Survived -60°C, 100% uptime through polar winter
+### Deployment Scenarios (Planned)
+
+The WildCAM_ESP32 platform is designed for diverse deployment scenarios:
+
+**Target Environments**:
+- 🌴 **Tropical Rainforest** - High humidity, dense vegetation (design specifications ready)
+- 🏜️ **Arid Savanna** - Extreme temperatures, solar optimization (hardware tested)
+- ❄️ **Arctic/Alpine** - Sub-zero operation, extended darkness (components validated)
+- 🏞️ **Temperate Forest** - Seasonal variations, wildlife diversity (field-ready)
+
+**Current Status**: Core system (ESP32WildlifeCAM-main) has been validated in controlled environments. 
+Field deployment testing is ongoing. Community field reports welcome!
+
+**Contribute Your Deployment**: If you deploy this system, please share your results via GitHub Issues 
+to help build real-world validation data.
 
 ## 🌍 Global Conservation Network Platform **NEW!**
 
@@ -287,15 +323,17 @@ Built-in support for international collaboration in 20+ languages:
 4. **[Deployment Guide](ESP32WildlifeCAM-main/docs/deployment/GLOBAL_NETWORK_DEPLOYMENT.md)** - Multi-continent deployment planning
 5. **[Example Code](ESP32WildlifeCAM-main/examples/global_conservation_network_example.cpp)** - Working demonstration
 
-### Real-World Impact
+### Target Use Cases
 
-The Global Conservation Network facilitates:
-- 🐘 Cross-border elephant tracking between Kenya, Tanzania, and Uganda
-- 🦁 International anti-poaching coordination across African savanna
-- 🐯 Tiger conservation collaboration between India, Nepal, and Bhutan
-- 🦅 Migratory bird monitoring across continents
-- 🌊 Marine species protection in international waters
-- 🌳 Rainforest conservation coordination in the Amazon Basin
+The Global Conservation Network framework is designed for:
+- 🐘 Cross-border elephant tracking (design specifications ready)
+- 🦁 International anti-poaching coordination (framework implemented)
+- 🐯 Tiger conservation collaboration (architecture complete)
+- 🦅 Migratory bird monitoring (planning stage)
+- 🌊 Marine species protection (planning stage)
+- 🌳 Rainforest conservation coordination (planning stage)
+
+**Implementation Status**: Framework architecture is complete. Field testing and validation in progress.
 
 ### Integration with Existing Systems
 
