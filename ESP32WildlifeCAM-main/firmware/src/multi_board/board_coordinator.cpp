@@ -274,28 +274,77 @@ bool BoardCoordinator::shouldBeCoordinator() const {
 void BoardCoordinator::processDiscovery() {
     if (!discoveryProtocol_) return;
     
+    // Update managed nodes continuously for real-time coordination
+    const auto& currentNodes = discoveryProtocol_->getDiscoveredNodes();
+    bool nodesChanged = (currentNodes.size() != managedNodes_.size());
+    
     if (discoveryProtocol_->isDiscoveryComplete()) {
-        managedNodes_ = discoveryProtocol_->getDiscoveredNodes();
+        managedNodes_ = currentNodes;
         
         if (shouldBeCoordinator()) {
-            state_ = COORD_ACTIVE;
-            Serial.printf("Coordinator active with %d managed nodes\n", managedNodes_.size());
-            
-            // Assign roles to discovered nodes
-            assignNodeRoles();
+            if (state_ != COORD_ACTIVE) {
+                state_ = COORD_ACTIVE;
+                Serial.printf("✓ Coordinator active with %d managed nodes\n", managedNodes_.size());
+                
+                // Perform initial role assignments
+                assignNodeRoles();
+                
+                // Send network topology to all nodes
+                sendNetworkTopology();
+            } else if (nodesChanged) {
+                // Dynamic topology update - new device joined or left
+                Serial.printf("⚡ Topology changed: %d managed nodes\n", managedNodes_.size());
+                
+                // Reassign roles based on new topology
+                if (networkConfig_.enableAutomaticRoleAssignment) {
+                    assignNodeRoles();
+                }
+                
+                // Broadcast updated topology
+                sendNetworkTopology();
+            }
         } else {
             // Another node is coordinator, step down
             Serial.printf("Node %d is coordinator, stepping down\n", 
                          discoveryProtocol_->getCoordinatorNode());
             stopCoordinator();
         }
+    } else if (state_ == COORD_ACTIVE && nodesChanged) {
+        // Real-time mesh formation: even during discovery, coordinate new nodes
+        managedNodes_ = currentNodes;
+        Serial.printf("⚡ Real-time coordination: %d nodes\n", managedNodes_.size());
+        sendNetworkTopology();
     }
 }
 
 void BoardCoordinator::processNodeManagement() {
     // Update managed nodes from discovery
     if (discoveryProtocol_) {
-        managedNodes_ = discoveryProtocol_->getDiscoveredNodes();
+        const auto& discoveredNodes = discoveryProtocol_->getDiscoveredNodes();
+        
+        // Check for capability changes that might require role reassignment
+        for (const auto& node : discoveredNodes) {
+            auto it = std::find_if(managedNodes_.begin(), managedNodes_.end(),
+                                  [&node](const NetworkNode& n) { return n.nodeId == node.nodeId; });
+            
+            if (it != managedNodes_.end()) {
+                // Check if node capabilities have changed significantly
+                bool capabilitiesChanged = 
+                    (it->capabilities.batteryLevel != node.capabilities.batteryLevel) ||
+                    (it->capabilities.hasAI != node.capabilities.hasAI) ||
+                    (it->capabilities.hasPSRAM != node.capabilities.hasPSRAM);
+                
+                if (capabilitiesChanged && networkConfig_.enableAutomaticRoleAssignment) {
+                    Serial.printf("Node %d capabilities changed, reassessing role\n", node.nodeId);
+                    BoardRole optimalRole = determineOptimalRole(node.capabilities);
+                    if (optimalRole != node.role) {
+                        sendRoleAssignment(node.nodeId, optimalRole);
+                    }
+                }
+            }
+        }
+        
+        managedNodes_ = discoveredNodes;
     }
     
     // Check for failed nodes and reassign tasks if needed
@@ -322,28 +371,50 @@ void BoardCoordinator::processElection() {
 }
 
 BoardRole BoardCoordinator::determineOptimalRole(const BoardCapabilities& caps) const {
-    // AI-capable boards with high resolution
-    if (caps.hasAI && caps.maxResolution >= 1920 * 1080) {
+    // Dynamic capability-based role assignment
+    
+    // Consider battery level for role assignment
+    bool lowBattery = (caps.batteryLevel < 30);
+    bool hasSolarPower = (caps.solarVoltage > 4.0);
+    
+    // AI-capable boards with high resolution and sufficient power
+    if (caps.hasAI && caps.hasPSRAM && caps.maxResolution >= 1920 * 1080 && !lowBattery) {
+        Serial.printf("Node capabilities: AI processor (AI=%d, PSRAM=%d, Res=%d, Bat=%d%%)\n",
+                     caps.hasAI, caps.hasPSRAM, caps.maxResolution, caps.batteryLevel);
         return ROLE_AI_PROCESSOR;
     }
     
     // High-resolution boards with good storage
-    if (caps.maxResolution >= 1600 * 1200 && caps.availableStorage > 1024 * 1024) {
+    if (caps.maxResolution >= 1600 * 1200 && caps.availableStorage > 1024 * 1024 && caps.hasSD) {
+        Serial.printf("Node capabilities: Hub (Res=%d, Storage=%d MB, SD=%d)\n",
+                     caps.maxResolution, caps.availableStorage / (1024*1024), caps.hasSD);
         return ROLE_HUB;
     }
     
-    // Low-power boards
-    if (caps.powerProfile <= 1) {
+    // Low-power boards or low battery - assign stealth role
+    if (caps.powerProfile <= 1 || lowBattery) {
+        Serial.printf("Node capabilities: Stealth (Power=%d, Battery=%d%%)\n",
+                     caps.powerProfile, caps.batteryLevel);
         return ROLE_STEALTH;
     }
     
-    // Boards with cellular capability
-    if (caps.hasCellular) {
+    // Boards with cellular capability - good for remote monitoring
+    if (caps.hasCellular || caps.hasSatellite) {
+        Serial.printf("Node capabilities: Portable (Cellular=%d, Satellite=%d)\n",
+                     caps.hasCellular, caps.hasSatellite);
         return ROLE_PORTABLE;
     }
     
-    // Default to edge sensor
-    return ROLE_EDGE_SENSOR;
+    // Boards with solar power and good connectivity - can be relay
+    if (hasSolarPower && caps.batteryLevel > 50) {
+        Serial.printf("Node capabilities: Relay (Solar=%.1fV, Battery=%d%%)\n",
+                     caps.solarVoltage, caps.batteryLevel);
+        return ROLE_RELAY;
+    }
+    
+    // Default to node role for standard camera operation
+    Serial.printf("Node capabilities: Standard node (defaults)\n");
+    return ROLE_NODE;
 }
 
 bool BoardCoordinator::sendRoleAssignment(int nodeId, BoardRole role) {

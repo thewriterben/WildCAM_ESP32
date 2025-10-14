@@ -370,14 +370,30 @@ void BoardNode::seekCoordinator() {
 void BoardNode::processSeekingCoordinator() {
     if (!discoveryProtocol_) return;
     
+    // Check for coordinator even before discovery is complete (real-time mesh formation)
+    int currentCoordinator = discoveryProtocol_->getCoordinatorNode();
+    
+    if (currentCoordinator > 0 && currentCoordinator != coordinatorNode_) {
+        coordinatorNode_ = currentCoordinator;
+        state_ = NODE_ACTIVE;
+        lastCoordinatorContact_ = millis();
+        Serial.printf("✓ Joined mesh: Coordinator is Node %d\n", coordinatorNode_);
+        
+        // Immediately send status to coordinator
+        sendStatusUpdate();
+        return;
+    }
+    
     if (discoveryProtocol_->isDiscoveryComplete()) {
-        coordinatorNode_ = discoveryProtocol_->getCoordinatorNode();
+        coordinatorNode_ = currentCoordinator;
         
         if (coordinatorNode_ > 0) {
             state_ = NODE_ACTIVE;
             lastCoordinatorContact_ = millis();
-            Serial.printf("Found coordinator: Node %d\n", coordinatorNode_);
+            Serial.printf("✓ Discovery complete: Coordinator is Node %d\n", coordinatorNode_);
+            sendStatusUpdate();
         } else if (nodeConfig_.enableAutonomousMode) {
+            Serial.println("⚠ No coordinator found, switching to standalone mode");
             switchToStandaloneMode();
         }
     }
@@ -439,10 +455,32 @@ void BoardNode::processStandaloneMode() {
 
 void BoardNode::handleRoleAssignment(const MultiboardMessage& msg) {
     BoardRole assignedRole = static_cast<BoardRole>(msg.data["assigned_role"].as<int>());
+    BoardRole previousRole = currentRole_;
+    
     setAssignedRole(assignedRole);
     
-    Serial.printf("Received role assignment: %s\n",
-                  MessageProtocol::roleToString(assignedRole));
+    Serial.printf("✓ Role assignment: %s -> %s (from coordinator node %d)\n",
+                  MessageProtocol::roleToString(previousRole),
+                  MessageProtocol::roleToString(assignedRole),
+                  msg.sourceNode);
+    
+    // Update coordinator contact time
+    lastCoordinatorContact_ = millis();
+    
+    // Send acknowledgment back to coordinator
+    DynamicJsonDocument ackDoc(256);
+    ackDoc["type"] = MSG_STATUS;
+    ackDoc["source_node"] = nodeId_;
+    ackDoc["target_node"] = msg.sourceNode;
+    ackDoc["timestamp"] = millis();
+    
+    JsonObject ackData = ackDoc.createNestedObject("data");
+    ackData["acknowledged_role"] = assignedRole;
+    ackData["previous_role"] = previousRole;
+    
+    String ackMessage;
+    serializeJson(ackDoc, ackMessage);
+    LoraMesh::queueMessage(ackMessage);
 }
 
 void BoardNode::handleTaskAssignment(const MultiboardMessage& msg) {

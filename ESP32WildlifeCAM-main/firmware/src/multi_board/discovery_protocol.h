@@ -16,10 +16,10 @@
 
 // Discovery states
 enum DiscoveryState {
-    DISCOVERY_IDLE = 0,
-    DISCOVERY_SCANNING = 1,
-    DISCOVERY_ADVERTISING = 2,
-    DISCOVERY_COMPLETE = 3
+    DISCOVERY_IDLE = 0,          // Not discovering
+    DISCOVERY_SCANNING = 1,      // Actively scanning for nodes
+    DISCOVERY_ADVERTISING = 2,   // Broadcasting presence
+    DISCOVERY_COMPLETE = 3       // Discovery complete, monitoring for changes
 };
 
 // Network topology information
@@ -138,6 +138,16 @@ public:
     void setDiscoveryInterval(unsigned long interval);
     void setAdvertisementInterval(unsigned long interval);
     void setNodeTimeout(unsigned long timeout);
+    
+    /**
+     * Get real-time network health score (0.0 - 1.0)
+     */
+    float getNetworkHealth() const;
+    
+    /**
+     * Force topology broadcast to all nodes
+     */
+    void broadcastTopologyNow();
     
 private:
     // Core state
