@@ -97,6 +97,10 @@ def create_app(config_name='development'):
     from routes import alert_bp
     app.register_blueprint(alert_bp, url_prefix='/api')
     
+    # Register research platform routes
+    from routes.research_routes import create_research_routes
+    create_research_routes(app)
+    
     # ==== API ROUTES ====
     
     @app.route('/api/health', methods=['GET'])
