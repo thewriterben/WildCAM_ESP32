@@ -1,0 +1,131 @@
+# Production Environment Configuration for Multi-Cloud Deployment
+# Copy this file to terraform.tfvars and fill in your values
+
+# Environment Configuration
+environment = "production"
+
+# AWS Configuration
+aws_region            = "us-west-2"
+aws_vpc_cidr          = "10.0.0.0/16"
+aws_availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
+
+# EKS Configuration
+eks_cluster_version = "1.28"
+eks_node_groups = {
+  general = {
+    instance_types = ["m5.xlarge", "m5a.xlarge"]
+    desired_size   = 5
+    min_size       = 3
+    max_size       = 20
+  }
+  compute = {
+    instance_types = ["c5.2xlarge", "c5a.2xlarge"]
+    desired_size   = 3
+    min_size       = 2
+    max_size       = 30
+  }
+}
+
+# RDS Configuration
+rds_instance_class   = "db.r6g.xlarge"
+rds_backup_retention = 30
+
+# Azure Configuration
+azure_subscription_id    = "YOUR_AZURE_SUBSCRIPTION_ID"
+azure_region             = "West US 2"
+azure_vnet_address_space = ["10.1.0.0/16"]
+
+# AKS Configuration
+aks_kubernetes_version = "1.28"
+aks_node_pools = {
+  system = {
+    vm_size    = "Standard_D8s_v3"
+    node_count = 5
+    min_count  = 3
+    max_count  = 10
+  }
+  user = {
+    vm_size    = "Standard_D16s_v3"
+    node_count = 3
+    min_count  = 2
+    max_count  = 20
+  }
+}
+
+# PostgreSQL Configuration
+postgres_sku_name        = "GP_Standard_D8s_v3"
+postgres_backup_retention = 30
+storage_replication_type  = "GRS"
+
+# GCP Configuration
+gcp_project_id      = "YOUR_GCP_PROJECT_ID"
+gcp_region          = "us-west1"
+gcp_vpc_subnet_cidr = "10.2.0.0/16"
+
+# GKE Configuration
+gke_cluster_version = "1.28"
+gke_node_pools = {
+  default = {
+    machine_type = "n2-standard-8"
+    node_count   = 5
+    min_count    = 3
+    max_count    = 20
+  }
+  compute = {
+    machine_type = "c2-standard-16"
+    node_count   = 3
+    min_count    = 2
+    max_count    = 30
+  }
+}
+
+# Cloud SQL Configuration
+cloudsql_tier           = "db-n1-standard-8"
+cloudsql_backup_enabled = true
+storage_class           = "MULTI_REGIONAL"
+
+# Multi-Cloud Features
+enable_multi_region = true
+enable_vpn_mesh     = true
+
+# Security Configuration
+domain_name                  = "wildcam.example.com"
+enable_zero_trust            = true
+enable_waf                   = true
+enable_ddos_protection       = true
+encryption_key_rotation_days = 90
+
+# Monitoring Configuration
+enable_prometheus = true
+enable_grafana    = true
+enable_jaeger     = true
+enable_elk_stack  = true
+alert_email       = "alerts@wildcam.example.com"
+
+# Optional: PagerDuty Integration
+# pagerduty_api_key = "YOUR_PAGERDUTY_API_KEY"
+
+# Database Configuration
+enable_multi_master     = true
+backup_retention_days   = 30
+backup_window           = "03:00-04:00"
+
+# S3 Lifecycle Rules
+s3_lifecycle_rules = [
+  {
+    id      = "archive-old-data"
+    enabled = true
+    transitions = [
+      {
+        days          = 90
+        storage_class = "GLACIER"
+      },
+      {
+        days          = 365
+        storage_class = "DEEP_ARCHIVE"
+      }
+    ]
+  }
+]
+
+enable_versioning = true
