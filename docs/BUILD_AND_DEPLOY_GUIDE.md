@@ -83,7 +83,7 @@ The backend exposes REST endpoints, alert workflows, and machine-learning servic
    npm run build
    ```
 
-3. For local development with live reload, run `npm start`. The development server proxies API calls to the Flask backend configured at `http://localhost:5000` in `package.json`.【F:frontend/dashboard/package.json†L1-L40】
+3. For local development with live reload, run `npm start`. The development server proxies API calls to the Flask backend configured at `http://localhost:5000` in `package.json`.
 
 The compiled dashboard output lives in `frontend/dashboard/build/`, ready to be served via Nginx or the provided Docker image.
 
