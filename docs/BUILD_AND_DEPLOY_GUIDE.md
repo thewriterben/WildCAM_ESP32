@@ -97,7 +97,7 @@ To streamline the above steps you can use the helper script `scripts/build_syste
 ./scripts/build_system.sh --skip-frontend  # Skip a particular component
 ```
 
-The script validates prerequisites, provisions a backend virtual environment, installs dashboard dependencies, and triggers the PlatformIO build when the respective toolchains are available.【F:scripts/build_system.sh†L1-L134】
+The script validates prerequisites, provisions a backend virtual environment, installs dashboard dependencies, and triggers the PlatformIO build when the respective toolchains are available. See [`scripts/build_system.sh`](https://github.com/thewriterben/WildCAM_ESP32/blob/main/scripts/build_system.sh) for details.
 
 ## 6. Containerized Deployment (Optional)
 
