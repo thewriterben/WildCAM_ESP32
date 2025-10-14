@@ -8,6 +8,7 @@
 
 #include "model_update_protocol.h"
 #include "../../utils/logger.h"
+#include <WiFi.h>
 #include <cstring>
 #include <algorithm>
 
@@ -111,7 +112,7 @@ bool ModelUpdateProtocol::sendRoundAnnouncement(const String& targetId,
     header.checksum = calculateChecksum(payload);
 
     stats_.messagesSent++;
-    stats_.bytesSent += payload.size();
+    stats_.bytesTransmitted += payload.size();
 
     return true;
 }
@@ -136,7 +137,7 @@ bool ModelUpdateProtocol::sendJoinRequest(const String& coordinatorId,
     header.checksum = calculateChecksum(serialized);
 
     stats_.messagesSent++;
-    stats_.bytesSent += serialized.size();
+    stats_.bytesTransmitted += serialized.size();
 
     return true;
 }
@@ -160,7 +161,7 @@ bool ModelUpdateProtocol::sendJoinResponse(const String& clientId,
     header.checksum = calculateChecksum(serialized);
 
     stats_.messagesSent++;
-    stats_.bytesSent += serialized.size();
+    stats_.bytesTransmitted += serialized.size();
 
     return true;
 }
@@ -188,7 +189,7 @@ bool ModelUpdateProtocol::sendModelUpdate(const String& coordinatorId, const Mod
     header.checksum = calculateChecksum(compressed);
 
     stats_.messagesSent++;
-    stats_.bytesSent += compressed.size();
+    stats_.bytesTransmitted += compressed.size();
     stats_.modelUpdatesSent++;
 
     Logger::info("[ModelUpdateProtocol] Model update sent, size: %u bytes", compressed.size());
@@ -221,7 +222,7 @@ bool ModelUpdateProtocol::sendGlobalModel(const String& clientId,
     header.checksum = calculateChecksum(compressed);
 
     stats_.messagesSent++;
-    stats_.bytesSent += compressed.size();
+    stats_.bytesTransmitted += compressed.size();
 
     return true;
 }
@@ -243,7 +244,7 @@ bool ModelUpdateProtocol::sendError(const String& targetId, const String& error)
     header.checksum = calculateChecksum(payload);
 
     stats_.messagesSent++;
-    stats_.bytesSent += payload.size();
+    stats_.bytesTransmitted += payload.size();
 
     return true;
 }
@@ -263,7 +264,7 @@ bool ModelUpdateProtocol::sendHeartbeat(const String& targetId) {
     header.checksum = calculateChecksum(payload);
 
     stats_.messagesSent++;
-    stats_.bytesSent += payload.size();
+    stats_.bytesTransmitted += payload.size();
 
     return true;
 }
@@ -296,7 +297,7 @@ bool ModelUpdateProtocol::broadcastPeerDiscovery() {
     header.checksum = calculateChecksum(payload);
 
     stats_.messagesSent++;
-    stats_.bytesSent += payload.size();
+    stats_.bytesTransmitted += payload.size();
 
     return true;
 }
@@ -319,7 +320,7 @@ bool ModelUpdateProtocol::broadcastRoundComplete(const String& roundId) {
     header.checksum = calculateChecksum(payload);
 
     stats_.messagesSent++;
-    stats_.bytesSent += payload.size();
+    stats_.bytesTransmitted += payload.size();
 
     return true;
 }
@@ -667,7 +668,7 @@ float ModelUpdateProtocol::getNetworkLatency() const {
 }
 
 uint32_t ModelUpdateProtocol::getBandwidthUsage() const {
-    return stats_.bytesSent + stats_.bytesReceived;
+    return stats_.bytesTransmitted + stats_.bytesReceived;
 }
 
 bool ModelUpdateProtocol::isNetworkCongested() const {

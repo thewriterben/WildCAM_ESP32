@@ -121,11 +121,17 @@ struct CommunicationStats {
     uint32_t networkErrors;
     uint32_t timeouts;
     float averageLatency;
+    uint32_t modelUpdatesSent;
+    uint32_t modelUpdatesReceived;
+    uint32_t failedMessages;
+    float averageCompressionRatio;
     
     CommunicationStats() : messagesSent(0), messagesReceived(0),
                           bytesTransmitted(0), bytesReceived(0),
                           compressionRatio(0), networkErrors(0),
-                          timeouts(0), averageLatency(0.0f) {}
+                          timeouts(0), averageLatency(0.0f),
+                          modelUpdatesSent(0), modelUpdatesReceived(0),
+                          failedMessages(0), averageCompressionRatio(0.0f) {}
 };
 
 /**

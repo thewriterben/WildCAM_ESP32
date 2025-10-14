@@ -164,17 +164,21 @@ struct ModelUpdate {
 struct FederatedRound {
     String roundId;
     String modelId;
+    WildlifeModelType modelType;
     uint32_t minParticipants;
     uint32_t maxParticipants;
     uint32_t currentParticipants;
     uint32_t roundTimeoutMs;
     uint32_t startTimestamp;
     uint32_t endTimestamp;
+    uint32_t startTime;  // Alias for startTimestamp
+    FederatedLearningState state;
     bool active;
     
-    FederatedRound() : minParticipants(3), maxParticipants(100), 
+    FederatedRound() : modelType(MODEL_SPECIES_CLASSIFIER), minParticipants(3), maxParticipants(100), 
                       currentParticipants(0), roundTimeoutMs(3600000), // 1 hour
-                      startTimestamp(0), endTimestamp(0), active(false) {}
+                      startTimestamp(0), endTimestamp(0), startTime(0),
+                      state(FederatedLearningState::FL_IDLE), active(false) {}
 };
 
 /**
