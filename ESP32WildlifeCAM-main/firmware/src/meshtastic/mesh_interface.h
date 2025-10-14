@@ -31,7 +31,8 @@ enum MeshPacketType {
     PACKET_TYPE_TELEMETRY = 3,
     PACKET_TYPE_POSITION = 4,
     PACKET_TYPE_TEXT = 5,
-    PACKET_TYPE_WILDLIFE = 6    // Custom wildlife packet type
+    PACKET_TYPE_WILDLIFE = 6,   // Custom wildlife packet type
+    PACKET_TYPE_IMAGE = 7       // Image transmission packet type
 };
 
 // Routing priorities
