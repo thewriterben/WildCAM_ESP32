@@ -1,0 +1,91 @@
+{
+  "short_name": "WildCAM",
+  "name": "WildCAM ESP32 Wildlife Monitoring",
+  "description": "Real-time collaborative wildlife research platform for monitoring and analysis",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#2e7d32",
+  "background_color": "#ffffff",
+  "orientation": "any",
+  "scope": "/",
+  "categories": ["science", "education", "utilities"],
+  "screenshots": [
+    {
+      "src": "screenshot-desktop.png",
+      "type": "image/png",
+      "sizes": "1280x720",
+      "form_factor": "wide"
+    },
+    {
+      "src": "screenshot-mobile.png",
+      "type": "image/png",
+      "sizes": "750x1334",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View live detections and analytics",
+      "url": "/dashboard",
+      "icons": [{ "src": "icon-dashboard.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Collaboration",
+      "short_name": "Collaborate",
+      "description": "Team chat and collaboration tools",
+      "url": "/collaboration",
+      "icons": [{ "src": "icon-collab.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Field Notes",
+      "short_name": "Notes",
+      "description": "Quick access to field notes",
+      "url": "/field-notes",
+      "icons": [{ "src": "icon-notes.png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "media",
+          "accept": ["image/*", "video/*"]
+        }
+      ]
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+wildcam",
+      "url": "/detection?id=%s"
+    }
+  ],
+  "prefer_related_applications": false
+}

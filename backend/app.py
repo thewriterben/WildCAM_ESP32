@@ -76,6 +76,20 @@ def create_app(config_name='development'):
     # Create upload folder
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
+    # Initialize collaboration services
+    collab_service = CollaborationService(socketio)
+    app.config['collab_service'] = collab_service
+    
+    # Initialize RBAC service
+    from rbac import RBACService
+    rbac_service = RBACService(db)
+    app.config['rbac_service'] = rbac_service
+    
+    # Initialize WebRTC signaling (Phase 3 preparation)
+    from webrtc_signaling import WebRTCSignalingServer
+    webrtc_signaling = WebRTCSignalingServer(socketio, db)
+    app.config['webrtc_signaling'] = webrtc_signaling
+    
     # Register authentication routes
     create_auth_routes(app)
     
@@ -738,6 +752,76 @@ def create_app(config_name='development'):
             if note:
                 return jsonify({'note': note}), 201
             return jsonify({'error': 'Failed to create field note'}), 500
+    
+    # ==== RBAC API ROUTES ====
+    
+    @app.route('/api/rbac/permissions', methods=['GET'])
+    @jwt_required()
+    def get_user_permissions():
+        """Get current user's role and permissions"""
+        try:
+            user_id = get_jwt_identity()
+            from rbac import get_rbac_info
+            
+            rbac_info = get_rbac_info(user_id)
+            if not rbac_info:
+                return jsonify({'error': 'RBAC information not available'}), 500
+            
+            return jsonify({
+                'user_id': user_id,
+                'rbac': rbac_info
+            }), 200
+        except Exception as e:
+            logger.error(f"Get RBAC info error: {e}")
+            return jsonify({'error': 'Failed to fetch RBAC information'}), 500
+    
+    @app.route('/api/rbac/check-permission', methods=['POST'])
+    @jwt_required()
+    def check_permission():
+        """Check if current user has a specific permission"""
+        try:
+            user_id = get_jwt_identity()
+            data = request.get_json()
+            
+            if not data or not data.get('permission'):
+                return jsonify({'error': 'permission is required'}), 400
+            
+            from rbac import Permission
+            permission_name = data['permission']
+            
+            # Convert string to Permission enum
+            try:
+                permission = Permission[permission_name.upper()]
+            except KeyError:
+                return jsonify({'error': f'Invalid permission: {permission_name}'}), 400
+            
+            rbac = app.config.get('rbac_service')
+            has_permission = rbac.has_permission(user_id, permission)
+            
+            return jsonify({
+                'has_permission': has_permission,
+                'permission': permission_name
+            }), 200
+        except Exception as e:
+            logger.error(f"Check permission error: {e}")
+            return jsonify({'error': 'Failed to check permission'}), 500
+    
+    @app.route('/api/rbac/roles', methods=['GET'])
+    @jwt_required()
+    def get_available_roles():
+        """Get list of available roles and their permissions"""
+        from rbac import Role, ROLE_PERMISSIONS, Permission
+        
+        roles_info = {}
+        for role in Role:
+            permissions = ROLE_PERMISSIONS.get(role, set())
+            roles_info[role.name.lower()] = {
+                'name': role.name,
+                'level': role.value,
+                'permissions': [p.value for p in permissions]
+            }
+        
+        return jsonify({'roles': roles_info}), 200
     
     # ==== WEBSOCKET EVENTS FOR COLLABORATION ====
     
