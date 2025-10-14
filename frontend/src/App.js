@@ -577,7 +577,7 @@ function CaptureModal({ capture, onClose }) {
   if (!capture) return null;
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal>
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal">
         <button type="button" className="close-button" onClick={onClose}>
           ×
