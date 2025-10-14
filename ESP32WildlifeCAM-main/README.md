@@ -1,5 +1,19 @@
 # 🦌 ESP32WildlifeCAM
 
+> **📢 IMPORTANT NOTICE - REPOSITORY CONSOLIDATION**
+>
+> **ESP32WildlifeCAM has been consolidated into [WildCAM_ESP32](../README.md)**
+> 
+> - ✅ **All content preserved** - This directory contains the complete ESP32WildlifeCAM project
+> - ✅ **Backward compatible** - All features and functionality maintained
+> - 📚 **Migration guide** - See [CONSOLIDATION_MIGRATION_GUIDE.md](../CONSOLIDATION_MIGRATION_GUIDE.md)
+> - 🏠 **Main repository** - [WildCAM_ESP32](https://github.com/thewriterben/WildCAM_ESP32)
+> - 📖 **Documentation** - Continue using this directory for simple DIY setups
+>
+> **Quick Links**: [Migration Guide](../CONSOLIDATION_MIGRATION_GUIDE.md) | [Main Platform README](../README.md) | [Full Documentation](docs/README.md)
+
+---
+
 **Advanced Solar-Powered AI Wildlife Monitoring Platform**
 
 Created by: @thewriterben  
