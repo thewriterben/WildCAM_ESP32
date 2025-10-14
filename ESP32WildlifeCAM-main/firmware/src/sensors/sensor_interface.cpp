@@ -97,23 +97,105 @@ const char* statusToString(SensorStatus status) {
 // ===========================
 
 BaseSensor* SensorFactory::createSensor(UnifiedSensorType type) {
-    // This will be extended as we add concrete sensor implementations
-    // For now, return nullptr
-    return nullptr;
+    // Note: Caller is responsible for deleting the returned sensor
+    switch (type) {
+        // DHT sensors - requires pin configuration
+        case UnifiedSensorType::SENSOR_DHT11:
+        case UnifiedSensorType::SENSOR_DHT22:
+            // Cannot auto-create without pin information
+            return nullptr;
+            
+        // Ultrasonic sensor - requires pin configuration
+        case UnifiedSensorType::SENSOR_HC_SR04:
+            return nullptr;
+            
+        // MQ gas sensors - requires pin configuration
+        case UnifiedSensorType::SENSOR_MQ2:
+        case UnifiedSensorType::SENSOR_MQ7:
+        case UnifiedSensorType::SENSOR_MQ135:
+            return nullptr;
+            
+        // I2C sensors could be auto-created if address is known
+        case UnifiedSensorType::SENSOR_BME280:
+        case UnifiedSensorType::SENSOR_BH1750:
+        case UnifiedSensorType::SENSOR_TSL2591:
+        case UnifiedSensorType::SENSOR_SGP30:
+        case UnifiedSensorType::SENSOR_MAX17048:
+            // Would require I2C library integration
+            return nullptr;
+            
+        default:
+            return nullptr;
+    }
 }
 
 std::vector<BaseSensor*> SensorFactory::detectSensors() {
     std::vector<BaseSensor*> detected_sensors;
     
-    // Auto-detection logic will be implemented here
-    // This will probe I2C bus, check GPIO pins, etc.
+    // Auto-detection for I2C sensors
+    Wire.begin();
+    
+    for (byte address = 1; address < 127; address++) {
+        Wire.beginTransmission(address);
+        byte error = Wire.endTransmission();
+        
+        if (error == 0) {
+            // Device found at this address
+            // Try to identify the sensor type based on address
+            switch (address) {
+                case 0x76:
+                case 0x77:
+                    // BME280/BMP280 - already supported in advanced_environmental_sensors
+                    break;
+                case 0x23:
+                    // BH1750 light sensor - already supported
+                    break;
+                case 0x29:
+                    // TSL2591 light sensor - already supported
+                    break;
+                case 0x58:
+                    // SGP30 air quality - already supported
+                    break;
+                case 0x36:
+                    // MAX17048 fuel gauge - already supported
+                    break;
+                // Additional I2C devices can be added here
+            }
+        }
+    }
+    
+    // Note: GPIO-based sensors (DHT, ultrasonic, PIR, etc.) require
+    // configuration to know which pins to probe, so they cannot be
+    // fully auto-detected without user configuration
     
     return detected_sensors;
 }
 
 bool SensorFactory::isSensorAvailable(UnifiedSensorType type) {
-    // Implementation will check if sensor is present
-    return false;
+    // Check if sensor type can be detected
+    switch (type) {
+        // I2C sensors - check bus
+        case UnifiedSensorType::SENSOR_BME280:
+            return checkI2CAddress(0x76) || checkI2CAddress(0x77);
+        case UnifiedSensorType::SENSOR_BH1750:
+            return checkI2CAddress(0x23);
+        case UnifiedSensorType::SENSOR_TSL2591:
+            return checkI2CAddress(0x29);
+        case UnifiedSensorType::SENSOR_SGP30:
+            return checkI2CAddress(0x58);
+        case UnifiedSensorType::SENSOR_MAX17048:
+            return checkI2CAddress(0x36);
+            
+        // GPIO-based sensors cannot be detected without configuration
+        default:
+            return false;
+    }
+}
+
+// Helper function to check I2C address
+static bool checkI2CAddress(byte address) {
+    Wire.beginTransmission(address);
+    return (Wire.endTransmission() == 0);
 }
 
 // ===========================
