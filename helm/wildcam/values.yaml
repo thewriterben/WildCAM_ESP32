@@ -1,0 +1,260 @@
+# Default values for WildCAM ESP32 Helm Chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  environment: production
+  cloudProvider: multi-cloud  # Options: aws, azure, gcp, multi-cloud
+  
+# Backend service configuration
+backend:
+  replicaCount: 3
+  
+  image:
+    repository: wildcam/backend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: wildcam-secrets
+          key: database-url
+    - name: REDIS_URL
+      value: "redis://wildcam-redis-master:6379"
+    - name: KAFKA_BROKERS
+      value: "wildcam-kafka:9092"
+
+# Frontend service configuration
+frontend:
+  replicaCount: 3
+  
+  image:
+    repository: wildcam/frontend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 70
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: istio
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: wildcam.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: frontend
+              port: 80
+        - path: /api
+          pathType: Prefix
+          backend:
+            service:
+              name: backend
+              port: 8000
+  tls:
+    - secretName: wildcam-tls
+      hosts:
+        - wildcam.example.com
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    username: wildcam
+    database: wildcam
+    existingSecret: wildcam-secrets
+    secretKeys:
+      adminPasswordKey: postgres-password
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: "fast-ssd"
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 100Gi
+
+# Redis configuration
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+    existingSecret: wildcam-secrets
+    existingSecretPasswordKey: redis-password
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+  replica:
+    replicaCount: 3
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# Kafka configuration
+kafka:
+  enabled: true
+  replicaCount: 3
+  auth:
+    clientProtocol: plaintext
+  persistence:
+    enabled: true
+    size: 50Gi
+  zookeeper:
+    enabled: true
+    replicaCount: 3
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# Service mesh (Istio) configuration
+serviceMesh:
+  enabled: true
+  mtls:
+    mode: STRICT
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+
+# Monitoring and observability
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    retention: 30d
+    storageSize: 100Gi
+  grafana:
+    enabled: true
+    adminPassword: changeme
+  jaeger:
+    enabled: true
+    storage:
+      type: elasticsearch
+  
+# Security settings
+security:
+  podSecurityPolicy:
+    enabled: true
+  networkPolicy:
+    enabled: true
+  secretsEncryption:
+    enabled: true
+
+# Multi-cloud specific settings
+multiCloud:
+  # AWS settings
+  aws:
+    region: us-west-2
+    s3:
+      bucket: wildcam-wildlife-data
+    rds:
+      endpoint: ""  # Set via secret
+  
+  # Azure settings
+  azure:
+    region: westus2
+    storage:
+      account: wildcamdata
+    postgres:
+      endpoint: ""  # Set via secret
+  
+  # GCP settings
+  gcp:
+    region: us-west1
+    storage:
+      bucket: wildcam-wildlife-data-gcp
+    cloudsql:
+      endpoint: ""  # Set via secret
+
+# Backup and disaster recovery
+backup:
+  enabled: true
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  retention:
+    daily: 7
+    weekly: 4
+    monthly: 12
+  targets:
+    - aws-s3
+    - azure-blob
+    - gcp-storage
+
+# Blue-green deployment
+deployment:
+  strategy: blue-green
+  blueGreenDelay: 300  # 5 minutes
+  autoPromote: false
+
+# Canary deployment
+canary:
+  enabled: true
+  steps:
+    - weight: 10
+      pause: 300
+    - weight: 25
+      pause: 300
+    - weight: 50
+      pause: 600
+    - weight: 75
+      pause: 300
+  analysis:
+    enabled: true
+    successRate: 95
+    errorRate: 5
