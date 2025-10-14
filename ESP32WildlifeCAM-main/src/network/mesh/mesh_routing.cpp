@@ -687,4 +687,163 @@ RouteEntry MeshRouting::findHighBandwidthRoute(uint32_t destination, float requi
     return bestRoute;
 }
 
-// Additional helper method implementations would continue here...
+// ===========================
+// CACHE MANAGEMENT
+// ===========================
+
+void MeshRouting::updateRouteCache() {
+    // Update cache with current routing table
+    for (const auto& route : routingTable_) {
+        updateRouteCacheEntry(route.first);
+    }
+}
+
+void MeshRouting::updateRouteCacheEntry(uint32_t destination) {
+    RouteEntry* route = findRoute(destination);
+    if (route) {
+        RouteCacheEntry& entry = routeCache_[destination];
+        entry.destination = destination;
+        entry.nextHop = route->nextHop;
+        entry.timestamp = millis();
+        entry.accessCount++;
+        statistics_.cacheHits++;
+    }
+}
+
+void MeshRouting::removeRouteCacheEntry(uint32_t destination) {
+    auto it = routeCache_.find(destination);
+    if (it != routeCache_.end()) {
+        routeCache_.erase(it);
+    }
+}
+
+void MeshRouting::cleanupExpiredRoutes() {
+    unsigned long currentTime = millis();
+    std::vector<uint32_t> expiredRoutes;
+    
+    // Find expired routes
+    for (const auto& route : routingTable_) {
+        if (currentTime - route.second.lastUsed > MESH_ROUTE_TIMEOUT) {
+            expiredRoutes.push_back(route.first);
+        }
+    }
+    
+    // Remove expired routes
+    for (uint32_t destination : expiredRoutes) {
+        removeRoute(destination);
+    }
+}
+
+// ===========================
+// ROUTE DISCOVERY HELPERS
+// ===========================
+
+uint32_t MeshRouting::generateRequestId() {
+    static uint32_t requestCounter = 0;
+    return (nodeId_ << 16) | (++requestCounter & 0xFFFF);
+}
+
+bool MeshRouting::waitForRouteDiscoveryResponse(uint32_t requestId, uint32_t timeout) {
+    unsigned long startTime = millis();
+    
+    while (millis() - startTime < timeout) {
+        // Check if route has been discovered
+        // This is a simplified implementation
+        delay(10);
+    }
+    
+    routeDiscoveryActive_ = false;
+    return false;  // Simplified - would check if route was discovered
+}
+
+void MeshRouting::broadcastRouteDiscovery(const RouteDiscoveryPacket& discovery) {
+    // Broadcast route discovery request to all neighbors
+    Serial.printf("Broadcasting route discovery request %08X\n", discovery.requestId);
+    
+    // In a real implementation, this would send the discovery packet via the radio
+    // For now, just log it
+}
+
+void MeshRouting::sendRouteDiscoveryResponse(const RouteDiscoveryPacket& request) {
+    RouteDiscoveryResponse response;
+    response.originId = request.originId;
+    response.destinationId = nodeId_;
+    response.nextHopId = nodeId_;
+    response.requestId = request.requestId;
+    response.hopCount = request.hopCount;
+    response.pathMetric = request.pathMetric;
+    response.timestamp = millis();
+    
+    Serial.printf("Sending route discovery response to %08X\n", request.originId);
+    
+    // In a real implementation, this would send the response packet
+}
+
+void MeshRouting::forwardRouteDiscoveryRequest(const RouteDiscoveryPacket& request) {
+    RouteDiscoveryPacket forward = request;
+    forward.hopCount++;
+    forward.pathMetric += 1.0;  // Add hop metric
+    
+    Serial.printf("Forwarding route discovery request %08X (hop %d)\n", 
+                 forward.requestId, forward.hopCount);
+    
+    // Broadcast forwarded request
+    broadcastRouteDiscovery(forward);
+}
+
+bool MeshRouting::isDiscoveryRequestSeen(uint32_t requestId, uint32_t originId) {
+    for (const auto& seen : seenDiscoveryRequests_) {
+        if (seen.first == requestId && seen.second == originId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void MeshRouting::addSeenDiscoveryRequest(uint32_t requestId, uint32_t originId) {
+    seenDiscoveryRequests_.push_back(std::make_pair(requestId, originId));
+    
+    // Limit size of seen requests list
+    if (seenDiscoveryRequests_.size() > 100) {
+        seenDiscoveryRequests_.erase(seenDiscoveryRequests_.begin());
+    }
+}
+
+// ===========================
+// LINK QUALITY HELPERS
+// ===========================
+
+bool MeshRouting::isSignificantQualityChange(const LinkQuality& quality) {
+    // Check if link quality change is significant enough to trigger routing update
+    // For now, any change triggers update - could be optimized
+    return true;
+}
+
+float MeshRouting::calculatePathMetric(uint32_t nextHop, uint32_t destination) {
+    // Calculate end-to-end path metric through nextHop to destination
+    auto linkIt = linkQualityTable_.find(nextHop);
+    if (linkIt == linkQualityTable_.end()) {
+        return std::numeric_limits<float>::infinity();
+    }
+    
+    float linkMetric = linkIt->second.metric;
+    
+    // Try to find route from nextHop to destination
+    // Simplified - in real implementation would query neighbor's routing table
+    RouteEntry* route = findRoute(destination);
+    if (route && route->nextHop == nextHop) {
+        return linkMetric + route->metric;
+    }
+    
+    return linkMetric + 1.0;  // Default hop metric
+}
+
+uint8_t MeshRouting::estimateHopCount(uint32_t nextHop, uint32_t destination) {
+    // Estimate hop count through nextHop to destination
+    RouteEntry* route = findRoute(destination);
+    if (route && route->nextHop == nextHop) {
+        return route->hopCount;
+    }
+    
+    return 2;  // Conservative estimate
+}

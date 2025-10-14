@@ -30,6 +30,9 @@ struct MeshNetworkStatus {
     float snr;
     unsigned long packetsReceived;
     unsigned long packetsSent;
+    bool isCoordinator;
+    int coordinatorNodeId;
+    unsigned long lastCoordinatorSeen;
 };
 
 namespace LoraMesh {
@@ -83,6 +86,24 @@ namespace LoraMesh {
      * @return Signal quality structure
      */
     SignalQuality getSignalQuality();
+    
+    /**
+     * Become network coordinator
+     * @return true if successfully became coordinator
+     */
+    bool becomeCoordinator();
+    
+    /**
+     * Check if this node is coordinator
+     * @return true if node is coordinator
+     */
+    bool isCoordinator();
+    
+    /**
+     * Get coordinator node ID
+     * @return coordinator node ID, or -1 if no coordinator
+     */
+    int getCoordinatorId();
     
     /**
      * Cleanup LoRa mesh resources
