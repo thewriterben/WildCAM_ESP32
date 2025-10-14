@@ -110,10 +110,11 @@ void DiscoveryProtocol::handleDiscoveryMessage(const MultiboardMessage& msg) {
         return;
     }
     
-    Serial.printf("Received discovery from node %d (role: %s)\n",
-                  discovery.nodeId, MessageProtocol::roleToString(discovery.preferredRole));
+    Serial.printf("Received discovery from node %d (role: %s, hop count: %d, RSSI: %d)\n",
+                  discovery.nodeId, MessageProtocol::roleToString(discovery.preferredRole),
+                  msg.hopCount, LoraMesh::getSignalQuality().rssi);
     
-    updateTopology(discovery);
+    updateTopology(discovery, msg.hopCount);
     lastDiscovery_ = millis();
 }
 
@@ -281,13 +282,20 @@ void DiscoveryProtocol::setNodeTimeout(unsigned long timeout) {
     nodeTimeout_ = timeout;
 }
 
-void DiscoveryProtocol::updateTopology(const DiscoveryMessage& discovery) {
+void DiscoveryProtocol::updateTopology(const DiscoveryMessage& discovery, int hopCount) {
     NetworkNode node;
     node.nodeId = discovery.nodeId;
     node.role = discovery.currentRole;
     node.capabilities = discovery.capabilities;
-    node.signalStrength = 0; // TODO: Get actual signal strength
-    node.hopCount = 0; // TODO: Calculate hop count
+    
+    // Get actual signal strength from LoRa mesh network
+    SignalQuality signalQuality = LoraMesh::getSignalQuality();
+    node.signalStrength = signalQuality.rssi;
+    
+    // Calculate hop count from message routing
+    // The hop count tells us how many intermediate nodes the message passed through
+    node.hopCount = hopCount;
+    
     node.coordinatorScore = discovery.coordinatorScore;
     
     updateNode(node);
