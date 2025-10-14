@@ -71,3 +71,32 @@ build/
 tmp/
 temp/
 *.tmp
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+.kube/
+
+# Cloud provider credentials
+.aws/
+.azure/
+gcloud/
+*.pem
+*.key
+!*example*.key
