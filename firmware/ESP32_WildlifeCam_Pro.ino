@@ -29,12 +29,16 @@
 // ML Model
 #include "wildlife_model.h"  // Generated from Python script
 
+// Encryption for secure LoRa communications
+#include "networking/lora_encryption.h"
+
 class ProfessionalWildlifeCam {
 private:
     // Core components
     camera_config_t camera_config;
     Adafruit_MLX90640 thermal_cam;
     RTC_DS3231 rtc;
+    LoRaEncryption* lora_encryption;
     
     // ML inference
     tflite::MicroInterpreter* interpreter;
@@ -91,6 +95,14 @@ public:
             thermal_cam.begin(MLX90640_I2CADDR_DEFAULT, &Wire);
             thermal_cam.setMode(MLX90640_CHESS);
             thermal_cam.setResolution(MLX90640_ADC_19BIT);
+        }
+        
+        // Initialize LoRa encryption
+        lora_encryption = new LoRaEncryption(DEFAULT_LORA_KEY);
+        if (!lora_encryption->begin()) {
+            Serial.println("LoRa encryption init failed");
+        } else {
+            Serial.println("✓ LoRa encryption initialized (AES-256)");
         }
         
         // Initialize LoRa
@@ -305,7 +317,7 @@ public:
     
     void sendDetectionAlert(WildlifeDetection& detection, JsonDocument& metadata) {
         if (status.wifi_connected) {
-            // Send via WiFi
+            // Send via WiFi (could also add encryption here)
             HTTPClient http;
             http.begin(config.api_endpoint);
             http.addHeader("Content-Type", "application/json");
@@ -316,7 +328,7 @@ public:
             http.end();
             
         } else if (status.lora_connected) {
-            // Send via LoRa
+            // Send via encrypted LoRa
             StaticJsonDocument<256> lora_msg;
             lora_msg["id"] = WiFi.macAddress();
             lora_msg["species"] = detection.species;
@@ -326,9 +338,24 @@ public:
             String msg;
             serializeJson(lora_msg, msg);
             
-            LoRa.beginPacket();
-            LoRa.print(msg);
-            LoRa.endPacket();
+            // Encrypt message before sending
+            String encrypted_msg;
+            if (lora_encryption && lora_encryption->encrypt(msg, encrypted_msg)) {
+                Serial.println("Sending encrypted LoRa message");
+                
+                // Send encrypted message
+                LoRa.beginPacket();
+                LoRa.print(encrypted_msg);
+                LoRa.endPacket();
+                
+                Serial.printf("✓ Encrypted message sent (%d bytes)\n", encrypted_msg.length());
+            } else {
+                // Fallback to unencrypted if encryption fails
+                Serial.println("⚠️ Encryption failed, sending unencrypted message");
+                LoRa.beginPacket();
+                LoRa.print(msg);
+                LoRa.endPacket();
+            }
         }
     }
     
