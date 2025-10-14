@@ -11,6 +11,11 @@
 #include <esp_partition.h>
 #include <esp_ota_ops.h>
 #include <mbedtls/sha256.h>
+#include <ArduinoJson.h>
+
+#ifdef ESP32
+#include <Preferences.h>
+#endif
 
 // AsyncElegantOTA integration for Phase 1 enhancement
 #ifdef OTA_ENABLED
@@ -63,8 +68,8 @@ bool OTAManager::init(const OTAConfig& config) {
         }
     }
     
-    // Load health metrics from storage
-    // TODO: Implement persistent storage for metrics
+    // Load health metrics from persistent storage
+    loadHealthMetrics();
     
     initialized_ = true;
     DEBUG_PRINTLN("OTA Manager initialized successfully");
@@ -122,11 +127,36 @@ bool OTAManager::checkForUpdates() {
             if (jsonStart != -1) {
                 String jsonPayload = response.substring(jsonStart + 4);
                 
-                // Parse update package information
-                // TODO: Implement proper JSON parsing
-                if (jsonPayload.indexOf("\"available\":true") != -1) {
+                // Parse update package information with proper JSON parsing
+                DynamicJsonDocument doc(2048);
+                DeserializationError error = deserializeJson(doc, jsonPayload);
+                
+                if (error) {
+                    DEBUG_PRINTLN("JSON parsing failed: " + String(error.c_str()));
+                    hasAvailableUpdate_ = false;
+                    return false;
+                }
+                
+                // Extract update information from parsed JSON
+                if (doc["available"].as<bool>()) {
+                    availableUpdate_.version = doc["version"].as<String>();
+                    availableUpdate_.description = doc["description"].as<String>();
+                    availableUpdate_.size = doc["size"].as<uint32_t>();
+                    availableUpdate_.checksum = doc["checksum"].as<String>();
+                    availableUpdate_.signature = doc["signature"].as<String>();
+                    availableUpdate_.priority = static_cast<UpdatePriority>(doc["priority"].as<int>());
+                    availableUpdate_.targetStage = static_cast<DeploymentStage>(doc["stage"].as<int>());
+                    availableUpdate_.downloadURL = doc["url"].as<String>();
+                    availableUpdate_.deltaUpdate = doc["delta"].as<bool>();
+                    availableUpdate_.baseVersion = doc["base_version"].as<String>();
+                    availableUpdate_.timestamp = doc["timestamp"].as<uint32_t>();
+                    
                     hasAvailableUpdate_ = true;
-                    updateStatus(OTA_IDLE, "Update available");
+                    updateStatus(OTA_IDLE, "Update available: " + availableUpdate_.version);
+                    
+                    DEBUG_PRINTLN("Update available: " + availableUpdate_.version);
+                    DEBUG_PRINTLN("  Size: " + String(availableUpdate_.size) + " bytes");
+                    DEBUG_PRINTLN("  Priority: " + String(availableUpdate_.priority));
                     return true;
                 }
             }
@@ -386,8 +416,20 @@ void OTAManager::reportError(int errorCode, const String& errorMessage) {
 void OTAManager::updateHealthMetrics(bool successful) {
     if (successful) {
         healthMetrics_.successfulUpdates++;
+        healthMetrics_.lastUpdateVersion = availableUpdate_.version;
     } else {
         healthMetrics_.failedUpdates++;
+    }
+    
+    // Update total update time if this was a recent update
+    if (updateStartTime_ > 0) {
+        uint32_t updateDuration = millis() - updateStartTime_;
+        healthMetrics_.totalUpdateTime += updateDuration;
+        
+        uint32_t totalUpdates = healthMetrics_.successfulUpdates + healthMetrics_.failedUpdates;
+        if (totalUpdates > 0) {
+            healthMetrics_.averageUpdateTime = healthMetrics_.totalUpdateTime / totalUpdates;
+        }
     }
     
     uint32_t totalUpdates = healthMetrics_.successfulUpdates + healthMetrics_.failedUpdates;
@@ -397,6 +439,9 @@ void OTAManager::updateHealthMetrics(bool successful) {
     
     healthMetrics_.lastUpdateTimestamp = millis();
     healthMetrics_.systemHealthy = healthMetrics_.successRate >= 80.0;  // 80% success threshold
+    
+    // Save updated metrics to persistent storage
+    saveHealthMetrics();
 }
 
 // Global utility functions
@@ -537,6 +582,69 @@ void OTAManager::setWebOTAPath(const String& path) {
 }
 
 #endif // OTA_ENABLED
+
+// Load health metrics from persistent storage
+bool OTAManager::loadHealthMetrics() {
+    #ifdef ESP32
+    // Use Preferences library for persistent storage on ESP32
+    Preferences prefs;
+    if (!prefs.begin("ota_metrics", true)) { // Read-only mode
+        DEBUG_PRINTLN("Failed to open preferences for OTA metrics");
+        return false;
+    }
+    
+    // Load metrics from preferences
+    healthMetrics_.successfulUpdates = prefs.getUInt("success_count", 0);
+    healthMetrics_.failedUpdates = prefs.getUInt("failed_count", 0);
+    healthMetrics_.rolledBackUpdates = prefs.getUInt("rollback_count", 0);
+    healthMetrics_.totalUpdateTime = prefs.getUInt("total_time", 0);
+    healthMetrics_.lastUpdateTimestamp = prefs.getUInt("last_update", 0);
+    healthMetrics_.lastUpdateVersion = prefs.getString("last_version", "");
+    
+    // Calculate derived metrics
+    uint32_t totalAttempts = healthMetrics_.successfulUpdates + healthMetrics_.failedUpdates;
+    if (totalAttempts > 0) {
+        healthMetrics_.successRate = (float)healthMetrics_.successfulUpdates / totalAttempts * 100.0;
+        healthMetrics_.averageUpdateTime = healthMetrics_.totalUpdateTime / totalAttempts;
+    }
+    
+    healthMetrics_.systemHealthy = (healthMetrics_.successRate >= 80.0); // 80% success rate threshold
+    
+    prefs.end();
+    DEBUG_PRINTLN("OTA health metrics loaded from storage");
+    return true;
+    #else
+    DEBUG_PRINTLN("Persistent storage not available on this platform");
+    return false;
+    #endif
+}
+
+// Save health metrics to persistent storage
+bool OTAManager::saveHealthMetrics() {
+    #ifdef ESP32
+    // Use Preferences library for persistent storage on ESP32
+    Preferences prefs;
+    if (!prefs.begin("ota_metrics", false)) { // Read-write mode
+        DEBUG_PRINTLN("Failed to open preferences for OTA metrics");
+        return false;
+    }
+    
+    // Save metrics to preferences
+    prefs.putUInt("success_count", healthMetrics_.successfulUpdates);
+    prefs.putUInt("failed_count", healthMetrics_.failedUpdates);
+    prefs.putUInt("rollback_count", healthMetrics_.rolledBackUpdates);
+    prefs.putUInt("total_time", healthMetrics_.totalUpdateTime);
+    prefs.putUInt("last_update", healthMetrics_.lastUpdateTimestamp);
+    prefs.putString("last_version", healthMetrics_.lastUpdateVersion);
+    
+    prefs.end();
+    DEBUG_PRINTLN("OTA health metrics saved to storage");
+    return true;
+    #else
+    DEBUG_PRINTLN("Persistent storage not available on this platform");
+    return false;
+    #endif
+}
 
 OTAStatus getOTAStatus() {
     return g_otaManager ? g_otaManager->getStatus() : OTA_IDLE;

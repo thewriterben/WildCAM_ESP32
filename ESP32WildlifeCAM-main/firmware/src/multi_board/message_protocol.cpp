@@ -65,6 +65,22 @@ bool detectAICapabilities() {
         return true;
     }
     
+    // Check for TensorFlow Lite Micro support
+    // TFLite can run on ESP32 with at least 4MB flash and sufficient RAM
+    #ifdef TFLITE_ENABLED
+    if (ESP.getFreeHeap() >= 100 * 1024) { // At least 100KB free heap for TFLite models
+        Serial.println("AI capabilities detected: TensorFlow Lite Micro support available");
+        return true;
+    }
+    #endif
+    
+    // Check for AI detection interface availability
+    // This checks if the advanced AI system is compiled and available
+    #ifdef AI_DETECTION_ENABLED
+    Serial.println("AI capabilities detected: AI detection framework available");
+    return true;
+    #endif
+    
     Serial.println("No AI capabilities detected");
     return false;
 }

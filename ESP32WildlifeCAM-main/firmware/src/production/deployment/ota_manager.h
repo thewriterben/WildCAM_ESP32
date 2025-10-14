@@ -280,6 +280,10 @@ private:
     bool checkSystemHealth() const;
     void updateHealthMetrics(bool successful);
     
+    // Persistent storage for metrics
+    bool loadHealthMetrics();
+    bool saveHealthMetrics();
+    
     // Security helpers
     bool initializeCrypto();
     bool loadPublicKey();
