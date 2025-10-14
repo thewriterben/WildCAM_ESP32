@@ -737,8 +737,8 @@ bool BoardNode::executeAIAnalysisTask(const NodeTask& task) {
                 }
             }
             
-            // TODO: Trigger mesh network event notification
-            // This would send detection results to other nodes in the mesh
+            // Trigger mesh network event notification
+            // Send detection results to other nodes in the mesh network
             triggerDetectionEvent(detection);
         }
     }
