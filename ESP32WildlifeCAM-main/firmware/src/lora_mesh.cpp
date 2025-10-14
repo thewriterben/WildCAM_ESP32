@@ -20,6 +20,10 @@ static unsigned long packetCounter = 0;
 static int rssiLast = 0;
 static float snrLast = 0.0;
 static MeshNetworkStatus networkStatus;
+static unsigned long lastDiscovery = 0;
+static unsigned long discoveryInterval = 60000;  // Initial 1 minute
+static const unsigned long MIN_DISCOVERY_INTERVAL = 30000;  // 30 seconds
+static const unsigned long MAX_DISCOVERY_INTERVAL = 300000; // 5 minutes
 
 // Message queue for outgoing packets
 static struct {
@@ -33,6 +37,8 @@ static struct {
     int nextHops[MAX_MESH_NODES];
     int hopCounts[MAX_MESH_NODES];
     unsigned long lastSeen[MAX_MESH_NODES];
+    int rssi[MAX_MESH_NODES];           // Signal strength per node
+    float reliability[MAX_MESH_NODES];  // Link reliability
     int count = 0;
 } routingTable;
 
@@ -40,13 +46,16 @@ static struct {
 static void onReceive(int packetSize);
 static bool sendPacket(const String& message, int targetNode = 0);
 static void processReceivedMessage(const String& message);
-static void updateRoutingTable(int sourceNode, int hopCount);
+static void updateRoutingTable(int sourceNode, int hopCount, int rssi);
 static int findRouteToNode(int targetNode);
 static void sendHeartbeat();
+static void sendDiscovery();
+static void adaptDiscoveryInterval();
 static String createMessage(const String& type, const JsonObject& data);
 static void handleDataMessage(const JsonObject& message);
 static void handleHeartbeat(const JsonObject& message);
 static void handleImageTransmission(const JsonObject& message);
+static void handleDiscovery(const JsonObject& message);
 
 /**
  * Initialize LoRa mesh networking
@@ -84,6 +93,9 @@ bool init() {
     networkStatus.snr = 0.0;
     networkStatus.packetsReceived = 0;
     networkStatus.packetsSent = 0;
+    networkStatus.isCoordinator = false;
+    networkStatus.coordinatorNodeId = -1;
+    networkStatus.lastCoordinatorSeen = 0;
     
     initialized = true;
     DEBUG_PRINTF("LoRa mesh network initialized - Node ID: %d\n", nodeId);
@@ -97,11 +109,19 @@ bool init() {
 void processMessages() {
     if (!initialized) return;
     
-    // Send heartbeat at configured interval
     unsigned long now = millis();
+    
+    // Send heartbeat at configured interval
     if (now - lastHeartbeat > HEARTBEAT_INTERVAL) {
         sendHeartbeat();
         lastHeartbeat = now;
+    }
+    
+    // Send discovery at adaptive interval
+    if (now - lastDiscovery > discoveryInterval) {
+        sendDiscovery();
+        lastDiscovery = now;
+        adaptDiscoveryInterval();
     }
     
     // Process outgoing message queue
@@ -118,17 +138,40 @@ void processMessages() {
     // Clean up old routing table entries (remove nodes not seen for 5 minutes)
     for (int i = 0; i < routingTable.count; i++) {
         if (now - routingTable.lastSeen[i] > 300000) {  // 5 minutes
-            DEBUG_PRINTF("Removing stale route to node %d\n", routingTable.nodeIds[i]);
+            DEBUG_PRINTF("Removing stale route to node %d (RSSI: %d, reliability: %.2f)\n", 
+                        routingTable.nodeIds[i], routingTable.rssi[i], routingTable.reliability[i]);
             // Shift remaining entries
             for (int j = i; j < routingTable.count - 1; j++) {
                 routingTable.nodeIds[j] = routingTable.nodeIds[j+1];
                 routingTable.nextHops[j] = routingTable.nextHops[j+1];
                 routingTable.hopCounts[j] = routingTable.hopCounts[j+1];
                 routingTable.lastSeen[j] = routingTable.lastSeen[j+1];
+                routingTable.rssi[j] = routingTable.rssi[j+1];
+                routingTable.reliability[j] = routingTable.reliability[j+1];
             }
             routingTable.count--;
             networkStatus.connectedNodes = routingTable.count;
             i--; // Adjust index after removal
+        }
+    }
+    
+    // Check coordinator health and trigger failover if needed
+    if (!networkStatus.isCoordinator && networkStatus.coordinatorNodeId != -1) {
+        if (now - networkStatus.lastCoordinatorSeen > 60000) {  // 1 minute timeout
+            DEBUG_PRINTLN("Coordinator timeout detected - initiating failover");
+            
+            // Simple failover: node with lowest ID becomes coordinator
+            int lowestNodeId = nodeId;
+            for (int i = 0; i < routingTable.count; i++) {
+                if (routingTable.nodeIds[i] < lowestNodeId) {
+                    lowestNodeId = routingTable.nodeIds[i];
+                }
+            }
+            
+            if (lowestNodeId == nodeId) {
+                DEBUG_PRINTLN("This node has lowest ID - becoming coordinator");
+                becomeCoordinator();
+            }
         }
     }
 }
@@ -273,12 +316,14 @@ static void processReceivedMessage(const String& message) {
     int sourceNode = doc["source_node"];
     int hopCount = doc["hop_count"] | 0;
     
-    // Update routing table
-    updateRoutingTable(sourceNode, hopCount);
+    // Update routing table with signal strength
+    updateRoutingTable(sourceNode, hopCount, rssiLast);
     
     // Handle different message types
     if (messageType == "heartbeat") {
         handleHeartbeat(doc.as<JsonObject>());
+    } else if (messageType == "discovery") {
+        handleDiscovery(doc.as<JsonObject>());
     } else if (messageType == "data" || messageType == "status") {
         handleDataMessage(doc.as<JsonObject>());
     } else if (messageType == "image_meta") {
@@ -304,7 +349,7 @@ static void processReceivedMessage(const String& message) {
 /**
  * Update routing table with node information
  */
-static void updateRoutingTable(int sourceNode, int hopCount) {
+static void updateRoutingTable(int sourceNode, int hopCount, int rssi) {
     if (sourceNode == nodeId) return;  // Don't add ourselves
     
     // Find existing entry or add new one
@@ -321,7 +366,8 @@ static void updateRoutingTable(int sourceNode, int hopCount) {
         index = routingTable.count;
         routingTable.count++;
         routingTable.nodeIds[index] = sourceNode;
-        DEBUG_PRINTF("Added new route to node %d\n", sourceNode);
+        routingTable.reliability[index] = 1.0;  // Start with full reliability
+        DEBUG_PRINTF("Added new route to node %d (RSSI: %d)\n", sourceNode, rssi);
     }
     
     if (index != -1) {
@@ -329,6 +375,11 @@ static void updateRoutingTable(int sourceNode, int hopCount) {
         routingTable.nextHops[index] = sourceNode;  // Direct connection for now
         routingTable.hopCounts[index] = hopCount + 1;
         routingTable.lastSeen[index] = millis();
+        routingTable.rssi[index] = rssi;
+        
+        // Update reliability based on signal strength
+        float signalQuality = (rssi > -70) ? 1.0 : (rssi > -85) ? 0.8 : (rssi > -100) ? 0.5 : 0.3;
+        routingTable.reliability[index] = 0.7 * routingTable.reliability[index] + 0.3 * signalQuality;
     }
 }
 
@@ -353,6 +404,9 @@ static void sendHeartbeat() {
     doc["source_node"] = nodeId;
     doc["timestamp"] = millis();
     doc["hop_count"] = 0;
+    doc["is_coordinator"] = networkStatus.isCoordinator;
+    doc["rssi"] = rssiLast;
+    doc["connected_nodes"] = routingTable.count;
     
     String message;
     serializeJson(doc, message);
@@ -400,7 +454,67 @@ static void handleDataMessage(const JsonObject& message) {
  */
 static void handleHeartbeat(const JsonObject& message) {
     int sourceNode = message["source_node"];
-    DEBUG_PRINTF("Heartbeat from node %d\n", sourceNode);
+    bool isCoord = message["is_coordinator"] | false;
+    
+    DEBUG_PRINTF("Heartbeat from node %d%s\n", sourceNode, isCoord ? " (coordinator)" : "");
+    
+    // Track coordinator status
+    if (isCoord) {
+        networkStatus.coordinatorNodeId = sourceNode;
+        networkStatus.lastCoordinatorSeen = millis();
+    }
+}
+
+/**
+ * Send discovery message
+ */
+static void sendDiscovery() {
+    DynamicJsonDocument doc(JSON_BUFFER_SMALL);
+    doc["type"] = "discovery";
+    doc["source_node"] = nodeId;
+    doc["timestamp"] = millis();
+    doc["hop_count"] = 0;
+    doc["rssi"] = rssiLast;
+    doc["connected_nodes"] = routingTable.count;
+    
+    String message;
+    serializeJson(doc, message);
+    
+    sendPacket(message);
+    DEBUG_PRINTF("Discovery sent - Connected nodes: %d\n", routingTable.count);
+}
+
+/**
+ * Handle discovery messages
+ */
+static void handleDiscovery(const JsonObject& message) {
+    int sourceNode = message["source_node"];
+    int connectedNodes = message["connected_nodes"] | 0;
+    
+    DEBUG_PRINTF("Discovery from node %d (connected: %d, RSSI: %d)\n", 
+                sourceNode, connectedNodes, rssiLast);
+}
+
+/**
+ * Adapt discovery interval based on network stability
+ */
+static void adaptDiscoveryInterval() {
+    // Adapt discovery interval based on network activity
+    // More nodes = less frequent discovery needed
+    // Fewer nodes = more frequent discovery to find new nodes
+    
+    if (routingTable.count == 0) {
+        // No nodes found - discover more frequently
+        discoveryInterval = MIN_DISCOVERY_INTERVAL;
+    } else if (routingTable.count < 3) {
+        // Few nodes - moderate discovery rate
+        discoveryInterval = 90000;  // 1.5 minutes
+    } else {
+        // Many nodes - reduce discovery frequency
+        discoveryInterval = MAX_DISCOVERY_INTERVAL;
+    }
+    
+    DEBUG_PRINTF("Discovery interval adapted to %lu ms\n", discoveryInterval);
 }
 
 /**
@@ -439,6 +553,44 @@ SignalQuality getSignalQuality() {
     else quality.strength = SIGNAL_POOR;
     
     return quality;
+}
+
+/**
+ * Become network coordinator
+ */
+bool becomeCoordinator() {
+    if (!initialized) return false;
+    
+    networkStatus.isCoordinator = true;
+    networkStatus.coordinatorNodeId = nodeId;
+    
+    DEBUG_PRINTF("Node %d became network coordinator\n", nodeId);
+    
+    // Announce coordinator role
+    DynamicJsonDocument doc(JSON_BUFFER_SMALL);
+    doc["type"] = "coordinator_announce";
+    doc["source_node"] = nodeId;
+    doc["timestamp"] = millis();
+    
+    String message;
+    serializeJson(doc, message);
+    sendPacket(message);
+    
+    return true;
+}
+
+/**
+ * Check if this node is coordinator
+ */
+bool isCoordinator() {
+    return networkStatus.isCoordinator;
+}
+
+/**
+ * Get coordinator node ID
+ */
+int getCoordinatorId() {
+    return networkStatus.coordinatorNodeId;
 }
 
 /**
