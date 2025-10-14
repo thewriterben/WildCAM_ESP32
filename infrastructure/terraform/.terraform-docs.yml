@@ -1,0 +1,39 @@
+# Terraform Docs Configuration
+formatter: markdown table
+
+sections:
+  show:
+    - header
+    - inputs
+    - outputs
+    - providers
+    - requirements
+
+content: |-
+  # Multi-Cloud Infrastructure
+
+  {{ .Header }}
+
+  ## Usage
+
+  ```hcl
+  terraform init
+  terraform plan
+  terraform apply
+  ```
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ .Providers }}
+
+  {{ .Requirements }}
+
+output:
+  file: README.md
+  mode: replace
+
+sort:
+  enabled: true
+  by: required

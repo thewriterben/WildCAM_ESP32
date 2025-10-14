@@ -1,0 +1,374 @@
+# ArgoCD Configuration for Multi-Cloud GitOps Deployment
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-server
+  namespace: argocd
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wildcam-multi-cloud
+  namespace: argocd
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/thewriterben/WildCAM_ESP32
+    targetRevision: main
+    path: infrastructure/kubernetes-federation
+    
+    helm:
+      valueFiles:
+      - values-production.yaml
+      
+      parameters:
+      - name: multiCloud.enabled
+        value: "true"
+      - name: aws.enabled
+        value: "true"
+      - name: azure.enabled
+        value: "true"
+      - name: gcp.enabled
+        value: "true"
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: wildcam
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  revisionHistoryLimit: 10
+---
+# ArgoCD ApplicationSet for Multi-Cluster Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: wildcam-clusters
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - cluster: aws-us-west-2
+        url: https://eks-cluster-aws-west.amazonaws.com
+        region: us-west-2
+        provider: aws
+      - cluster: aws-us-east-1
+        url: https://eks-cluster-aws-east.amazonaws.com
+        region: us-east-1
+        provider: aws
+      - cluster: azure-westus2
+        url: https://aks-cluster-azure-west.azure.com
+        region: westus2
+        provider: azure
+      - cluster: azure-eastus
+        url: https://aks-cluster-azure-east.azure.com
+        region: eastus
+        provider: azure
+      - cluster: gcp-us-west1
+        url: https://gke-cluster-gcp-west.googleapis.com
+        region: us-west1
+        provider: gcp
+      - cluster: gcp-us-east1
+        url: https://gke-cluster-gcp-east.googleapis.com
+        region: us-east1
+        provider: gcp
+  
+  template:
+    metadata:
+      name: 'wildcam-{{cluster}}'
+      labels:
+        cluster: '{{cluster}}'
+        provider: '{{provider}}'
+        region: '{{region}}'
+    
+    spec:
+      project: default
+      
+      source:
+        repoURL: https://github.com/thewriterben/WildCAM_ESP32
+        targetRevision: main
+        path: k8s/overlays/production
+        
+        helm:
+          parameters:
+          - name: cluster.name
+            value: '{{cluster}}'
+          - name: cluster.provider
+            value: '{{provider}}'
+          - name: cluster.region
+            value: '{{region}}'
+      
+      destination:
+        server: '{{url}}'
+        namespace: wildcam
+      
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+---
+# ArgoCD Multi-Cluster Configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-cluster-secret
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+type: Opaque
+stringData:
+  name: aws-us-west-2
+  server: https://eks-cluster-aws-west.amazonaws.com
+  config: |
+    {
+      "awsAuthConfig": {
+        "clusterName": "wildcam-eks-west",
+        "roleARN": "arn:aws:iam::123456789012:role/ArgoCD-EKS-Role"
+      },
+      "tlsClientConfig": {
+        "insecure": false
+      }
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azure-cluster-secret
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+type: Opaque
+stringData:
+  name: azure-westus2
+  server: https://aks-cluster-azure-west.azure.com
+  config: |
+    {
+      "execProviderConfig": {
+        "command": "kubelogin",
+        "args": ["get-token", "--server-id", "azure-aks-cluster-id"],
+        "apiVersion": "client.authentication.k8s.io/v1beta1"
+      },
+      "tlsClientConfig": {
+        "insecure": false
+      }
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gcp-cluster-secret
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+type: Opaque
+stringData:
+  name: gcp-us-west1
+  server: https://gke-cluster-gcp-west.googleapis.com
+  config: |
+    {
+      "execProviderConfig": {
+        "command": "gke-gcloud-auth-plugin",
+        "apiVersion": "client.authentication.k8s.io/v1beta1"
+      },
+      "tlsClientConfig": {
+        "insecure": false
+      }
+    }
+---
+# ArgoCD Project for Wildlife Monitoring
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: wildlife-monitoring
+  namespace: argocd
+spec:
+  description: Multi-cloud wildlife monitoring platform
+  
+  sourceRepos:
+  - https://github.com/thewriterben/WildCAM_ESP32
+  - https://charts.bitnami.com/bitnami
+  - https://prometheus-community.github.io/helm-charts
+  
+  destinations:
+  - namespace: 'wildcam*'
+    server: '*'
+  - namespace: 'monitoring'
+    server: '*'
+  - namespace: 'logging'
+    server: '*'
+  - namespace: 'security'
+    server: '*'
+  
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  
+  orphanedResources:
+    warn: true
+---
+# ArgoCD Notifications for Deployment Events
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  service.slack: |
+    token: $slack-token
+  
+  service.email: |
+    host: smtp.gmail.com
+    port: 587
+    from: ops@wildcam.org
+  
+  template.app-deployed: |
+    message: |
+      Application {{.app.metadata.name}} is now running new version.
+      Provider: {{.app.metadata.labels.provider}}
+      Region: {{.app.metadata.labels.region}}
+    slack:
+      attachments: |
+        [{
+          "title": "{{.app.metadata.name}}",
+          "title_link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+          "color": "#18be52",
+          "fields": [{
+            "title": "Sync Status",
+            "value": "{{.app.status.sync.status}}",
+            "short": true
+          }, {
+            "title": "Provider",
+            "value": "{{.app.metadata.labels.provider}}",
+            "short": true
+          }]
+        }]
+  
+  template.app-health-degraded: |
+    message: |
+      Application {{.app.metadata.name}} has degraded health.
+      Provider: {{.app.metadata.labels.provider}}
+      Region: {{.app.metadata.labels.region}}
+    email:
+      subject: Application {{.app.metadata.name}} has degraded health
+  
+  trigger.on-deployed: |
+    - when: app.status.operationState.phase in ['Succeeded']
+      send: [app-deployed]
+  
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+---
+# ArgoCD RBAC Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.default: role:readonly
+  policy.csv: |
+    p, role:org-admin, applications, *, */*, allow
+    p, role:org-admin, clusters, *, *, allow
+    p, role:org-admin, repositories, *, *, allow
+    p, role:org-admin, projects, *, *, allow
+    
+    p, role:wildlife-ops, applications, get, wildlife-monitoring/*, allow
+    p, role:wildlife-ops, applications, sync, wildlife-monitoring/*, allow
+    p, role:wildlife-ops, applications, override, wildlife-monitoring/*, allow
+    
+    g, wildlife-admins, role:org-admin
+    g, wildlife-operators, role:wildlife-ops
+---
+# Sync Wave Annotations Example for Ordered Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+  namespace: wildcam
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"  # Deploy first
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: wildcam
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"  # Deploy after database
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: api
+        image: wildcam/backend:latest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: wildcam
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"  # Deploy last
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: ui
+        image: wildcam/frontend:latest

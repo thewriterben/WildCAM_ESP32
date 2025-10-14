@@ -1,0 +1,316 @@
+# Production Helm Values for Multi-Cloud Deployment
+
+global:
+  projectName: wildcam
+  environment: production
+  domain: wildcam.org
+
+# Multi-Cloud Configuration
+multiCloud:
+  enabled: true
+  
+  providers:
+    aws:
+      enabled: true
+      regions:
+        - us-west-2
+        - us-east-1
+    
+    azure:
+      enabled: true
+      regions:
+        - westus2
+        - eastus
+    
+    gcp:
+      enabled: true
+      regions:
+        - us-west1
+        - us-east1
+
+# Application Configuration
+application:
+  name: wildcam-backend
+  
+  image:
+    repository: wildcam/backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 5
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Database Configuration
+database:
+  type: postgresql
+  version: "15"
+  
+  replication:
+    enabled: true
+    mode: logical
+    conflictResolution: last-write-wins
+  
+  backup:
+    enabled: true
+    schedule: "0 3 * * *"  # Daily at 3 AM UTC
+    retention: 30  # days
+  
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2"
+    limits:
+      memory: "16Gi"
+      cpu: "8"
+
+# Storage Configuration
+storage:
+  objectStore:
+    aws:
+      bucket: wildcam-wildlife-data-us-west-2
+      region: us-west-2
+      versioning: true
+    
+    azure:
+      container: wildlife-data
+      storageAccount: wildcamstorage
+      replication: GRS
+    
+    gcp:
+      bucket: wildcam-wildlife-data-us-west1
+      region: us-west1
+      storageClass: STANDARD
+  
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: standard
+
+# Networking Configuration
+networking:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    
+    hosts:
+      - host: api.wildcam.org
+        paths:
+          - path: /
+            pathType: Prefix
+    
+    tls:
+      - secretName: wildcam-tls
+        hosts:
+          - api.wildcam.org
+  
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 8080
+
+# Monitoring Configuration
+monitoring:
+  prometheus:
+    enabled: true
+    retention: 30d
+    storageSize: 100Gi
+    
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2"
+      limits:
+        memory: "8Gi"
+        cpu: "4"
+  
+  grafana:
+    enabled: true
+    adminPassword: ""  # Set via secret
+    
+    dashboards:
+      - wildlife-detection
+      - system-health
+      - cost-monitoring
+      - sla-tracking
+  
+  jaeger:
+    enabled: true
+    storage: elasticsearch
+    retention: 7d
+  
+  alerts:
+    enabled: true
+    channels:
+      - email: ops@wildcam.org
+      - slack: "#wildcam-ops"
+      - pagerduty: true
+
+# Security Configuration
+security:
+  vault:
+    enabled: true
+    address: "http://vault.security.svc.cluster.local:8200"
+    
+    autoUnseal:
+      enabled: true
+      provider: awskms
+  
+  certManager:
+    enabled: true
+    issuer: letsencrypt-prod
+    email: ops@wildcam.org
+  
+  networkPolicies:
+    enabled: true
+    denyAll: true
+    
+    allowRules:
+      - name: allow-monitoring
+        namespace: monitoring
+      - name: allow-ingress
+        namespace: ingress-nginx
+  
+  podSecurityPolicy:
+    enabled: true
+    privileged: false
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+
+# Cost Management
+costManagement:
+  budget:
+    monthly: 10000  # USD
+    alerts:
+      - threshold: 80
+        severity: warning
+      - threshold: 100
+        severity: critical
+  
+  optimization:
+    enabled: true
+    spotInstances: true
+    autoScaling: true
+    storageLifecycle: true
+
+# Traffic Management
+trafficManagement:
+  loadBalancing:
+    strategy: latency-based
+    healthChecks:
+      interval: 30
+      timeout: 10
+      unhealthyThreshold: 3
+  
+  cdn:
+    enabled: true
+    provider: cloudfront
+    cacheTTL: 3600
+    
+    edgeLocations:
+      - us-west
+      - us-east
+      - eu-west
+      - ap-south
+      - ap-east
+  
+  routing:
+    dns:
+      provider: route53
+      ttl: 60
+      healthCheckEnabled: true
+    
+    weights:
+      aws: 33
+      azure: 33
+      gcp: 34
+
+# Data Synchronization
+dataSync:
+  enabled: true
+  interval: 300  # seconds
+  
+  consistency:
+    checkInterval: 21600  # 6 hours
+    reconciliation: auto
+  
+  replication:
+    objectStorage: bidirectional
+    database: master-replica
+    timeSeries: clustered
+
+# Backup and Disaster Recovery
+backupRecovery:
+  enabled: true
+  
+  schedule:
+    full: "0 2 * * 0"  # Weekly full backup
+    incremental: "0 3 * * *"  # Daily incremental
+  
+  retention:
+    daily: 7
+    weekly: 4
+    monthly: 12
+  
+  rto: 300  # seconds
+  rpo: 60   # seconds
+
+# Service Mesh
+serviceMesh:
+  enabled: true
+  provider: istio
+  
+  mtls:
+    mode: STRICT
+  
+  tracing:
+    enabled: true
+    sampling: 10  # percent
+
+# Edge Computing
+edge:
+  enabled: true
+  
+  locations:
+    - name: remote-station-1
+      region: us-west
+      capabilities:
+        - detection
+        - preprocessing
+    
+    - name: remote-station-2
+      region: ap-southeast
+      capabilities:
+        - detection
+        - preprocessing
+
+# Chaos Engineering
+chaosEngineering:
+  enabled: false  # Enable in staging first
+  
+  experiments:
+    - type: pod-failure
+      frequency: weekly
+    
+    - type: network-latency
+      frequency: weekly
+    
+    - type: node-failure
+      frequency: monthly
