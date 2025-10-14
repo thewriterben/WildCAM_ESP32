@@ -70,7 +70,7 @@ The firmware sources live in `firmware/` with hardware abstraction, sensor drive
    celery -A tasks.alert_tasks worker --loglevel=info
    ```
 
-The backend exposes REST endpoints, alert workflows, and machine-learning services defined inside `backend/api`, `backend/services`, and `backend/tasks`. Refer to `backend/README_ALERT_SYSTEM.md` for detailed module descriptions.【F:backend/README_ALERT_SYSTEM.md†L1-L120】
+The backend exposes REST endpoints, alert workflows, and machine-learning services defined inside `backend/api`, `backend/services`, and `backend/tasks`. Refer to [backend/README_ALERT_SYSTEM.md](../backend/README_ALERT_SYSTEM.md) for detailed module descriptions.
 
 ## 4. Frontend Dashboard (React)
 
