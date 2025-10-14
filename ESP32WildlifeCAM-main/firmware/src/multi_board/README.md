@@ -118,6 +118,7 @@ The system supports various task types that can be assigned to nodes:
 - **`ai_analysis`**: Perform AI-based species identification
 - **`data_transmission`**: Upload data to cloud/base station
 - **`system_status`**: Report system health and diagnostics
+- **`3d_capture`**: Synchronized capture for 3D reconstruction (see [3D Reconstruction Guide](../../../docs/3D_RECONSTRUCTION_GUIDE.md))
 
 ## Network Topology
 
@@ -138,12 +139,56 @@ The multi-board system integrates seamlessly with existing infrastructure:
 - **Board Abstraction**: Leverages existing board detection and HAL
 - **Power Management**: Considers power profiles in role assignment
 
+## 3D Reconstruction from Multi-Camera Captures
+
+The multi-board system enables synchronized image capture from multiple cameras for 3D reconstruction of wildlife subjects. This advanced feature provides:
+
+- **Synchronized Timing**: Coordinate captures within milliseconds across multiple boards
+- **Spatial Metadata**: Store camera position and orientation with each image
+- **Flexible Configurations**: Support for various camera array layouts (arc, ring, multi-level)
+- **Post-Processing Tools**: Python script for image aggregation and reconstruction preparation
+
+### Quick Example
+
+```cpp
+// Trigger synchronized 3D capture across multiple cameras
+DynamicJsonDocument params(512);
+params["session_id"] = "wildlife_001";
+params["position_x"] = 2.0;      // Camera position in meters
+params["position_y"] = 0.0;
+params["position_z"] = 1.5;
+params["orientation_pitch"] = 0.0;  // Camera angles in degrees
+params["orientation_yaw"] = 45.0;
+params["orientation_roll"] = 0.0;
+params["sync_delay_ms"] = 100;   // Synchronization delay
+
+// Send to each camera with appropriate positions
+multiboardSystem.sendTaskToNode(1, "3d_capture", params.as<JsonObject>());
+```
+
+### Post-Processing
+
+After capture, aggregate images and prepare for 3D reconstruction:
+
+```bash
+python3 tools/3d_reconstruction_aggregator.py \
+    --session wildlife_001 \
+    --input /sd/3d_captures \
+    --output ./3d_output
+
+cd 3d_output
+./run_meshroom.sh  # or ./run_colmap.sh
+```
+
+**See the complete guide:** [3D Reconstruction Documentation](../../../docs/3D_RECONSTRUCTION_GUIDE.md)
+
 ## Examples
 
-See the `examples/multi_board_communication/` directory for:
+See the `examples/` directory for:
 
 - **`multi_board_communication_example.cpp`**: Complete standalone example
 - **`main_with_multiboard.cpp`**: Integration with existing main.cpp
+- **`3d_capture_example.cpp`**: 3D reconstruction with synchronized captures
 
 ## API Reference
 
