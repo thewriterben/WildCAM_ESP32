@@ -53,6 +53,7 @@ const defaultState = {
 
 const DEFAULT_MAP_CENTER = [0, 0];
 const DEFAULT_MAP_ZOOM = 2;
+const CAPTURE_MARKER_LIMIT = 50;
 
 const ICONS = {
   camera: '📷',
@@ -63,6 +64,7 @@ const ICONS = {
   refresh: '🔄',
   trendingUp: '📈',
   trendingDown: '📉',
+  steady: '➖',
   mapPin: '📍',
   clock: '🕒',
   shield: '🛡️',
@@ -78,6 +80,91 @@ function EmojiIcon({ symbol, label, className }) {
       {symbol}
     </span>
   );
+}
+
+function normalizeCamera(rawCamera) {
+  if (!rawCamera) return null;
+
+  return {
+    id: rawCamera.id,
+    name: rawCamera.name ?? rawCamera.device_id ?? `Camera ${rawCamera.id}`,
+    deviceId: rawCamera.device_id ?? rawCamera.deviceId,
+    locationName: rawCamera.location_name ?? rawCamera.locationName,
+    latitude: coerceNumber(rawCamera.latitude ?? rawCamera.lat ?? rawCamera.location?.lat),
+    longitude: coerceNumber(rawCamera.longitude ?? rawCamera.lng ?? rawCamera.location?.lng),
+    altitude: coerceNumber(rawCamera.altitude ?? rawCamera.altitudeMeters),
+    lastSeen: rawCamera.last_seen ?? rawCamera.lastSeen,
+    batteryLevel: coerceNumber(rawCamera.battery_level ?? rawCamera.batteryLevel),
+    solarVoltage: coerceNumber(rawCamera.solar_voltage ?? rawCamera.solarVoltage),
+    temperature: coerceNumber(rawCamera.temperature),
+    humidity: coerceNumber(rawCamera.humidity),
+    firmwareVersion: rawCamera.firmware_version ?? rawCamera.firmwareVersion,
+    hardwareVersion: rawCamera.hardware_version ?? rawCamera.hardwareVersion,
+    status: rawCamera.status ?? rawCamera.cameraStatus ?? 'unknown',
+    createdAt: rawCamera.created_at ?? rawCamera.createdAt,
+    batteryHistory: rawCamera.batteryHistory,
+    statusHistory: rawCamera.statusHistory,
+  };
+}
+
+function normalizeDetection(rawDetection) {
+  if (!rawDetection) return null;
+
+  return {
+    id: rawDetection.id,
+    cameraId: rawDetection.camera_id ?? rawDetection.cameraId,
+    species: rawDetection.detected_species ?? rawDetection.species ?? rawDetection.classification,
+    classification: rawDetection.detected_species ?? rawDetection.classification,
+    timestamp: rawDetection.timestamp,
+    imageUrl: rawDetection.image_url ?? rawDetection.imageUrl,
+    thumbnailUrl: rawDetection.thumbnail_url ?? rawDetection.thumbnailUrl,
+    confidence: rawDetection.confidence_score ?? rawDetection.confidence,
+    notes: rawDetection.verification_notes ?? rawDetection.notes,
+    latitude: coerceNumber(rawDetection.latitude ?? rawDetection.lat ?? rawDetection.location?.lat),
+    longitude: coerceNumber(rawDetection.longitude ?? rawDetection.lng ?? rawDetection.location?.lng),
+    cameraName: rawDetection.camera_name ?? rawDetection.cameraName,
+    metadata: rawDetection.metadata,
+  };
+}
+
+function normalizeAlert(rawAlert) {
+  if (!rawAlert) return null;
+
+  return {
+    id: rawAlert.id,
+    cameraId: rawAlert.camera_id ?? rawAlert.cameraId,
+    cameraName: rawAlert.camera_name ?? rawAlert.cameraName,
+    detectionId: rawAlert.detection_id ?? rawAlert.detectionId,
+    severity: rawAlert.severity ?? 'info',
+    title: rawAlert.title,
+    message: rawAlert.message,
+    timestamp: rawAlert.created_at ?? rawAlert.timestamp,
+    alertType: rawAlert.alert_type ?? rawAlert.alertType,
+  };
+}
+
+function coerceNumber(value) {
+  if (value == null) return null;
+  const parsed = typeof value === 'string' ? Number.parseFloat(value) : value;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getCoordinates(entity) {
+  if (!entity) return { lat: null, lng: null };
+  const lat = coerceNumber(entity.latitude ?? entity.lat ?? entity.location?.lat);
+  const lng = coerceNumber(entity.longitude ?? entity.lng ?? entity.location?.lng);
+  return {
+    lat: Number.isFinite(lat) ? lat : null,
+    lng: Number.isFinite(lng) ? lng : null,
+  };
+}
+
+function formatCoordinates(entity, fractionDigits = 4) {
+  const { lat, lng } = getCoordinates(entity);
+  if (lat == null || lng == null) {
+    return '—';
+  }
+  return `${lat.toFixed(fractionDigits)}, ${lng.toFixed(fractionDigits)}`;
 }
 
 function WildlifeDashboard() {
@@ -108,20 +195,50 @@ function WildlifeDashboard() {
     setIsRefreshing(true);
     setError(null);
     try {
-      const [camerasResponse, capturesResponse, alertsResponse, insightsResponse] =
-        await Promise.all([
-          axios.get('/api/cameras'),
-          axios.get('/api/captures/recent'),
-          axios.get('/api/alerts/active'),
-          axios.get('/api/insights'),
-        ]);
+      const requests = [
+        { key: 'cameras', request: axios.get('/api/cameras') },
+        { key: 'captures', request: axios.get('/api/detections', { params: { per_page: 200 } }) },
+        { key: 'alerts', request: axios.get('/api/alerts') },
+      ];
 
-      setData({
-        cameras: camerasResponse.data ?? [],
-        captures: capturesResponse.data ?? [],
-        alerts: alertsResponse.data ?? [],
-        insights: insightsResponse.data ?? [],
+      const results = await Promise.allSettled(requests.map((item) => item.request));
+
+      const nextState = { ...defaultState };
+      const warnings = [];
+      const criticalFailures = new Set();
+
+      results.forEach((result, index) => {
+        const { key } = requests[index];
+        if (result.status === 'fulfilled') {
+          const payload = result.value.data ?? [];
+          if (key === 'cameras') {
+            const rawCameras = payload.cameras ?? payload;
+            nextState.cameras = rawCameras.map(normalizeCamera).filter(Boolean);
+          } else if (key === 'captures') {
+            const rawDetections = payload.detections ?? payload;
+            nextState.captures = rawDetections.map(normalizeDetection).filter(Boolean);
+          } else if (key === 'alerts') {
+            const rawAlerts = payload.alerts ?? payload;
+            nextState.alerts = rawAlerts.map(normalizeAlert).filter(Boolean);
+          }
+        } else {
+          const message = result.reason?.response?.data?.message ?? result.reason?.message ?? key;
+          warnings.push(message);
+          if (key === 'cameras' || key === 'captures') {
+            criticalFailures.add(key);
+          }
+        }
       });
+
+      nextState.insights = deriveInsights(nextState.cameras, nextState.captures);
+
+      setData(nextState);
+
+      if (criticalFailures.size > 0) {
+        setError('Some critical data could not be loaded. Please try refreshing.');
+      } else if (warnings.length > 0) {
+        setError('Some panels may be missing data, but the dashboard is still usable.');
+      }
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
@@ -262,8 +379,18 @@ function StatCard({ icon, label, value, trend }) {
       {trend && (
         <div className={`stat-trend ${trend.direction}`}>
           <EmojiIcon
-            symbol={trend.direction === 'down' ? ICONS.trendingDown : ICONS.trendingUp}
-            label={trend.direction === 'down' ? 'Trend down' : 'Trend up'}
+            symbol=
+              {trend.direction === 'down'
+                ? ICONS.trendingDown
+                : trend.direction === 'up'
+                ? ICONS.trendingUp
+                : ICONS.steady}
+            label=
+              {trend.direction === 'down'
+                ? 'Trend down'
+                : trend.direction === 'up'
+                ? 'Trend up'
+                : 'Trend steady'}
             className="trend-icon"
           />
           <span>{trend.percentage}%</span>
@@ -331,55 +458,67 @@ function CameraMap({ cameras, captures, selectedCameraId, onCameraSelect }) {
         <LayersControl position="topright">
           <LayersControl.Overlay name="Cameras" checked>
             <LayerGroup>
-              {cameras.map((camera) => (
-                <Marker
-                  key={camera.id}
-                  position={[camera.latitude, camera.longitude]}
-                  eventHandlers={{
-                    click: () => onCameraSelect(camera.id),
-                  }}
-                >
-                  <Popup>
-                    <strong>{camera.name}</strong>
-                    <div className="popup-details">
-                      <span>
-                        <EmojiIcon symbol={ICONS.wifi} label="Status" className="popup-icon" /> {camera.status}
-                      </span>
-                      <span>
-                        <EmojiIcon symbol={ICONS.battery} label="Battery" className="popup-icon" />{' '}
-                        {camera.batteryLevel}%
-                      </span>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
+              {cameras.map((camera) => {
+                const { lat, lng } = getCoordinates(camera);
+                if (lat == null || lng == null) {
+                  return null;
+                }
+                return (
+                  <Marker
+                    key={camera.id}
+                    position={[lat, lng]}
+                    eventHandlers={{
+                      click: () => onCameraSelect(camera.id),
+                    }}
+                  >
+                    <Popup>
+                      <strong>{camera.name}</strong>
+                      <div className="popup-details">
+                        <span>
+                          <EmojiIcon symbol={ICONS.wifi} label="Status" className="popup-icon" /> {camera.status}
+                        </span>
+                        <span>
+                          <EmojiIcon symbol={ICONS.battery} label="Battery" className="popup-icon" />{' '}
+                          {camera.batteryLevel}%
+                        </span>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
             </LayerGroup>
           </LayersControl.Overlay>
           <LayersControl.Overlay name="Recent Captures">
             <LayerGroup>
-              {captures.slice(0, 50).map((capture) => (
-                <Marker
-                  key={capture.id}
-                  position={[capture.latitude ?? capture.lat, capture.longitude ?? capture.lng]}
-                  eventHandlers={{
-                    click: () => onCameraSelect(capture.cameraId),
-                  }}
-                >
-                  <Popup>
-                    <strong>{capture.species ?? capture.classification}</strong>
-                    <div className="popup-details">
-                      <span>
-                        <EmojiIcon symbol={ICONS.clock} label="Captured at" className="popup-icon" />
-                        {formatDateTime(capture.timestamp)}
-                      </span>
-                      <span>
-                        <EmojiIcon symbol={ICONS.camera} label="Camera" className="popup-icon" />{' '}
-                        {capture.cameraName ?? capture.cameraId}
-                      </span>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
+              {captures.slice(0, CAPTURE_MARKER_LIMIT).map((capture) => {
+                const { lat, lng } = getCoordinates(capture);
+                if (lat == null || lng == null) {
+                  return null;
+                }
+                return (
+                  <Marker
+                    key={capture.id}
+                    position={[lat, lng]}
+                    eventHandlers={{
+                      click: () => onCameraSelect(capture.cameraId),
+                    }}
+                  >
+                    <Popup>
+                      <strong>{capture.species ?? capture.classification}</strong>
+                      <div className="popup-details">
+                        <span>
+                          <EmojiIcon symbol={ICONS.clock} label="Captured at" className="popup-icon" />
+                          {formatDateTime(capture.timestamp)}
+                        </span>
+                        <span>
+                          <EmojiIcon symbol={ICONS.camera} label="Camera" className="popup-icon" />{' '}
+                          {capture.cameraName ?? capture.cameraId}
+                        </span>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
             </LayerGroup>
           </LayersControl.Overlay>
         </LayersControl>
@@ -414,9 +553,7 @@ function CameraDetails({ camera, onViewGallery, onOpenCapture, captures }) {
 
       <div className="location-info">
         <EmojiIcon symbol={ICONS.mapPin} label="Location" className="location-icon" />
-        <span>
-          {camera.latitude?.toFixed(4)}, {camera.longitude?.toFixed(4)}
-        </span>
+        <span>{formatCoordinates(camera)}</span>
       </div>
 
       <div className="recent-captures">
@@ -596,8 +733,7 @@ function CaptureModal({ capture, onClose }) {
             </span>
             <span>
               <EmojiIcon symbol={ICONS.mapPin} label="Location" className="modal-icon" />
-              {capture.latitude?.toFixed?.(4) ?? capture.lat?.toFixed?.(4) ?? '—'},
-              {capture.longitude?.toFixed?.(4) ?? capture.lng?.toFixed?.(4) ?? '—'}
+              {formatCoordinates(capture)}
             </span>
           </div>
           {capture.notes && <p className="modal-notes">{capture.notes}</p>}
@@ -608,104 +744,128 @@ function CaptureModal({ capture, onClose }) {
 }
 
 function computeMetrics({ cameras, captures }, timeRange) {
-  const cameraCount = cameras.length;
-  const onlineCameras = cameras.filter((camera) => camera.status === 'online');
-  const totalCaptures = captures.length;
-  const averageBattery = Math.round(
-    cameras.reduce((sum, camera) => sum + (camera.batteryLevel ?? 0), 0) / Math.max(cameraCount, 1)
-  );
-
+  const currentPeriod = getCurrentPeriodMetrics({ cameras, captures }, timeRange);
+  const previousPeriod = getPreviousPeriodMetrics({ cameras, captures }, timeRange);
   const activityByDay = aggregateCapturesByDay(captures, timeRange);
 
-  // Helper to calculate percentage change and direction
-  function getTrend(current, previous) {
-    if (previous === 0) {
-      return { direction: 'up', percentage: 100 };
-    }
-    const diff = current - previous;
-    const percentage = Math.abs(diff) / previous * 100;
-    return {
-      direction: diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat',
-      percentage: Math.round(percentage * 10) / 10,
-    };
-  }
-
-  // Calculate previous period values
-  const days = parseInt(timeRange, 10);
-  // Cameras: previous period count (simulate by filtering by createdAt if available)
-  let previousCameraCount = cameraCount;
-  if (cameras.length > 0 && cameras[0].createdAt) {
-    const now = new Date();
-    const prevStart = new Date(now);
-    prevStart.setDate(prevStart.getDate() - days * 2);
-    const prevEnd = new Date(now);
-    prevEnd.setDate(prevEnd.getDate() - days);
-    previousCameraCount = cameras.filter((camera) => {
-      const created = new Date(camera.createdAt);
-      return created >= prevStart && created < prevEnd;
-    }).length;
-  }
-
-  // Captures: previous period count
-  const now = new Date();
-  const prevStart = new Date(now);
-  prevStart.setDate(prevStart.getDate() - days * 2);
-  const prevEnd = new Date(now);
-  prevEnd.setDate(prevEnd.getDate() - days);
-  const previousCaptures = captures.filter((capture) => {
-    const ts = new Date(capture.timestamp);
-    return ts >= prevStart && ts < prevEnd;
-  }).length;
-
-  // Online cameras: previous period (simulate by statusHistory if available)
-  let previousOnlineCount = onlineCameras.length;
-  if (cameras.length > 0 && cameras[0].statusHistory) {
-    previousOnlineCount = cameras.filter((camera) => {
-      // statusHistory: [{timestamp, status}]
-      const prevStatus = camera.statusHistory?.find((s) => {
-        const ts = new Date(s.timestamp);
-        return ts >= prevStart && ts < prevEnd;
-      });
-      return prevStatus?.status === 'online';
-    }).length;
-  }
-  const previousOnlineRate = Math.round((previousOnlineCount / Math.max(previousCameraCount, 1)) * 100);
-
-  // Battery: previous period average (simulate by batteryHistory if available)
-  let previousBatteryAvg = averageBattery;
-  if (cameras.length > 0 && cameras[0].batteryHistory) {
-    let sum = 0, count = 0;
-    cameras.forEach((camera) => {
-      const prevBattery = camera.batteryHistory?.find((b) => {
-        const ts = new Date(b.timestamp);
-        return ts >= prevStart && ts < prevEnd;
-      });
-      if (prevBattery) {
-        sum += prevBattery.level;
-        count += 1;
-      }
-    });
-    previousBatteryAvg = count > 0 ? Math.round(sum / count) : averageBattery;
-  }
-
   return {
-    activeCameras: cameraCount,
-    totalCaptures,
-    onlineRate: Math.round((onlineCameras.length / Math.max(cameraCount, 1)) * 100),
-    averageBattery,
-    cameraGrowth: getTrend(cameraCount, previousCameraCount),
-    captureTrend: getTrend(totalCaptures, previousCaptures),
-    onlineTrend: getTrend(
-      Math.round((onlineCameras.length / Math.max(cameraCount, 1)) * 100),
-      previousOnlineRate
-    ),
-    batteryTrend: getTrend(averageBattery, previousBatteryAvg),
+    activeCameras: currentPeriod.cameraCount,
+    totalCaptures: currentPeriod.totalCaptures,
+    onlineRate: currentPeriod.onlineRate,
+    averageBattery: currentPeriod.averageBattery,
+    cameraGrowth: calculateTrend(currentPeriod.cameraCount, previousPeriod.cameraCount),
+    captureTrend: calculateTrend(currentPeriod.totalCaptures, previousPeriod.totalCaptures),
+    onlineTrend: calculateTrend(currentPeriod.onlineRate, previousPeriod.onlineRate),
+    batteryTrend: calculateTrend(currentPeriod.averageBattery, previousPeriod.averageBattery),
     activityChart: buildActivityChart(activityByDay),
   };
 }
 
+function getCurrentPeriodMetrics({ cameras, captures }, timeRange) {
+  const days = Number.parseInt(timeRange, 10) || 30;
+  const now = new Date();
+  const periodStart = new Date(now);
+  periodStart.setDate(periodStart.getDate() - days);
+
+  const cameraCount = cameras.length;
+  const onlineCameras = cameras.filter((camera) => camera.status === 'online');
+  const periodCaptures = captures.filter((capture) => {
+    const timestamp = new Date(capture.timestamp);
+    return !Number.isNaN(timestamp.getTime()) && timestamp >= periodStart && timestamp <= now;
+  });
+
+  const totalCaptures = periodCaptures.length;
+  const averageBattery = Math.round(
+    cameras.reduce((sum, camera) => sum + (camera.batteryLevel ?? 0), 0) / Math.max(cameraCount, 1)
+  );
+  const onlineRate = Math.round((onlineCameras.length / Math.max(cameraCount, 1)) * 100);
+
+  return {
+    cameraCount,
+    totalCaptures,
+    onlineRate,
+    averageBattery,
+  };
+}
+
+function getPreviousPeriodMetrics({ cameras, captures }, timeRange) {
+  const days = Number.parseInt(timeRange, 10) || 30;
+  const now = new Date();
+  const prevPeriodEnd = new Date(now);
+  prevPeriodEnd.setDate(prevPeriodEnd.getDate() - days);
+  const prevPeriodStart = new Date(prevPeriodEnd);
+  prevPeriodStart.setDate(prevPeriodStart.getDate() - days);
+
+  let previousCameraCount = cameras.length;
+  if (cameras.some((camera) => camera.createdAt)) {
+    previousCameraCount = cameras.filter((camera) => {
+      if (!camera.createdAt) return true;
+      const created = new Date(camera.createdAt);
+      if (Number.isNaN(created.getTime())) return true;
+      return created < prevPeriodEnd;
+    }).length;
+  }
+
+  let previousOnlineCount = cameras.filter((camera) => camera.status === 'online').length;
+  if (cameras.some((camera) => Array.isArray(camera.statusHistory))) {
+    previousOnlineCount = cameras.filter((camera) => {
+      const historyEntry = camera.statusHistory?.find((entry) => {
+        const ts = new Date(entry.timestamp);
+        return !Number.isNaN(ts.getTime()) && ts >= prevPeriodStart && ts < prevPeriodEnd;
+      });
+      return historyEntry?.status === 'online';
+    }).length;
+  }
+
+  let previousBatteryAvg = Math.round(
+    cameras.reduce((sum, camera) => sum + (camera.batteryLevel ?? 0), 0) / Math.max(previousCameraCount, 1)
+  );
+  if (cameras.some((camera) => Array.isArray(camera.batteryHistory))) {
+    let sum = 0;
+    let count = 0;
+    cameras.forEach((camera) => {
+      const historyEntry = camera.batteryHistory?.find((entry) => {
+        const ts = new Date(entry.timestamp);
+        return !Number.isNaN(ts.getTime()) && ts >= prevPeriodStart && ts < prevPeriodEnd;
+      });
+      if (historyEntry) {
+        sum += historyEntry.level;
+        count += 1;
+      }
+    });
+    previousBatteryAvg = count > 0 ? Math.round(sum / count) : previousBatteryAvg;
+  }
+
+  const previousCaptures = captures.filter((capture) => {
+    const timestamp = new Date(capture.timestamp);
+    return !Number.isNaN(timestamp.getTime()) && timestamp >= prevPeriodStart && timestamp < prevPeriodEnd;
+  }).length;
+
+  return {
+    cameraCount: previousCameraCount,
+    totalCaptures: previousCaptures,
+    onlineRate: Math.round((previousOnlineCount / Math.max(previousCameraCount, 1)) * 100),
+    averageBattery: previousBatteryAvg,
+  };
+}
+
+function calculateTrend(current, previous) {
+  if (previous === 0) {
+    return { direction: current > 0 ? 'up' : 'flat', percentage: current > 0 ? 100 : 0 };
+  }
+  const diff = current - previous;
+  if (diff === 0) {
+    return { direction: 'flat', percentage: 0 };
+  }
+  const percentage = Math.abs(diff) / previous * 100;
+  return {
+    direction: diff > 0 ? 'up' : 'down',
+    percentage: Math.round(percentage * 10) / 10,
+  };
+}
+
 function aggregateCapturesByDay(captures, timeRange) {
-  const days = parseInt(timeRange, 10);
+  const days = Number.parseInt(timeRange, 10) || 30;
   const now = new Date();
   const startDate = new Date(now);
   startDate.setDate(startDate.getDate() - days);
@@ -776,6 +936,51 @@ function formatDateTime(dateLike) {
   const date = new Date(dateLike);
   if (Number.isNaN(date.getTime())) return '—';
   return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function deriveInsights(cameras, captures) {
+  if (!Array.isArray(cameras) || !Array.isArray(captures)) {
+    return [];
+  }
+
+  const insights = [];
+  const offlineCameras = cameras.filter((camera) => camera.status === 'offline');
+  if (offlineCameras.length > 0) {
+    insights.push({
+      id: 'insight-offline',
+      type: 'Connectivity',
+      timestamp: new Date().toISOString(),
+      message: `${offlineCameras.length} camera${offlineCameras.length === 1 ? '' : 's'} require attention due to offline status.`,
+    });
+  }
+
+  const lowBattery = cameras.filter((camera) => (camera.batteryLevel ?? 100) < 25);
+  if (lowBattery.length > 0) {
+    insights.push({
+      id: 'insight-battery',
+      type: 'Maintenance',
+      timestamp: new Date().toISOString(),
+      message: `${lowBattery.length} camera${lowBattery.length === 1 ? '' : 's'} report battery below 25%. Schedule a recharge.`,
+    });
+  }
+
+  if (captures.length > 0) {
+    const latestCapture = captures
+      .slice()
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+    if (latestCapture) {
+      insights.push({
+        id: `insight-capture-${latestCapture.id}`,
+        type: 'Activity',
+        timestamp: latestCapture.timestamp,
+        message: `Most recent sighting: ${latestCapture.species ?? latestCapture.classification ?? 'Unknown species'} at camera ${
+          latestCapture.cameraName ?? latestCapture.cameraId
+        }.`,
+      });
+    }
+  }
+
+  return insights.slice(0, 5);
 }
 
 export default WildlifeDashboard;
