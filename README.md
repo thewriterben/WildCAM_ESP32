@@ -12,6 +12,7 @@
 > - **👤 Simple DIY Setup**: [Start with ESP32WildlifeCAM](ESP32WildlifeCAM-main/QUICK_START.md) - Basic monitoring in 30 minutes
 > - **🏢 Enterprise Platform**: Continue below for full platform with AI, cloud, and advanced features
 > - **🔄 Migrating?**: See [Consolidation Migration Guide](CONSOLIDATION_MIGRATION_GUIDE.md)
+> - **✅ Existing User?**: Check [Backward Compatibility Guide](BACKWARD_COMPATIBILITY.md) - Your setup works as-is!
 
 ## 🌟 Revolutionary Wildlife Monitoring Platform
 
@@ -455,6 +456,7 @@ npx react-native run-android  # or run-ios
 - **Simple DIY users**: Continue using `ESP32WildlifeCAM-main/` - no changes needed
 - **Enterprise users**: Access full platform features in root directories
 - **Migrating users**: See [Consolidation Migration Guide](CONSOLIDATION_MIGRATION_GUIDE.md)
+- **Existing setups**: See [Backward Compatibility Guide](BACKWARD_COMPATIBILITY.md) - Everything works as-is!
 
 ### Legacy Repository
 
@@ -462,6 +464,7 @@ If you were using the standalone ESP32WildlifeCAM repository:
 - All features and documentation are preserved here
 - Update your git remotes to point to WildCAM_ESP32
 - Follow the [migration guide](CONSOLIDATION_MIGRATION_GUIDE.md) for smooth transition
+- Check [backward compatibility](BACKWARD_COMPATIBILITY.md) for testing your existing setup
 
 ---
 
