@@ -106,8 +106,8 @@ Welcome to the ESP32WildlifeCAM documentation hub! This page provides organized 
 ## 🤝 Contributing to Documentation
 
 ### How to Help
-1. **Report Issues**: Found outdated or unclear documentation? [Open an issue](https://github.com/thewriterben/ESP32WildlifeCAM/issues)
-2. **Suggest Improvements**: Have ideas for better organization? [Start a discussion](https://github.com/thewriterben/ESP32WildlifeCAM/discussions)
+1. **Report Issues**: Found outdated or unclear documentation? [Open an issue](https://github.com/thewriterben/WildCAM_ESP32/issues)
+2. **Suggest Improvements**: Have ideas for better organization? [Start a discussion](https://github.com/thewriterben/WildCAM_ESP32/discussions)
 3. **Submit Updates**: Ready to contribute? See our [Contributing Guide](../CONTRIBUTING.md)
 4. **Translate Content**: Help with localization in our [Multi-Language Support](MULTI_LANGUAGE_SUPPORT.md)
 
@@ -137,14 +137,14 @@ Welcome to the ESP32WildlifeCAM documentation hub! This page provides organized 
 ## 📞 Getting Help
 
 ### Support Channels
-- **General Questions**: [GitHub Discussions](https://github.com/thewriterben/ESP32WildlifeCAM/discussions)
-- **Technical Issues**: [GitHub Issues](https://github.com/thewriterben/ESP32WildlifeCAM/issues)
+- **General Questions**: [GitHub Discussions](https://github.com/thewriterben/WildCAM_ESP32/discussions)
+- **Technical Issues**: [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues)
 - **Real-time Chat**: [Discord Community](https://discord.gg/7cmrkFKx)
 - **Direct Contact**: benjamin.j.snider@gmail.com
 
 ### Before Asking for Help
 1. Check this documentation index
-2. Search existing [GitHub Issues](https://github.com/thewriterben/ESP32WildlifeCAM/issues)
+2. Search existing [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues)
 3. Review [Troubleshooting Guide](troubleshooting.md)
 4. Try [Quick Validation](../scripts/quick_validate.sh)
 
