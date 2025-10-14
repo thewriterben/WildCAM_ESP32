@@ -6,14 +6,14 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-ESP32-orange.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![AI](https://img.shields.io/badge/AI-YOLO--tiny-red.svg)](https://github.com/ultralytics/yolov5)
-[![Security](https://img.shields.io/badge/security-AES--256-yellow.svg)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard)
+[![Security](https://img.shields.io/badge/security-Quantum--Safe-brightgreen.svg)](QUANTUM_SAFE_SECURITY.md)
 
 ## 🌟 Revolutionary Wildlife Monitoring Platform
 
 Transform wildlife research and conservation with cutting-edge technology that combines:
 - **🤖 Edge AI Detection** - YOLO-tiny neural networks running on ESP32
 - **🔋 Smart Power Management** - MPPT solar charging with 6+ month battery life  
-- **🔐 Military-Grade Security** - AES-256 encryption with hardware security elements
+- **🔐 Quantum-Safe Security** - Hybrid classical-quantum resistant encryption protecting data for 50+ years
 - **🌐 Real-Time Analytics** - React dashboard with live detection feeds
 - **📱 Mobile Integration** - React Native companion app for field work
 - **🛰️ Global Connectivity** - Mesh networking with satellite communication support
@@ -59,12 +59,14 @@ WildCAM_ESP32_v2.0/
 - **Energy Harvesting**: Daily energy accounting and efficiency monitoring
 - **Low Power Modes**: Deep sleep with sub-microamp consumption
 
-### 🔐 Enterprise Security
-- **AES-256 Encryption**: End-to-end data protection
+### 🔐 Quantum-Safe Security **NEW!**
+- **Hybrid Encryption**: Classical + post-quantum resistant cryptography
+- **Hash-Based Signatures**: SPHINCS+-inspired quantum-resistant signatures
+- **50+ Year Protection**: Data security against future quantum computers
+- **Automatic Key Rotation**: Quantum-safe key lifecycle management
+- **4 Security Levels**: From classical to maximum quantum resistance
 - **Hardware Security**: ATECC608A secure element integration
-- **Secure Boot**: Cryptographic firmware validation
-- **Tamper Detection**: Runtime integrity monitoring
-- **Key Management**: Hardware-backed secure key storage
+- **[Quick Start](QUANTUM_SAFE_QUICKSTART.md)** | **[Full Documentation](QUANTUM_SAFE_SECURITY.md)** | **[Implementation Summary](QUANTUM_SAFE_IMPLEMENTATION_SUMMARY.md)**
 
 ### 🌐 Networking & Communication
 - **ESP-MESH**: Self-healing multi-node networks
