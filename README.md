@@ -20,7 +20,7 @@
 **Location**: Root-level `/firmware/`, `/backend/`, `/frontend/`  
 **Status**: Architectural framework (12-18 months to completion)  
 **What's Ready**: Code frameworks, system architecture, development roadmap  
-**Timeline**: See [ROADMAP.md](ROADMAP.md) for phased development plan
+**Timeline**: See [ESP32WildlifeCAM-main/ROADMAP.md](ESP32WildlifeCAM-main/ROADMAP.md) for phased development plan
 
 **Quick Decision Guide**:
 - 🎯 **Need a working wildlife camera now?** → Start with `ESP32WildlifeCAM-main/`

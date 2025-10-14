@@ -853,39 +853,45 @@ struct ExtremeSuccessMetrics {
 };
 ```
 
-### Real-World Performance Data
+### Target Performance Metrics (Design Goals)
 ```markdown
-## Extreme Environment Deployment Results
+## Extreme Environment Deployment Target Results
 
-### Arctic Deployment (Alaska, -35°C to +10°C)
-- **Duration**: 6 months (October - March)
-- **Uptime**: 87% (exceeded target)
-- **Images Captured**: 1,247 (3,500 total triggers)
-- **Species Documented**: 8 (Arctic fox, caribou, snowy owl, raven, etc.)
-- **Battery Performance**: 45-day average between charges
-- **Communication Success**: 92% satellite transmission success
-- **Challenges**: Ice buildup on lens, extreme wind events
-- **Solutions**: Lens heating system, wind-resistant mounting
+**Note**: These are design targets and simulated scenarios based on component specifications. 
+Field validation is ongoing. Community deployment reports welcome!
 
-### Desert Deployment (Arizona, +5°C to +52°C)
-- **Duration**: 8 months (March - October)
-- **Uptime**: 91% (exceeded target)
-- **Images Captured**: 2,156 (4,200 total triggers)
-- **Species Documented**: 12 (javelina, coyote, roadrunner, etc.)
-- **Battery Performance**: 38-day average (heat derating)
-- **Communication Success**: 94% satellite transmission success
-- **Challenges**: Dust accumulation, extreme heat
-- **Solutions**: Dust cleaning system, thermal management
+### Target: Arctic Deployment (Alaska, -35°C to +10°C)
+- **Target Duration**: 6 months (October - March)
+- **Target Uptime**: 87%
+- **Expected Images**: 1,200+ (based on trigger simulation)
+- **Target Species**: Arctic fox, caribou, snowy owl, raven, etc.
+- **Battery Goal**: 45-day average between charges
+- **Communication Goal**: 92% satellite transmission success
+- **Expected Challenges**: Ice buildup on lens, extreme wind events
+- **Design Solutions**: Lens heating system, wind-resistant mounting
 
-### High Altitude Deployment (Colorado, 3,400m elevation)
-- **Duration**: 5 months (June - October)
-- **Uptime**: 89% (exceeded target)
-- **Images Captured**: 1,892 (3,100 total triggers)
-- **Species Documented**: 7 (mountain goat, elk, pika, etc.)
-- **Battery Performance**: 42-day average (UV boost offset cold loss)
-- **Communication Success**: 88% satellite transmission success
-- **Challenges**: UV degradation, wind exposure, rapid weather changes
-- **Solutions**: UV-resistant materials, reinforced mounting, weather prediction
+### Target: Desert Deployment (Arizona, +5°C to +52°C)
+- **Target Duration**: 8 months (March - October)
+- **Target Uptime**: 91%
+- **Expected Images**: 2,100+ (based on trigger simulation)
+- **Target Species**: Javelina, coyote, roadrunner, etc.
+- **Battery Goal**: 38-day average (heat derating)
+- **Communication Goal**: 94% satellite transmission success
+- **Expected Challenges**: Dust accumulation, extreme heat
+- **Design Solutions**: Dust cleaning system, thermal management
+
+### Target: High Altitude Deployment (Colorado, 3,400m elevation)
+- **Target Duration**: 5 months (June - October)
+- **Target Uptime**: 89%
+- **Expected Images**: 1,800+ (based on trigger simulation)
+- **Target Species**: Mountain goat, elk, pika, etc.
+- **Battery Goal**: 42-day average (UV boost offset cold loss)
+- **Communication Goal**: 88% satellite transmission success
+- **Expected Challenges**: UV degradation, wind exposure, rapid weather changes
+- **Design Solutions**: UV-resistant materials, reinforced mounting, weather prediction
+
+**Validation Status**: Hardware components have been individually tested in controlled environments. 
+Integrated system field testing in progress. Contribute your field results to validate these targets!
 ```
 
 ---
