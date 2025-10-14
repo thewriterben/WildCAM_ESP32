@@ -93,7 +93,7 @@ if [[ $SKIP_BACKEND -eq 0 ]]; then
     # shellcheck disable=SC1090
     source "$VENV_DIR/bin/activate"
     pip install --upgrade pip >/dev/null
-    pip install -r "$BACKEND_DIR/requirements.txt"
+    pip install -r "$BACKEND_DIR/requirements.txt" >/dev/null
     if [[ $INSTALL_ONLY -eq 0 ]]; then
       log_step "Performing backend syntax check"
       python -m compileall "$BACKEND_DIR"
