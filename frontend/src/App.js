@@ -617,15 +617,89 @@ function computeMetrics({ cameras, captures }, timeRange) {
 
   const activityByDay = aggregateCapturesByDay(captures, timeRange);
 
+  // Helper to calculate percentage change and direction
+  function getTrend(current, previous) {
+    if (previous === 0) {
+      return { direction: 'up', percentage: 100 };
+    }
+    const diff = current - previous;
+    const percentage = Math.abs(diff) / previous * 100;
+    return {
+      direction: diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat',
+      percentage: Math.round(percentage * 10) / 10,
+    };
+  }
+
+  // Calculate previous period values
+  const days = parseInt(timeRange, 10);
+  // Cameras: previous period count (simulate by filtering by createdAt if available)
+  let previousCameraCount = cameraCount;
+  if (cameras.length > 0 && cameras[0].createdAt) {
+    const now = new Date();
+    const prevStart = new Date(now);
+    prevStart.setDate(prevStart.getDate() - days * 2);
+    const prevEnd = new Date(now);
+    prevEnd.setDate(prevEnd.getDate() - days);
+    previousCameraCount = cameras.filter((camera) => {
+      const created = new Date(camera.createdAt);
+      return created >= prevStart && created < prevEnd;
+    }).length;
+  }
+
+  // Captures: previous period count
+  const now = new Date();
+  const prevStart = new Date(now);
+  prevStart.setDate(prevStart.getDate() - days * 2);
+  const prevEnd = new Date(now);
+  prevEnd.setDate(prevEnd.getDate() - days);
+  const previousCaptures = captures.filter((capture) => {
+    const ts = new Date(capture.timestamp);
+    return ts >= prevStart && ts < prevEnd;
+  }).length;
+
+  // Online cameras: previous period (simulate by statusHistory if available)
+  let previousOnlineCount = onlineCameras.length;
+  if (cameras.length > 0 && cameras[0].statusHistory) {
+    previousOnlineCount = cameras.filter((camera) => {
+      // statusHistory: [{timestamp, status}]
+      const prevStatus = camera.statusHistory?.find((s) => {
+        const ts = new Date(s.timestamp);
+        return ts >= prevStart && ts < prevEnd;
+      });
+      return prevStatus?.status === 'online';
+    }).length;
+  }
+  const previousOnlineRate = Math.round((previousOnlineCount / Math.max(previousCameraCount, 1)) * 100);
+
+  // Battery: previous period average (simulate by batteryHistory if available)
+  let previousBatteryAvg = averageBattery;
+  if (cameras.length > 0 && cameras[0].batteryHistory) {
+    let sum = 0, count = 0;
+    cameras.forEach((camera) => {
+      const prevBattery = camera.batteryHistory?.find((b) => {
+        const ts = new Date(b.timestamp);
+        return ts >= prevStart && ts < prevEnd;
+      });
+      if (prevBattery) {
+        sum += prevBattery.level;
+        count += 1;
+      }
+    });
+    previousBatteryAvg = count > 0 ? Math.round(sum / count) : averageBattery;
+  }
+
   return {
     activeCameras: cameraCount,
     totalCaptures,
     onlineRate: Math.round((onlineCameras.length / Math.max(cameraCount, 1)) * 100),
     averageBattery,
-    cameraGrowth: { direction: 'up', percentage: 4.2 },
-    captureTrend: { direction: 'up', percentage: 12.4 },
-    onlineTrend: { direction: 'up', percentage: 3.1 },
-    batteryTrend: { direction: 'down', percentage: 1.2 },
+    cameraGrowth: getTrend(cameraCount, previousCameraCount),
+    captureTrend: getTrend(totalCaptures, previousCaptures),
+    onlineTrend: getTrend(
+      Math.round((onlineCameras.length / Math.max(cameraCount, 1)) * 100),
+      previousOnlineRate
+    ),
+    batteryTrend: getTrend(averageBattery, previousBatteryAvg),
     activityChart: buildActivityChart(activityByDay),
   };
 }
