@@ -20,6 +20,8 @@ Transform wildlife research and conservation with cutting-edge technology that c
 
 ## 🏗️ Advanced Modular Architecture
 
+> 📖 **Developer Guide**: See [Related Code Content Guide](RELATED_CODE_CONTENT.md) for detailed component relationships and code navigation
+
 ```
 WildCAM_ESP32_v2.0/
 ├── firmware/                 # ESP32 Firmware (C++)
@@ -423,6 +425,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support & Community
 
 - **Documentation**: [Wiki](https://github.com/thewriterben/WildCAM_ESP32/wiki)
+- **Code Navigation**: [Related Code Content Guide](RELATED_CODE_CONTENT.md) - Cross-reference guide for finding related components
 - **Issues**: [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues)  
 - **Discussions**: [GitHub Discussions](https://github.com/thewriterben/WildCAM_ESP32/discussions)
 - **Email**: wildlife-tech@example.com
