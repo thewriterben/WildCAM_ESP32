@@ -1,0 +1,65 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wildcam-gcp-production
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: wildcam-multicloud
+  
+  source:
+    repoURL: https://github.com/thewriterben/WildCAM_ESP32.git
+    targetRevision: main
+    path: helm/wildcam
+    helm:
+      releaseName: wildcam-gcp
+      values: |
+        global:
+          environment: production
+          cloudProvider: gcp
+        
+        backend:
+          replicaCount: 5
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+            limits:
+              cpu: 4000m
+              memory: 8Gi
+        
+        multiCloud:
+          gcp:
+            region: us-west1
+            storage:
+              bucket: wildcam-wildlife-data-gcp
+        
+        ingress:
+          hosts:
+            - host: gcp.wildcam.example.com
+              paths:
+                - path: /
+                  pathType: Prefix
+  
+  destination:
+    server: https://wildcam-gcp-gke.us-west1.container.cloud.google.com
+    namespace: wildcam-production
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  revisionHistoryLimit: 10

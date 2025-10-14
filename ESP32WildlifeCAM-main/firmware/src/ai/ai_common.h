@@ -105,6 +105,17 @@ struct CameraFrame {
 };
 
 /**
+ * Wildlife AI Model Types
+ */
+enum WildlifeModelType {
+    MODEL_SPECIES_CLASSIFIER,
+    MODEL_BEHAVIOR_ANALYZER,
+    MODEL_MOTION_DETECTOR,
+    MODEL_HUMAN_DETECTOR,
+    MODEL_COUNT
+};
+
+/**
  * AI Model Information
  */
 struct ModelInfo {

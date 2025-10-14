@@ -1,0 +1,32 @@
+apiVersion: v2
+name: wildcam
+description: WildCAM ESP32 Multi-Cloud Wildlife Monitoring Platform
+type: application
+version: 1.0.0
+appVersion: "2.0.0"
+keywords:
+  - wildlife
+  - monitoring
+  - iot
+  - esp32
+  - conservation
+maintainers:
+  - name: WildCAM Team
+    email: team@wildcam.example.com
+home: https://github.com/thewriterben/WildCAM_ESP32
+sources:
+  - https://github.com/thewriterben/WildCAM_ESP32
+icon: https://wildcam.example.com/icon.png
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "17.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+  - name: kafka
+    version: "26.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: kafka.enabled
