@@ -15,6 +15,7 @@ class SatelliteComm;
 
 enum NetworkType {
     NETWORK_TYPE_NONE = 0,
+    NETWORK_TYPE_WIFI,
     NETWORK_TYPE_LORA,
     NETWORK_TYPE_CELLULAR,
     NETWORK_TYPE_SATELLITE
@@ -32,6 +33,12 @@ enum PowerConsumption {
     POWER_MEDIUM,
     POWER_HIGH
 };
+
+// Network scoring constants
+#define NETWORK_SCORE_EXCELLENT 90
+#define NETWORK_SCORE_GOOD 70
+#define NETWORK_SCORE_FAIR 40
+#define NETWORK_SCORE_POOR 20
 
 struct NetworkInfo {
     NetworkType type;
@@ -80,12 +87,15 @@ private:
     int calculateNetworkScore(const NetworkInfo& network, size_t dataSize, MessagePriority priority);
     
     // Transmission methods
+    bool sendViaWiFi(const uint8_t* data, size_t length);
     bool sendViaLoRa(const uint8_t* data, size_t length);
     bool sendViaCellular(const uint8_t* data, size_t length);
     bool sendViaSatellite(const uint8_t* data, size_t length);
     bool attemptFallbackTransmission(const uint8_t* data, size_t length);
     
     // Network availability checks
+    bool checkWiFiAvailability();
+    int getWiFiSignalStrength();
     bool checkLoRaMeshAvailability();
     int getLoRaSignalStrength();
     

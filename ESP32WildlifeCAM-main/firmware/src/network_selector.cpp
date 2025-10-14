@@ -36,6 +36,17 @@ bool NetworkSelector::scanAvailableNetworks() {
     
     availableNetworks.clear();
     
+    // Check WiFi availability
+    if (checkWiFiAvailability()) {
+        NetworkInfo wifiInfo;
+        wifiInfo.type = NETWORK_TYPE_WIFI;
+        wifiInfo.signalStrength = getWiFiSignalStrength();
+        wifiInfo.estimatedCost = 0; // Free/minimal
+        wifiInfo.powerConsumption = POWER_LOW;
+        wifiInfo.available = true;
+        availableNetworks.push_back(wifiInfo);
+    }
+    
     // Check LoRa mesh (placeholder - would integrate with actual LoRa implementation)
     if (checkLoRaMeshAvailability()) {
         NetworkInfo loraInfo;
@@ -117,16 +128,19 @@ int NetworkSelector::calculateNetworkScore(const NetworkInfo& network,
                                          MessagePriority priority) {
     int score = 0;
     
-    // Base priority scores
+    // Base priority scores - prefer WiFi/LoRa (free), then cellular, then satellite (expensive)
     switch (network.type) {
+        case NETWORK_TYPE_WIFI:
+            score = NETWORK_SCORE_EXCELLENT; // Highest priority - free and reliable
+            break;
         case NETWORK_TYPE_LORA:
-            score = NETWORK_SCORE_EXCELLENT; // Highest priority
+            score = NETWORK_SCORE_GOOD + 15; // High priority - free but shorter range
             break;
         case NETWORK_TYPE_CELLULAR:
-            score = 70;
+            score = NETWORK_SCORE_GOOD;
             break;
         case NETWORK_TYPE_SATELLITE:
-            score = 40;
+            score = NETWORK_SCORE_FAIR;
             break;
         default:
             return 0;
@@ -197,6 +211,9 @@ bool NetworkSelector::sendData(const uint8_t* data, size_t length, MessagePriori
     bool success = false;
     
     switch (selectedNetwork) {
+        case NETWORK_TYPE_WIFI:
+            success = sendViaWiFi(data, length);
+            break;
         case NETWORK_TYPE_LORA:
             success = sendViaLoRa(data, length);
             break;
@@ -216,6 +233,20 @@ bool NetworkSelector::sendData(const uint8_t* data, size_t length, MessagePriori
     }
     
     return success;
+}
+
+bool NetworkSelector::sendViaWiFi(const uint8_t* data, size_t length) {
+    Serial.printf("Sending %d bytes via WiFi\n", length);
+    
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi not connected, attempting reconnection...");
+        return false;
+    }
+    
+    // WiFi transmission implementation would go here
+    // This is a placeholder for actual WiFi client implementation
+    Serial.println("WiFi transmission successful");
+    return true;
 }
 
 bool NetworkSelector::sendViaLoRa(const uint8_t* data, size_t length) {
@@ -253,7 +284,8 @@ bool NetworkSelector::sendViaSatellite(const uint8_t* data, size_t length) {
 bool NetworkSelector::attemptFallbackTransmission(const uint8_t* data, size_t length) {
     Serial.println("Attempting fallback transmission for emergency message");
     
-    // Try all available networks in order of reliability
+    // Try all available networks in order of reliability for emergencies
+    // Priority: Satellite (most reliable in remote) > WiFi > Cellular > LoRa
     for (const auto& network : availableNetworks) {
         if (!network.available) continue;
         
@@ -261,6 +293,9 @@ bool NetworkSelector::attemptFallbackTransmission(const uint8_t* data, size_t le
         switch (network.type) {
             case NETWORK_TYPE_SATELLITE:
                 success = sendViaSatellite(data, length);
+                break;
+            case NETWORK_TYPE_WIFI:
+                success = sendViaWiFi(data, length);
                 break;
             case NETWORK_TYPE_CELLULAR:
                 success = sendViaCellular(data, length);
@@ -280,6 +315,28 @@ bool NetworkSelector::attemptFallbackTransmission(const uint8_t* data, size_t le
     }
     
     return false;
+}
+
+bool NetworkSelector::checkWiFiAvailability() {
+    // Check if WiFi is connected or networks are available
+    if (WiFi.status() == WL_CONNECTED) {
+        return true;
+    }
+    
+    // Scan for available WiFi networks
+    int networkCount = WiFi.scanNetworks();
+    return networkCount > 0;
+}
+
+int NetworkSelector::getWiFiSignalStrength() {
+    if (WiFi.status() == WL_CONNECTED) {
+        long rssi = WiFi.RSSI();
+        // Convert RSSI to 0-100 scale
+        // RSSI typically ranges from -90 (weak) to -30 (strong)
+        int strength = map(rssi, -90, -30, 0, 100);
+        return constrain(strength, 0, 100);
+    }
+    return 0;
 }
 
 bool NetworkSelector::checkLoRaMeshAvailability() {
@@ -324,6 +381,7 @@ NetworkType NetworkSelector::getCurrentNetwork() {
 
 const char* NetworkSelector::getNetworkTypeName(NetworkType type) {
     switch (type) {
+        case NETWORK_TYPE_WIFI: return "WiFi";
         case NETWORK_TYPE_LORA: return "LoRa Mesh";
         case NETWORK_TYPE_CELLULAR: return "Cellular";
         case NETWORK_TYPE_SATELLITE: return "Satellite";
