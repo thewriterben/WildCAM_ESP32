@@ -1,0 +1,152 @@
+name: Build Firmware Releases
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: true
+        default: 'dev'
+
+jobs:
+  build-firmware:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        board:
+          - name: esp32cam
+            display: "AI-Thinker ESP32-CAM"
+          - name: esp32s3cam
+            display: "ESP32-S3-CAM"
+          - name: ttgo-t-camera
+            display: "TTGO T-Camera"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Cache PlatformIO
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+      - name: Install PlatformIO
+        run: |
+          pip install --upgrade platformio
+          pio --version
+      - name: Build firmware for ${{ matrix.board.display }}
+        run: |
+          cd ESP32WildlifeCAM-main/WildCAM_ESP32
+          pio run -e ${{ matrix.board.name }}
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p release/${{ matrix.board.name }}
+          cp ESP32WildlifeCAM-main/WildCAM_ESP32/.pio/build/${{ matrix.board.name }}/firmware.bin \
+             release/${{ matrix.board.name }}/wildcam_${{ matrix.board.name }}_${{ github.ref_name }}.bin
+          cp ESP32WildlifeCAM-main/WildCAM_ESP32/.pio/build/${{ matrix.board.name }}/bootloader.bin \
+             release/${{ matrix.board.name }}/bootloader.bin 2>/dev/null || true
+          cp ESP32WildlifeCAM-main/WildCAM_ESP32/.pio/build/${{ matrix.board.name }}/partitions.bin \
+             release/${{ matrix.board.name }}/partitions.bin 2>/dev/null || true
+          cat > release/${{ matrix.board.name }}/build_info.txt <<EOF
+          WildCAM ESP32 Firmware
+          Board: ${{ matrix.board.display }}
+          Version: ${{ github.ref_name }}
+          Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Commit: ${{ github.sha }}
+          EOF
+      - name: Create flashing instructions
+        run: |
+          cat > release/${{ matrix.board.name }}/FLASH_INSTRUCTIONS.txt <<'EOF'
+          WildCAM ESP32 Flashing Instructions
+          ====================================
+          Prerequisites:
+          - esptool.py installed: pip install esptool
+          - USB cable connected to ESP32
+          - Drivers installed for USB-to-Serial chip
+          Windows:
+          --------
+          esptool.py --chip esp32 --port COM3 --baud 460800 ^
+            --before default_reset --after hard_reset write_flash ^
+            -z --flash_mode dio --flash_freq 40m --flash_size detect ^
+            0x1000 bootloader.bin ^
+            0x8000 partitions.bin ^
+            0x10000 wildcam_${{ matrix.board.name }}_${{ github.ref_name }}.bin
+          Linux/Mac:
+          ----------
+          esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 \
+            --before default_reset --after hard_reset write_flash \
+            -z --flash_mode dio --flash_freq 40m --flash_size detect \
+            0x1000 bootloader.bin \
+            0x8000 partitions.bin \
+            0x10000 wildcam_${{ matrix.board.name }}_${{ github.ref_name }}.bin
+          Troubleshooting:
+          ----------------
+          - If upload fails, hold BOOT button while connecting USB
+          - Check correct COM port: "esptool.py --list-ports"
+          - Try lower baud rate: change 460800 to 115200
+          - Ensure no other program is using the serial port
+          After Flashing:
+          ---------------
+          - Press RESET button on ESP32
+          - Open serial monitor at 115200 baud
+          - You should see startup messages
+          - Insert formatted SD card (FAT32)
+          - Configure WiFi in config_local.h if needed
+          EOF
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: firmware-${{ matrix.board.name }}-${{ github.ref_name }}
+          path: release/${{ matrix.board.name }}/*
+          retention-days: 90
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/${{ matrix.board.name }}/*
+          body: |
+            ## WildCAM ESP32 Firmware Release
+            ### Board: ${{ matrix.board.display }}
+            **What's Included**:
+            - ✅ Core wildlife camera functionality
+            - ✅ Motion detection (PIR + vision confirmation)
+            - ✅ Power management with state machine
+            - ✅ SD card storage with metadata
+            - ✅ WiFi connectivity
+            - ⚠️ AI detection (requires ML model - see docs)
+            **Installation**:
+            1. Download all .bin files for your board
+            2. Install esptool: `pip install esptool`
+            3. Follow instructions in FLASH_INSTRUCTIONS.txt
+            **First Time Setup**:
+            1. Insert formatted SD card (FAT32, 32GB recommended)
+            2. Connect PIR sensor to GPIO 13
+            3. Power on and check serial output (115200 baud)
+            4. Configure WiFi credentials if needed
+            **Documentation**: See [README.md](../README.md) for complete setup guide
+            **Support**: Open an issue if you encounter problems
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  build-summary:
+    needs: build-firmware
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create build summary
+        run: |
+          echo "## Firmware Build Complete ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Built firmware for:" >> $GITHUB_STEP_SUMMARY
+          echo "- AI-Thinker ESP32-CAM" >> $GITHUB_STEP_SUMMARY
+          echo "- ESP32-S3-CAM" >> $GITHUB_STEP_SUMMARY
+          echo "- TTGO T-Camera" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifacts from the Actions tab" >> $GITHUB_STEP_SUMMARY

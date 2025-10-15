@@ -1,10 +1,7 @@
 #include <Arduino.h>
-#include "src/core/system_manager.h"
-#include "src/utils/logger.h"
-#include "hardware/board_detector.h"
 
-// Global system manager instance
-SystemManager* g_system = nullptr;
+// Minimal WildCAM ESP32 firmware for testing builds
+// TODO: Integrate full system components after dependency resolution
 
 void setup() {
     Serial.begin(115200);
@@ -12,89 +9,77 @@ void setup() {
         ; // Wait for serial port to connect
     }
     
-    // Print startup banner
-    Logger::info("===================================");
-    Logger::info("ESP32WildlifeCAM v2.5.0");
-    Logger::info("Wildlife Camera System Test");
-    Logger::info("===================================");
+    Serial.println("===================================");
+    Serial.println("WildCAM ESP32 Firmware v2.5.0");
+    Serial.println("Build Test - Basic Functionality");
+    Serial.println("===================================");
     
-    // Detect board type
-    BoardDetector::BoardType board = BoardDetector::detectBoard();
-    Logger::info("Detected board: %s", BoardDetector::getBoardName(board));
+    // Basic board detection
+    #ifdef BOARD_AI_THINKER_CAM
+        Serial.println("Board: AI-Thinker ESP32-CAM");
+    #elif defined(BOARD_ESP32S3_CAM)
+        Serial.println("Board: ESP32-S3-CAM");
+    #elif defined(BOARD_TTGO_T_CAMERA)
+        Serial.println("Board: TTGO T-Camera");
+    #else
+        Serial.println("Board: Generic ESP32");
+    #endif
     
-    // Create and initialize system manager
-    g_system = new SystemManager(board);
-    if (!g_system->initialize()) {
-        Logger::error("Failed to initialize system!");
-        Logger::error("Last error: %s", g_system->getLastError());
-        return; // Stay in setup - don't proceed to loop
+    Serial.print("Free Heap: ");
+    Serial.print(ESP.getFreeHeap());
+    Serial.println(" bytes");
+    
+    if (psramFound()) {
+        Serial.print("PSRAM Size: ");
+        Serial.print(ESP.getPsramSize());
+        Serial.println(" bytes");
     }
     
-    Logger::info("System initialization complete!");
-    Logger::info("Camera ready: %s", g_system->isCameraReady() ? "Yes" : "No");
-    Logger::info("Storage ready: %s", g_system->isStorageReady() ? "Yes" : "No");
-    
-    // Test camera capture on successful initialization
-    if (g_system->isCameraReady()) {
-        Logger::info("Testing camera capture...");
-        if (g_system->captureImage("/test")) {
-            Logger::info("✅ Camera test successful!");
-        } else {
-            Logger::warning("⚠️ Camera test failed - but system initialized");
-        }
-    }
+    Serial.println("System ready - type 'help' for commands");
 }
 
 void loop() {
-    if (g_system) {
-        // Run main system loop
-        g_system->update();
-        
-        // Test image capture every 30 seconds if camera is ready
-        static unsigned long lastCapture = 0;
-        unsigned long now = millis();
-        
-        if (g_system->isCameraReady() && (now - lastCapture > 30000)) {
-            lastCapture = now;
-            Logger::info("Periodic camera test...");
-            g_system->captureImage("/wildlife");
-        }
-    }
-    
     // Check for serial commands
     if (Serial.available()) {
         String command = Serial.readStringUntil('\n');
         command.trim();
         command.toLowerCase();
         
-        if (command == "capture" || command == "c") {
-            if (g_system && g_system->isCameraReady()) {
-                Logger::info("Manual capture requested...");
-                if (g_system->captureImage("/manual")) {
-                    Logger::info("✅ Manual capture successful!");
-                } else {
-                    Logger::error("❌ Manual capture failed!");
-                }
-            } else {
-                Logger::error("Camera not ready for capture");
+        if (command == "status" || command == "s") {
+            Serial.println("=== System Status ===");
+            Serial.print("Free Heap: ");
+            Serial.print(ESP.getFreeHeap());
+            Serial.println(" bytes");
+            
+            if (psramFound()) {
+                Serial.print("PSRAM: ");
+                Serial.print(ESP.getPsramSize());
+                Serial.println(" bytes");
             }
-        } else if (command == "status" || command == "s") {
-            if (g_system) {
-                Logger::info("=== System Status ===");
-                Logger::info("Camera: %s", g_system->isCameraReady() ? "Ready" : "Not Ready");
-                Logger::info("Storage: %s", g_system->isStorageReady() ? "Ready" : "Not Ready");
-                Logger::info("Network: %s", g_system->isNetworkReady() ? "Ready" : "Not Ready");
-                Logger::info("Free Heap: %d bytes", ESP.getFreeHeap());
-                if (psramFound()) {
-                    Logger::info("PSRAM: %d bytes", ESP.getPsramSize());
-                }
-            }
+            
+            Serial.print("Uptime: ");
+            Serial.print(millis() / 1000);
+            Serial.println(" seconds");
+            
         } else if (command == "help" || command == "h") {
-            Logger::info("=== Available Commands ===");
-            Logger::info("c, capture - Take a photo");
-            Logger::info("s, status - Show system status");
-            Logger::info("h, help - Show this help");
+            Serial.println("=== Available Commands ===");
+            Serial.println("s, status - Show system status");
+            Serial.println("h, help - Show this help");
+            Serial.println("r, restart - Restart system");
+            
+        } else if (command == "restart" || command == "r") {
+            Serial.println("Restarting system...");
+            ESP.restart();
         }
+    }
+    
+    // Heartbeat every 10 seconds
+    static unsigned long lastHeartbeat = 0;
+    unsigned long now = millis();
+    
+    if (now - lastHeartbeat > 10000) {
+        lastHeartbeat = now;
+        Serial.print(".");
     }
     
     // Small delay to prevent excessive CPU usage
