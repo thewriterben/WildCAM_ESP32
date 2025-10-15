@@ -129,6 +129,30 @@ This repository now has ESP32-specific CI/CD workflows optimized for embedded de
 
 ---
 
+### 4. Build Firmware Releases (`build-firmware-releases.yml`)
+**Triggers:** 
+- Push to version tags (`v*.*.*`)
+- Manual workflow dispatch with version input
+
+**Jobs:**
+1. **build-firmware** - Firmware release builds (matrix strategy)
+   - Builds: esp32cam, esp32s3cam, ttgo-t-camera
+   - Creates release artifacts with version naming
+   - Includes firmware, bootloader, and partition binaries
+   - Generates build_info.txt with flash instructions
+   - Uses PlatformIO caching for faster builds
+
+**Artifacts:**
+- `firmware-{board}-{version}`: Complete release package (90 days)
+  - wildcam_{board}_{version}.bin
+  - bootloader.bin
+  - partitions.bin
+  - build_info.txt
+
+**Purpose:** Automatically build production-ready firmware binaries for all supported boards whenever a new version tag is pushed.
+
+---
+
 ## Workflow Dependencies
 
 ```
@@ -148,6 +172,10 @@ Infrastructure Tests:
   validate-library-compatibility ┘
   
   Other jobs run in parallel
+
+Build Firmware Releases:
+  Triggered on tags or manually
+  build-firmware (matrix) → [release artifacts]
 ```
 
 ## Expected Workflow Results
@@ -157,6 +185,12 @@ Infrastructure Tests:
 ✅ Firmware artifacts uploaded
 ✅ No critical security issues
 ✅ All validation scripts pass
+
+### Successful Release Build
+✅ All three board firmware binaries built successfully
+✅ Release artifacts include firmware, bootloader, and partitions
+✅ Build info file generated with flash instructions
+✅ Artifacts retained for 90 days
 
 ### Acceptable Warnings
 ⚠️ Extended board builds may fail (hardware-specific)
