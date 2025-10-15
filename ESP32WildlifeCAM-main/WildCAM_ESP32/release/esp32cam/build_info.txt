@@ -1,0 +1,5 @@
+WildCAM ESP32 Firmware
+Board: esp32cam
+Version: localtest
+Build Date: 2025-10-15 00:45:22 UTC
+Commit: 0d8f0cec973bfe3da1b381c5edb02e1ec0119e55
