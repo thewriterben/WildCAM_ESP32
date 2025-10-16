@@ -1,84 +1,160 @@
 #include "image_utils.h"
 #include <esp_heap_caps.h>
+#include <TJpg_Decoder.h>
 #include <cmath>
 
 namespace ImageUtils {
 
+// Callback function for TJpgDec to output decoded image data
+static uint8_t* g_rgbBuffer = nullptr;
+static uint16_t g_currentRow = 0;
+static uint16_t g_imageWidth = 0;
+
+// TJpgDec callback: Called when a block of image is decoded
+bool tjpgOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap) {
+    if (!g_rgbBuffer) return false;
+    
+    // Convert RGB565 to RGB888
+    for (uint16_t row = 0; row < h; row++) {
+        for (uint16_t col = 0; col < w; col++) {
+            uint16_t pixel565 = bitmap[row * w + col];
+            
+            // Extract RGB components from RGB565
+            uint8_t r = ((pixel565 >> 11) & 0x1F) << 3;  // 5 bits -> 8 bits
+            uint8_t g = ((pixel565 >> 5) & 0x3F) << 2;   // 6 bits -> 8 bits
+            uint8_t b = (pixel565 & 0x1F) << 3;          // 5 bits -> 8 bits
+            
+            // Calculate position in RGB888 buffer
+            size_t pixelIndex = ((y + row) * g_imageWidth + (x + col)) * 3;
+            g_rgbBuffer[pixelIndex + 0] = r;
+            g_rgbBuffer[pixelIndex + 1] = g;
+            g_rgbBuffer[pixelIndex + 2] = b;
+        }
+    }
+    
+    return true;
+}
+
 bool decodeJPEG(const uint8_t* jpegData, size_t jpegSize, 
                 uint16_t* outWidth, uint16_t* outHeight, uint8_t** outRgb) {
     if (!jpegData || jpegSize == 0 || !outWidth || !outHeight || !outRgb) {
-        Serial.println("Invalid parameters for JPEG decode");
+        Serial.println("ERROR: Invalid parameters for JPEG decode");
         return false;
     }
     
-    // TODO: Implement proper JPEG decoding using a library like TJpgDec
-    // For now, this is a placeholder that assumes frame buffer is already decoded
-    // In practice, esp_camera provides JPEG data that needs decoding
+    // Initialize TJpgDec
+    TJpgDec.setJpgScale(1);  // No scaling (1:1)
+    TJpgDec.setCallback(tjpgOutput);
     
-    // Placeholder: Allocate minimal RGB buffer
-    // Actual implementation would decode the JPEG and populate this
-    *outWidth = 320;   // Placeholder dimensions
-    *outHeight = 240;
-    size_t rgbSize = (*outWidth) * (*outHeight) * 3;
-    
-    *outRgb = (uint8_t*)heap_caps_malloc(rgbSize, MALLOC_CAP_8BIT);
-    if (*outRgb == nullptr) {
-        Serial.println("Failed to allocate RGB buffer");
+    // Get JPEG dimensions without decoding
+    uint16_t w, h;
+    if (TJpgDec.getJpgSize(&w, &h, jpegData, jpegSize) != JDR_OK) {
+        Serial.println("ERROR: Failed to get JPEG dimensions");
         return false;
     }
     
-    // Placeholder: Fill with dummy data
-    // Real implementation would decode JPEG here
-    memset(*outRgb, 128, rgbSize);
+    *outWidth = w;
+    *outHeight = h;
     
-    Serial.println("JPEG decode (placeholder) completed");
+    // Allocate RGB buffer
+    size_t rgbSize = w * h * 3;
+    g_rgbBuffer = (uint8_t*)heap_caps_malloc(rgbSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (g_rgbBuffer == nullptr) {
+        Serial.printf("ERROR: Failed to allocate RGB buffer (%d bytes)\n", rgbSize);
+        return false;
+    }
+    
+    // Set global variables for callback
+    g_imageWidth = w;
+    g_currentRow = 0;
+    
+    // Decode JPEG
+    if (TJpgDec.drawJpg(0, 0, jpegData, jpegSize) != JDR_OK) {
+        Serial.println("ERROR: JPEG decode failed");
+        free(g_rgbBuffer);
+        g_rgbBuffer = nullptr;
+        return false;
+    }
+    
+    *outRgb = g_rgbBuffer;
+    g_rgbBuffer = nullptr;  // Transfer ownership to caller
+    
+    Serial.printf("JPEG decoded successfully: %dx%d (%d bytes)\n", w, h, rgbSize);
     return true;
+}
+
+void freeDecodedBuffer(uint8_t* rgbBuffer) {
+    if (rgbBuffer != nullptr) {
+        free(rgbBuffer);
+    }
 }
 
 bool scaleImage(const uint8_t* srcRgb, uint16_t srcWidth, uint16_t srcHeight,
                 uint8_t* dstRgb, uint16_t dstWidth, uint16_t dstHeight) {
     if (!srcRgb || !dstRgb || srcWidth == 0 || srcHeight == 0 || 
         dstWidth == 0 || dstHeight == 0) {
-        Serial.println("Invalid parameters for image scaling");
+        Serial.println("ERROR: Invalid parameters for image scaling");
         return false;
     }
     
     /**
-     * PLACEHOLDER: Simple nearest-neighbor scaling
+     * Bilinear Interpolation Implementation
      * 
-     * NOTE: This is a basic implementation using nearest-neighbor interpolation.
-     * For production use, consider implementing:
-     * - Bilinear interpolation for better quality
-     * - Bicubic interpolation for highest quality
-     * - Hardware-accelerated scaling if available
+     * This implementation uses bilinear interpolation for high-quality image resizing.
+     * For each destination pixel, we:
+     * 1. Calculate the corresponding floating-point position in the source image
+     * 2. Find the four nearest source pixels (top-left, top-right, bottom-left, bottom-right)
+     * 3. Interpolate horizontally between top pixels and between bottom pixels
+     * 4. Interpolate vertically between the two horizontal results
      * 
-     * The current implementation prioritizes simplicity and speed over quality.
+     * This provides much better quality than nearest-neighbor, especially for downscaling.
      */
     
     float xRatio = (float)srcWidth / dstWidth;
     float yRatio = (float)srcHeight / dstHeight;
     
-    for (uint16_t y = 0; y < dstHeight; y++) {
-        for (uint16_t x = 0; x < dstWidth; x++) {
-            // Find nearest source pixel
-            uint16_t srcX = (uint16_t)(x * xRatio);
-            uint16_t srcY = (uint16_t)(y * yRatio);
+    for (uint16_t dstY = 0; dstY < dstHeight; dstY++) {
+        for (uint16_t dstX = 0; dstX < dstWidth; dstX++) {
+            // Calculate corresponding position in source image
+            float srcXf = dstX * xRatio;
+            float srcYf = dstY * yRatio;
+            
+            // Get integer and fractional parts
+            uint16_t srcX = (uint16_t)srcXf;
+            uint16_t srcY = (uint16_t)srcYf;
+            float fracX = srcXf - srcX;
+            float fracY = srcYf - srcY;
             
             // Clamp to source bounds
-            if (srcX >= srcWidth) srcX = srcWidth - 1;
-            if (srcY >= srcHeight) srcY = srcHeight - 1;
+            uint16_t srcX1 = srcX;
+            uint16_t srcY1 = srcY;
+            uint16_t srcX2 = (srcX + 1 < srcWidth) ? srcX + 1 : srcX;
+            uint16_t srcY2 = (srcY + 1 < srcHeight) ? srcY + 1 : srcY;
             
-            // Copy RGB values
-            size_t srcIndex = (srcY * srcWidth + srcX) * 3;
-            size_t dstIndex = (y * dstWidth + x) * 3;
-            
-            dstRgb[dstIndex + 0] = srcRgb[srcIndex + 0];  // R
-            dstRgb[dstIndex + 1] = srcRgb[srcIndex + 1];  // G
-            dstRgb[dstIndex + 2] = srcRgb[srcIndex + 2];  // B
+            // Get the four surrounding pixels for each RGB channel
+            for (int c = 0; c < 3; c++) {
+                // Top-left, top-right, bottom-left, bottom-right pixels
+                float p11 = srcRgb[(srcY1 * srcWidth + srcX1) * 3 + c];
+                float p21 = srcRgb[(srcY1 * srcWidth + srcX2) * 3 + c];
+                float p12 = srcRgb[(srcY2 * srcWidth + srcX1) * 3 + c];
+                float p22 = srcRgb[(srcY2 * srcWidth + srcX2) * 3 + c];
+                
+                // Bilinear interpolation
+                // First interpolate horizontally
+                float top = p11 * (1.0f - fracX) + p21 * fracX;
+                float bottom = p12 * (1.0f - fracX) + p22 * fracX;
+                
+                // Then interpolate vertically
+                float result = top * (1.0f - fracY) + bottom * fracY;
+                
+                // Write to destination
+                size_t dstIndex = (dstY * dstWidth + dstX) * 3 + c;
+                dstRgb[dstIndex] = (uint8_t)(result + 0.5f);  // Round to nearest
+            }
         }
     }
     
-    Serial.printf("Image scaled from %dx%d to %dx%d (nearest-neighbor)\n", 
+    Serial.printf("Image scaled from %dx%d to %dx%d (bilinear interpolation)\n", 
                  srcWidth, srcHeight, dstWidth, dstHeight);
     return true;
 }
@@ -131,20 +207,20 @@ PreprocessResult preprocessFrameForModel(camera_fb_t* frame,
     uint8_t* scaledRgb = (uint8_t*)heap_caps_malloc(scaledSize, MALLOC_CAP_8BIT);
     
     if (scaledRgb == nullptr) {
-        free(rgbData);
+        freeDecodedBuffer(rgbData);
         result.errorMessage = "Failed to allocate scaled buffer";
         return result;
     }
     
     if (!scaleImage(rgbData, decodedWidth, decodedHeight, 
                    scaledRgb, targetWidth, targetHeight)) {
-        free(rgbData);
+        freeDecodedBuffer(rgbData);
         free(scaledRgb);
         result.errorMessage = "Image scaling failed";
         return result;
     }
     
-    free(rgbData);  // No longer need decoded image
+    freeDecodedBuffer(rgbData);  // No longer need decoded image
     
     // Step 3: Normalize to tensor
     result.tensorSize = targetWidth * targetHeight * 3;

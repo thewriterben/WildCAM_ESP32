@@ -24,7 +24,7 @@ struct PreprocessResult {
 };
 
 /**
- * @brief Decode JPEG image to RGB data
+ * @brief Decode JPEG image to RGB data using TJpgDec library
  * @param jpegData JPEG image data
  * @param jpegSize Size of JPEG data
  * @param outWidth Output image width
@@ -36,9 +36,15 @@ bool decodeJPEG(const uint8_t* jpegData, size_t jpegSize,
                 uint16_t* outWidth, uint16_t* outHeight, uint8_t** outRgb);
 
 /**
- * @brief Scale image to target dimensions
- * PLACEHOLDER: Currently uses simple nearest-neighbor interpolation
- * TODO: Implement bilinear or bicubic interpolation for better quality
+ * @brief Free memory allocated for decoded RGB buffer
+ * @param rgbBuffer RGB buffer to free
+ */
+void freeDecodedBuffer(uint8_t* rgbBuffer);
+
+/**
+ * @brief Scale image to target dimensions using bilinear interpolation
+ * Implements bilinear interpolation for high-quality image resizing,
+ * suitable for AI preprocessing and thumbnail generation.
  * 
  * @param srcRgb Source RGB data
  * @param srcWidth Source width
