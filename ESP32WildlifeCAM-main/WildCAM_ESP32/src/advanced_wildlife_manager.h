@@ -94,18 +94,24 @@ public:
     
     /**
      * Destructor
+     * Ensures proper cleanup of all subsystems and RTOS resources
+     * Calls cleanup() to release resources safely
      */
     ~AdvancedWildlifeManager();
     
     /**
      * Initialize all wildlife camera systems
      * @return true if initialization successful
+     * @note Validates all subsystem initialization and performs cleanup on failure
+     * @note Safe to call multiple times - subsequent calls return current state
      */
     bool initialize();
     
     /**
      * Main update loop - call regularly from main loop
      * This is the primary integration point for the entire system
+     * @note Not thread-safe: Call only from main loop thread
+     * @note Validates initialization before processing
      */
     void update();
     
@@ -193,6 +199,9 @@ public:
     
     /**
      * Cleanup all resources
+     * @note Safe to call multiple times
+     * @note Automatically called by destructor
+     * @note Releases all subsystem resources and resets state
      */
     void cleanup();
 
