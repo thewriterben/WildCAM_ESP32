@@ -260,9 +260,9 @@ The AI-Thinker ESP32-CAM has **limited available GPIO pins**, preventing some fe
 
 | Module | Cost/Message | Target Use | Development Status |
 |--------|--------------|------------|-------------------|
-| **Swarm M138** | $0.05 | Budget deployments | 🔄 Basic interface working |
-| **RockBLOCK 9603** | $0.04-0.14 | Professional reliability | 🔄 Hardware driver exists |
-| **Iridium 9603N** | $0.50-1.00 | Mission-critical | 📋 Framework only |
+| **Swarm M138** | $0.05 | Budget deployments | 📋 Interface design stage |
+| **RockBLOCK 9603** | $0.04-0.14 | Professional reliability | 📋 Interface design stage |
+| **Iridium 9603N** | $0.50-1.00 | Mission-critical | 📋 Interface design stage |
 
 ### Example Framework Code (Not Production-Ready)
 ```cpp
@@ -526,11 +526,11 @@ Built-in support for international collaboration in 20+ languages:
 
 ### Documentation & Resources
 
-1. **[Quick Start Guide](ESP32WildlifeCAM-main/docs/GLOBAL_NETWORK_QUICKSTART.md)** - Get connected in 5 minutes
+1. **[Quick Start Guide](ESP32WildlifeCAM-main/docs/GLOBAL_NETWORK_QUICKSTART.md)** - Framework design documentation
 2. **[Full Documentation](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_NETWORK.md)** - Comprehensive platform guide (23KB)
 3. **[API Reference](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_API.md)** - Complete API documentation (20KB)
 4. **[Deployment Guide](ESP32WildlifeCAM-main/docs/deployment/GLOBAL_NETWORK_DEPLOYMENT.md)** - Multi-continent deployment planning
-5. **[Example Code](ESP32WildlifeCAM-main/examples/global_conservation_network_example.cpp)** - Working demonstration
+5. **[Example Code](ESP32WildlifeCAM-main/examples/global_conservation_network_example.cpp)** - Framework demonstration code
 
 ### Planned Use Cases (Design Stage)
 
