@@ -95,18 +95,29 @@ ESP32WildlifeCAM is a production-ready, open-source wildlife monitoring platform
 Choose from multiple supported platforms:
 
 **ESP32-CAM Series (6 Supported Variants)**
-- AI-Thinker ESP32-CAM (recommended for beginners)
-- ESP32-S3-CAM (enhanced AI capabilities with 8MB PSRAM)
+- AI-Thinker ESP32-CAM (recommended for beginners - **limited GPIO pins**)
+- **ESP32-S3-CAM** (⭐ **RECOMMENDED for full feature set** - more GPIO, 8MB PSRAM, USB OTG)
 - TTGO T-Camera (integrated display)
 - ESP32-C3-CAM (ultra-low-power RISC-V)
 - ESP32-C6-CAM (WiFi 6 and Thread networking)
 - ESP32-S2-CAM (single-core high-performance with USB OTG)
 
+> ⚠️ **IMPORTANT - GPIO Pin Limitations:**
+> 
+> **AI-Thinker ESP32-CAM** has limited available GPIO pins. It cannot run all features simultaneously:
+> - ✅ Supported: Camera + SD Card + Motion Detection + Environmental Sensors
+> - ❌ NOT Supported Together: Camera + LoRa + Servos + IR LED (pin conflicts)
+> 
+> **For Full Feature Set** (Camera + LoRa Mesh + Servos + All Sensors):
+> - 🌟 **Use ESP32-S3-CAM** - More GPIO pins, better performance, full peripheral support
+> - See [Hardware Configuration Guide](docs/HARDWARE_SETUP.md) for detailed pin assignments
+> - Review `include/config.h` for compile-time pin conflict checks
+
 **Enhanced Components**
-- LoRa module (SX1276/SX1278) for mesh networking
+- LoRa module (SX1276/SX1278) for mesh networking (**requires ESP32-S3-CAM for use with camera**)
 - Satellite module (optional): Iridium 9603N, Swarm M138, or RockBLOCK for remote areas
 - PIR motion sensor (HC-SR501 or similar) + audio microphone (I2S or analog)
-- Pan/Tilt servos (optional): SG90 or similar for camera movement
+- Pan/Tilt servos (optional): SG90 or similar for camera movement (**requires ESP32-S3-CAM**)
 - Solar panel (5W minimum) with charge controller
 - LiPo battery (3000mAh+ for 24/7 operation)
 - MicroSD card (32GB+ Class 10 for analytics data)

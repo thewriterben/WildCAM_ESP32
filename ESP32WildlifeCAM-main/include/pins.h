@@ -5,6 +5,23 @@
 // ESP32-CAM PIN DEFINITIONS
 // AI-Thinker ESP32-CAM Module
 // ===========================
+//
+// ⚠️  BEFORE MODIFYING PIN ASSIGNMENTS:
+//     Read docs/HARDWARE_FEATURE_GUIDELINES.md for implementation guidelines
+//     and pin conflict resolution strategies.
+//
+// Available GPIO on AI-Thinker ESP32-CAM:
+//   - GPIO 1, 3 (UART - use with caution)
+//   - GPIO 12, 13, 15, 16 (available when SD disabled)
+//   - GPIO 2 (LED, available when SD disabled)
+//
+// Reserved Pins (DO NOT USE):
+//   - GPIO 0, 5, 18-27, 32, 34-36, 39: Camera
+//   - GPIO 2, 4, 12-15: SD card (when enabled)
+//   - GPIO 6-11: Flash (NEVER use)
+//
+// For full feature set → Use ESP32-S3-CAM
+// ===========================
 
 // ===========================
 // CAMERA PINS (OV2640)

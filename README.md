@@ -143,9 +143,24 @@ WildCAM_ESP32_v2.0/
 | **Battery** | 18650 Li-ion 3000mAh+ | Energy storage |
 | **Security Chip** | ATECC608A | Hardware encryption |
 
+> ⚠️ **IMPORTANT - Hardware Selection Guide:**
+> 
+> **AI-Thinker ESP32-CAM** (Basic Configuration):
+> - ✅ Best for: Camera + Motion Detection + Environmental Sensors + SD Card
+> - ❌ Limited GPIO pins - Cannot support Camera + LoRa + Servos simultaneously
+> - 💰 Budget-friendly option for basic wildlife monitoring
+> 
+> **ESP32-S3-CAM** (⭐ Recommended for Full Features):
+> - ✅ Supports: Camera + LoRa + Servos + All Sensors + SD Card (no conflicts!)
+> - ✅ More RAM (8MB PSRAM), faster processing, USB OTG
+> - ✅ Additional GPIO pins for peripheral expansion
+> - 🌟 **Required for production deployments with LoRa mesh networking**
+> 
+> See [Hardware Requirements](HARDWARE_REQUIREMENTS.md) and [ESP32WildlifeCAM-main/README.md](ESP32WildlifeCAM-main/README.md) for detailed pin assignments and configuration.
+
 ### Optional Enhancements
 - **Thermal Camera**: FLIR Lepton for heat detection
-- **Servo Motors**: Pan/tilt camera control
+- **Servo Motors**: Pan/tilt camera control (**requires ESP32-S3-CAM**)
 - **GPS Module**: Precise location tracking
 - **🛰️ Satellite Modem**: Global connectivity (Swarm M138, RockBLOCK 9603, Iridium 9603N)
 - **SD Card**: Local data storage (32GB+)
