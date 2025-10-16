@@ -8,13 +8,11 @@
 
 #include "image_mesh.h"
 #include "../debug_utils.h"
-#include "../sensors/gps_manager.h"
+
 #include <FS.h>
 #include <LittleFS.h>
 #include <esp_crc.h>
 
-// External GPS manager instance (defined in main.cpp or similar)
-extern GPSManager* gpsManager;
 
 // Static instance for callback access
 ImageMesh* ImageMesh::instance_ = nullptr;
@@ -132,10 +130,7 @@ uint32_t ImageMesh::transmitImage(camera_fb_t* frameBuffer, uint32_t destination
     metadata.captureTime = millis();
     metadata.motionTriggered = true;
     
-    // Get GPS coordinates from GPSManager if available
-    if (gpsManager != nullptr && gpsManager->hasFix()) {
-        metadata.latitude = gpsManager->getLatitude();
-        metadata.longitude = gpsManager->getLongitude();
+
     } else {
         metadata.latitude = 0.0;
         metadata.longitude = 0.0;

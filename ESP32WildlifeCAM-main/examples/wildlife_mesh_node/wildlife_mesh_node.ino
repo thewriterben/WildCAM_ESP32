@@ -44,6 +44,7 @@
 #include "../../firmware/src/meshtastic/mesh_interface.h"
 #include "../../firmware/src/meshtastic/wildlife_telemetry.h"
 #include "../../firmware/src/meshtastic/image_mesh.h"
+#include "../../../firmware/src/sensors/gps_manager.h"
 
 // Camera configuration (AI-Thinker ESP32-CAM)
 #define PWDN_GPIO_NUM     32
@@ -67,12 +68,18 @@
 #define PIR_SENSOR_PIN    13    // Motion sensor
 #define BATTERY_ADC_PIN   33    // Battery voltage monitoring
 #define SOLAR_ADC_PIN     32    // Solar panel voltage monitoring
+#define GPS_RX_PIN        15    // GPS module RX pin
+#define GPS_TX_PIN        12    // GPS module TX pin
 
 // Global objects
 LoRaDriver* radioDriver = nullptr;
 MeshInterface* meshInterface = nullptr;
 WildlifeTelemetry* wildlifeTelemetry = nullptr;
 ImageMesh* imageMesh = nullptr;
+GPSManager* gpsManager = nullptr;
+
+// Global GPS manager for external access
+GPSManager* g_gpsManager = nullptr;
 
 // Node configuration
 String nodeName = "WildlifeCam";
@@ -348,7 +355,33 @@ bool initializeMeshNetwork() {
     nodeInfo.status = NODE_STATUS_ONLINE;
     nodeInfo.batteryLevel = getBatteryLevel();
     nodeInfo.voltage = getBatteryVoltage();
-    nodeInfo.hasPosition = false;  // TODO: Add GPS support
+    
+    // Initialize GPS manager and get position if available
+    gpsManager = new GPSManager();
+    g_gpsManager = gpsManager;  // Set global reference for external access
+    if (gpsManager && gpsManager->initialize(GPS_RX_PIN, GPS_TX_PIN, 9600)) {
+        Serial.println("GPS manager initialized");
+        // Update GPS data for a few seconds to try to get a fix
+        for (int i = 0; i < 30 && !gpsManager->hasFix(); i++) {
+            gpsManager->update();
+            delay(100);
+        }
+        
+        if (gpsManager->hasFix()) {
+            nodeInfo.hasPosition = true;
+            nodeInfo.latitude = gpsManager->getLatitude();
+            nodeInfo.longitude = gpsManager->getLongitude();
+            nodeInfo.altitude = (uint32_t)gpsManager->getAltitude();
+            Serial.printf("GPS fix acquired: %.6f, %.6f\n", 
+                         nodeInfo.latitude, nodeInfo.longitude);
+        } else {
+            nodeInfo.hasPosition = false;
+            Serial.println("No GPS fix yet, will continue trying in background");
+        }
+    } else {
+        nodeInfo.hasPosition = false;
+        Serial.println("GPS manager not available");
+    }
     
     meshInterface->setNodeInfo(nodeInfo);
     
