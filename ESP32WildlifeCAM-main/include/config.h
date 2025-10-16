@@ -16,8 +16,105 @@
 // - firmware/src/meshtastic/mesh_config.h (LoRa/mesh settings)
 // ===========================
 
+// ===========================
+// HARDWARE FEATURE IMPLEMENTATION GUIDELINES
+// ===========================
+/*
+ * BEFORE ADDING NEW HARDWARE FEATURES:
+ * 
+ * 1. CHECK FOR PIN CONFLICTS
+ *    - Review pins.h for existing pin assignments
+ *    - Verify your pins don't conflict with camera, SD card, or other features
+ *    - Check the available GPIO pins list below
+ * 
+ * 2. AVAILABLE GPIO PINS ON AI-THINKER ESP32-CAM:
+ *    - GPIO 1, 3 (UART TX/RX - use with caution, needed for debugging)
+ *    - GPIO 12, 13, 15, 16 (available, but GPIO 12 affects boot if HIGH)
+ *    - GPIO 2 (built-in LED, can be repurposed if not using SD card)
+ *    
+ *    RESERVED PINS (DO NOT USE):
+ *    - GPIO 0, 5, 18-27, 32, 34-36, 39: Camera interface
+ *    - GPIO 2, 4, 12-15: SD card (when SD_CARD_ENABLED)
+ *    - GPIO 6-11: Internal flash (NEVER use these)
+ * 
+ * 3. FOR FULL FEATURE SET:
+ *    Consider upgrading to ESP32-S3-CAM which has more available GPIO pins
+ *    and can support concurrent camera, SD card, LoRa, and other peripherals.
+ * 
+ * 4. DOCUMENT ALL NEW PIN ASSIGNMENTS:
+ *    - Add clear comments in pins.h
+ *    - Update pin conflict checks below
+ *    - Document in feature-specific sections
+ * 
+ * 5. ADD COMPILE-TIME CHECKS:
+ *    - Use #error directives to prevent conflicting configurations
+ *    - See examples in "PIN CONFLICT CHECKS" section below
+ */
+
 // Forward compatibility - include pins.h for pin definitions
 #include "pins.h"
+
+// ===========================
+// PIN CONFLICT CHECKS
+// These compile-time checks prevent invalid hardware configurations
+// ===========================
+
+// Check 1: LoRa and Camera cannot coexist on AI-Thinker ESP32-CAM
+// LoRa requires SPI pins (GPIO 18, 19, 23) which conflict with camera data pins
+#if defined(CAMERA_MODEL_AI_THINKER) && defined(LORA_ENABLED) && LORA_ENABLED
+  #error "LoRa and Camera cannot be enabled simultaneously on AI-Thinker ESP32-CAM due to pin conflicts (GPIO 18, 19, 23). Use ESP32-S3-CAM or disable one feature."
+#endif
+
+// Check 2: SD Card and certain features conflict
+// When SD card is enabled, GPIO 2, 4, 12-15 are reserved for SD interface
+#if defined(SD_CARD_ENABLED) && SD_CARD_ENABLED
+  #if defined(CHARGING_LED_PIN) && CHARGING_LED_PIN == 2
+    #error "CHARGING_LED_PIN conflicts with SD card data line (GPIO 2). Reassign LED or disable SD card."
+  #endif
+  #if defined(POWER_LED_PIN) && POWER_LED_PIN == 4
+    #warning "POWER_LED_PIN (GPIO 4) is shared with SD card data line. LED control may interfere with SD operations."
+  #endif
+#endif
+
+// Check 3: Servo control conflicts on AI-Thinker ESP32-CAM
+// Servo pins would conflict with LoRa and other peripherals
+#if defined(CAMERA_MODEL_AI_THINKER) && defined(PAN_SERVO_PIN) && defined(TILT_SERVO_PIN)
+  #if defined(LORA_ENABLED) && LORA_ENABLED
+    #error "Servo control and LoRa cannot coexist on AI-Thinker ESP32-CAM. Use ESP32-S3-CAM for full features."
+  #endif
+#endif
+
+// Check 4: IR LED conflicts with LoRa chip select
+#if defined(IR_LED_ENABLED) && IR_LED_ENABLED && defined(LORA_ENABLED) && LORA_ENABLED
+  #if defined(IR_LED_PIN) && defined(LORA_CS_PIN) && (IR_LED_PIN == LORA_CS_PIN)
+    #error "IR LED pin conflicts with LoRa chip select (both use GPIO 16). Disable one feature or use different hardware."
+  #endif
+#endif
+
+// Check 5: Board-specific feature limitations
+#if defined(CAMERA_MODEL_AI_THINKER)
+  #if (defined(LORA_ENABLED) && LORA_ENABLED) && (defined(IR_LED_ENABLED) && IR_LED_ENABLED) && (defined(PAN_SERVO_PIN))
+    #error "AI-Thinker ESP32-CAM cannot support Camera + LoRa + IR LED + Servo simultaneously. Upgrade to ESP32-S3-CAM or reduce features."
+  #endif
+#endif
+
+// ===========================
+// BOARD CAPABILITY DOCUMENTATION
+// ===========================
+/*
+ * AI-THINKER ESP32-CAM LIMITATIONS:
+ * - Limited GPIO pins available (most reserved for camera/SD)
+ * - Cannot run Camera + LoRa + full sensor suite simultaneously
+ * - Suitable for: Basic camera + motion + environmental sensors
+ * 
+ * ESP32-S3-CAM RECOMMENDED FOR:
+ * - Full feature set (Camera + LoRa + Servos + Multiple sensors)
+ * - More RAM and processing power for AI/ML
+ * - Additional GPIO pins for peripheral expansion
+ * - USB OTG and other advanced features
+ * 
+ * For production deployments requiring all features, consider ESP32-S3-CAM.
+ */
 
 // ===========================
 // CAMERA CONFIGURATION

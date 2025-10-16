@@ -28,6 +28,8 @@ Welcome to the ESP32WildlifeCAM documentation hub! This page provides organized 
 ### 🛠️ Setup & Configuration
 - **[Hardware Setup](Hardware_Setup.md)** - Physical assembly and wiring
 - **[Board Compatibility](board_compatibility.md)** - ESP32 variant support
+- **⭐ [Hardware Feature Guidelines](HARDWARE_FEATURE_GUIDELINES.md)** - **NEW!** Pin conflict prevention & implementation guide
+- **⭐ [Pin Assignment Quick Reference](PIN_ASSIGNMENT_QUICK_REFERENCE.md)** - **NEW!** Fast GPIO lookup for developers
 - **[Deployment Checklist](DEPLOYMENT_CHECKLIST.md)** - Pre-deployment validation
 - **[Workbench Setup](WORKBENCH_SETUP.md)** - Development environment
 
