@@ -53,8 +53,64 @@ CameraResult CameraModule::deinitialize() {
 // Capture a single image
 CameraResult CameraModule::captureImage(ImageMetadata* metadata) {
     Logger::info("CameraModule::captureImage() - Called");
-    // TODO: Implement image capture logic
-    return CAMERA_ERROR_CAPTURE_FAILED;
+    
+    // Check if camera is initialized
+    if (!m_initialized) {
+        Logger::error("CameraModule::captureImage() - Camera not initialized (ERR_NOT_INITIALIZED)");
+        setError("Camera not initialized");
+        return CAMERA_ERROR_NOT_INITIALIZED;
+    }
+    
+    // Record start time for statistics
+    unsigned long start_time = millis();
+    
+    // Acquire frame buffer from ESP32 camera driver
+    camera_fb_t* fb = esp_camera_fb_get();
+    
+    // Validate frame buffer is not null
+    if (fb == nullptr) {
+        Logger::error("CameraModule::captureImage() - Failed to acquire frame buffer (ERR_NO_FRAME)");
+        setError("Failed to acquire frame buffer");
+        
+        // Update statistics for failed capture
+        m_stats.total_captures++;
+        m_stats.failed_captures++;
+        
+        return CAMERA_ERROR_NO_FRAME;
+    }
+    
+    // Calculate capture time
+    uint32_t capture_time_ms = millis() - start_time;
+    
+    // Store frame buffer reference for later use
+    m_last_frame = fb;
+    
+    // Populate metadata if provided
+    if (metadata != nullptr) {
+        metadata->timestamp = millis();
+        metadata->image_size = fb->len;
+        metadata->width = fb->width;
+        metadata->height = fb->height;
+        metadata->frame_size = m_config.frame_size;
+        metadata->quality = m_config.jpeg_quality;
+        metadata->flash_used = m_config.flash_enabled;
+        metadata->battery_voltage = 0.0f; // Would be populated by power manager if available
+        metadata->temperature = 0; // Would be populated by environmental sensor if available
+        metadata->motion_trigger_level = 0; // Would be populated by motion detector if available
+    }
+    
+    // Update statistics for successful capture
+    m_stats.total_captures++;
+    m_stats.successful_captures++;
+    m_stats.last_capture_size = fb->len;
+    m_stats.last_capture_timestamp = millis();
+    m_stats.total_data_captured += fb->len;
+    updateStatistics(capture_time_ms, fb->len, true);
+    
+    Logger::info("CameraModule::captureImage() - Image captured successfully (size: %u bytes, time: %u ms)", 
+                 fb->len, capture_time_ms);
+    
+    return CAMERA_OK;
 }
 
 // Capture burst of images
@@ -74,7 +130,21 @@ camera_fb_t* CameraModule::getLastFrameBuffer() {
 // Return frame buffer to system
 void CameraModule::returnFrameBuffer(camera_fb_t* fb) {
     Logger::info("CameraModule::returnFrameBuffer() - Called");
-    // TODO: Implement frame buffer return logic
+    
+    if (fb == nullptr) {
+        Logger::warning("CameraModule::returnFrameBuffer() - Attempted to return null frame buffer");
+        return;
+    }
+    
+    // Return frame buffer to ESP32 camera driver
+    esp_camera_fb_return(fb);
+    
+    // Clear last frame reference if it matches
+    if (m_last_frame == fb) {
+        m_last_frame = nullptr;
+    }
+    
+    Logger::info("CameraModule::returnFrameBuffer() - Frame buffer returned successfully");
 }
 
 // Update camera configuration
@@ -168,7 +238,21 @@ CameraResult CameraModule::applyWildlifeOptimizations() {
 // Private: Update capture statistics
 void CameraModule::updateStatistics(uint32_t capture_time_ms, uint32_t image_size, bool success) {
     Logger::info("CameraModule::updateStatistics() - Called");
-    // TODO: Implement statistics update logic
+    
+    // Update average capture time using running average
+    if (m_stats.successful_captures > 0) {
+        // Calculate new average: (old_avg * (n-1) + new_value) / n
+        m_stats.avg_capture_time_ms = 
+            ((m_stats.avg_capture_time_ms * (m_stats.successful_captures - 1)) + capture_time_ms) 
+            / m_stats.successful_captures;
+    } else {
+        m_stats.avg_capture_time_ms = capture_time_ms;
+    }
+    
+    // Update maximum capture time if necessary
+    if (capture_time_ms > m_stats.max_capture_time_ms) {
+        m_stats.max_capture_time_ms = capture_time_ms;
+    }
 }
 
 // Private: Set error message
