@@ -10,6 +10,7 @@
 #include "../debug_utils.h"
 #include "../config.h"
 #include "../sensors/advanced_environmental_sensors.h"
+#include "../sensors/gps_manager.h"
 #include "../../src/data/storage_manager.h"
 #include <FS.h>
 #include <LittleFS.h>
@@ -18,6 +19,9 @@
 // External function from environmental integration
 extern AdvancedEnvironmentalData getLatestEnvironmentalData();
 extern bool areEnvironmentalSensorsHealthy();
+
+// External GPS manager instance (defined in main.cpp or similar)
+extern GPSManager* gpsManager;
 
 // ===========================
 // CONSTRUCTOR/DESTRUCTOR
@@ -698,16 +702,34 @@ bool WildlifeTelemetry::collectLocationData() {
     LocationData location;
     location.timestamp = getCurrentTimestamp();
     
-    // TODO: Read from actual GPS module
-    // For now, use placeholder values
-    location.latitude = 0.0;
-    location.longitude = 0.0;
-    location.altitude = 0.0;
-    location.accuracy = 0.0;
-    location.satellites = 0;
-    location.fixValid = false;
-    location.speed = 0.0;
-    location.heading = 0.0;
+    // Read from GPSManager if available
+    if (gpsManager != nullptr && gpsManager->isInitialized()) {
+        // Update GPS data
+        gpsManager->update();
+        
+        // Get GPS data
+        location.latitude = gpsManager->getLatitude();
+        location.longitude = gpsManager->getLongitude();
+        location.altitude = gpsManager->getAltitude();
+        location.satellites = gpsManager->getSatelliteCount();
+        location.fixValid = gpsManager->hasFix();
+        location.speed = gpsManager->getSpeedKmph();
+        location.heading = gpsManager->getCourse();
+        
+        // Calculate accuracy from HDOP (approximate meters)
+        float hdop = gpsManager->getHDOP();
+        location.accuracy = hdop * 5.0; // Rough approximation: HDOP * 5 meters
+    } else {
+        // Use placeholder values if GPS not available
+        location.latitude = 0.0;
+        location.longitude = 0.0;
+        location.altitude = 0.0;
+        location.accuracy = 0.0;
+        location.satellites = 0;
+        location.fixValid = false;
+        location.speed = 0.0;
+        location.heading = 0.0;
+    }
     
     return recordLocationData(location);
 }
