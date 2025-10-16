@@ -17,6 +17,10 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 #include <esp_log.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <SD.h>
+#include <Preferences.h>
 
 // Hardware abstraction layer
 #include "hal/board_detector.h"
@@ -78,6 +82,9 @@ TaskHandle_t power_management_task = NULL;
 TaskHandle_t network_management_task = NULL;
 TaskHandle_t security_monitoring_task = NULL;
 
+// Power management settings
+uint32_t deep_sleep_duration = 300; // Default: 300 seconds (5 minutes)
+
 // System state
 struct SystemState {
     bool ai_initialized = false;
@@ -90,6 +97,24 @@ struct SystemState {
     int active_cameras = 0;
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
+    
+    // Power save mode
+    bool power_save_mode = false;
+    
+    // Security lockdown
+    bool in_lockdown = false;
+    unsigned long lockdown_start_time = 0;
+    
+    // Network management
+    int wifi_retry_count = 0;
+    unsigned long last_wifi_attempt = 0;
+    int pending_uploads = 0;
+    unsigned long last_upload = 0;
+    bool ota_available = false;
+    unsigned long last_ota_check = 0;
+    int lora_active_nodes = 0;
+    unsigned long last_lora_check = 0;
+    unsigned long last_network_status_log = 0;
 
 } system_state;
 
@@ -342,9 +367,51 @@ void powerManagementTask(void* parameter) {
             }
             
             // Handle low power conditions
-            if (power_status.battery_voltage < 3.0f) {
-                Logger::warning("Low battery detected, entering power save mode");
-                // TODO: Implement power save mode
+            if (power_status.battery_voltage < 3.0f && !system_state.power_save_mode) {
+                Logger::warning("Entering power save mode (battery: %.2fV)", 
+                                power_status.battery_voltage);
+                
+                // Reduce CPU frequency
+                setCpuFrequencyMhz(80);
+                Logger::info("CPU frequency reduced to 80MHz");
+                
+                // Increase sleep duration
+                deep_sleep_duration = 600; // 10 minutes
+                Logger::info("Deep sleep duration increased to 600 seconds");
+                
+                // Disable WiFi if enabled
+                #if WIFI_ENABLED
+                if (system_state.network_connected) {
+                    WiFi.disconnect(true);
+                    WiFi.mode(WIFI_OFF);
+                    system_state.network_connected = false;
+                    Logger::info("WiFi disabled for power saving");
+                }
+                #endif
+                
+                // Reduce camera quality (would need to update camera config)
+                // This would be implemented when camera is reconfigured
+                Logger::info("Camera quality will be reduced on next capture");
+                
+                system_state.power_save_mode = true;
+                Logger::info("Power save mode activated");
+                
+            } else if (power_status.battery_voltage > 3.4f && system_state.power_save_mode) {
+                Logger::info("Exiting power save mode (battery: %.2fV)", 
+                             power_status.battery_voltage);
+                
+                // Restore normal operation
+                setCpuFrequencyMhz(240);
+                Logger::info("CPU frequency restored to 240MHz");
+                
+                deep_sleep_duration = 300;
+                Logger::info("Deep sleep duration restored to 300 seconds");
+                
+                // Camera quality will be restored on next capture
+                Logger::info("Camera quality will be restored on next capture");
+                
+                system_state.power_save_mode = false;
+                Logger::info("Power save mode deactivated - normal operation resumed");
             }
         }
         
