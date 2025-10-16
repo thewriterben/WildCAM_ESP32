@@ -210,7 +210,7 @@ private:
     static const unsigned long HEARTBEAT_INTERVAL = 30000;      // 30 seconds
     static const unsigned long TASK_CHECK_INTERVAL = 10000;    // 10 seconds
     static const unsigned long ELECTION_TIMEOUT = 60000;       // 1 minute
-    static const unsigned long NODE_FAILURE_TIMEOUT = 60000;   // 60 seconds - node failure detection
+
 };
 
 #endif // BOARD_COORDINATOR_H
