@@ -467,12 +467,19 @@ bool PowerManager::enterDeepSleep(uint32_t sleepTimeMs) {
     // Intelligent deep sleep based on current power state
     uint32_t actualSleepTime = sleepTimeMs;
     
-    // Adjust sleep duration based on power state
+    // Adjust sleep duration based on power state and battery voltage
     if (m_targetPowerState == STATE_EMERGENCY_SHUTDOWN) {
         // Critical battery - sleep indefinitely until external wakeup
         actualSleepTime = 0;
         Logger::error("Entering emergency deep sleep - critical battery %.2fV", 
                      m_currentMetrics.batteryVoltage);
+    } else if (m_currentMetrics.batteryVoltage > 0.0f && m_currentMetrics.batteryVoltage < 3.0f) {
+        // Power save mode for battery < 3.0V - increase sleep to 600s (600000ms)
+        if (actualSleepTime > 0 && actualSleepTime < 600000) {
+            actualSleepTime = 600000; // 600 seconds = 10 minutes
+            Logger::warning("Power save mode: extending deep sleep to 600s - battery %.2fV", 
+                          m_currentMetrics.batteryVoltage);
+        }
     } else if (m_currentMetrics.powerStatus == POWER_LOW_BATTERY) {
         // Low battery - extend sleep time to conserve power
         if (actualSleepTime > 0 && actualSleepTime < 3600000) { // < 1 hour

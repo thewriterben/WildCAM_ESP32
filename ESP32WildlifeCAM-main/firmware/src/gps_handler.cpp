@@ -7,42 +7,57 @@
  */
 
 #include "gps_handler.h"
+#include "config.h"
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <math.h>
 
-// Pin definitions for GPS module
-#define GPS_RX_PIN 32
-#define GPS_TX_PIN 33
-#define GPS_EN_PIN 25
+// GPS pin definitions are now configured in config.h
+// GPS_RX_PIN, GPS_TX_PIN, GPS_EN_PIN are board-specific
 
 GPSHandler::GPSHandler() :
+#if GPS_ENABLED
     gpsSerial(GPS_RX_PIN, GPS_TX_PIN),
+#else
+    gpsSerial(-1, -1),  // Dummy initialization when GPS disabled
+#endif
     isInitialized(false),
     hasValidFix(false),
     currentLocation{0, 0, 0},
     lastFixTime(0),
-    fixTimeout(60000) { // 60 second timeout
+    fixTimeout(GPS_FIX_TIMEOUT) {  // Use timeout from config.h
 }
 
 bool GPSHandler::initialize() {
+#if !GPS_ENABLED
+    Serial.println("GPS module is disabled in config.h");
+    return false;
+#else
     // Initialize GPS serial communication
-    gpsSerial.begin(9600);
+    gpsSerial.begin(GPS_BAUD_RATE);
     
-    // Enable GPS module
+    // Enable GPS module if enable pin is defined
+    #ifdef GPS_EN_PIN
     pinMode(GPS_EN_PIN, OUTPUT);
     digitalWrite(GPS_EN_PIN, HIGH);
     delay(1000);
+    #endif
     
     // Configure GPS module
     if (configureGPS()) {
         isInitialized = true;
         Serial.println("GPS handler initialized successfully");
+        Serial.printf("GPS Pins - RX: %d, TX: %d", GPS_RX_PIN, GPS_TX_PIN);
+        #ifdef GPS_EN_PIN
+        Serial.printf(", EN: %d", GPS_EN_PIN);
+        #endif
+        Serial.println();
         return true;
     }
     
     Serial.println("Failed to initialize GPS module");
     return false;
+#endif
 }
 
 bool GPSHandler::configureGPS() {
@@ -307,16 +322,20 @@ void GPSHandler::enterSleepMode() {
         gpsSerial.println("$PMTK161,0*28");
         delay(100);
         
-        // Disable GPS power
+        // Disable GPS power if enable pin is defined
+        #ifdef GPS_EN_PIN
         digitalWrite(GPS_EN_PIN, LOW);
+        #endif
     }
 }
 
 void GPSHandler::exitSleepMode() {
     if (isInitialized) {
-        // Enable GPS power
+        // Enable GPS power if enable pin is defined
+        #ifdef GPS_EN_PIN
         digitalWrite(GPS_EN_PIN, HIGH);
         delay(1000);
+        #endif
         
         // Wake up GPS module
         gpsSerial.println("$PMTK010,001*2E");

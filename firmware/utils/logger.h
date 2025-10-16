@@ -47,6 +47,16 @@ public:
         Serial.println(buffer);
         va_end(args);
     }
+    
+    static void critical(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        Serial.print("[CRITICAL] ");
+        char buffer[256];
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        Serial.println(buffer);
+        va_end(args);
+    }
 };
 
 #endif // LOGGER_H

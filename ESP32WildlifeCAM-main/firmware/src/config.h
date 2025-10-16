@@ -207,6 +207,79 @@
 #define RTC_TYPE_PCF8563 false           // Alternative RTC option
 
 // ===========================
+// GPS CONFIGURATION
+// ===========================
+
+// GPS Module Configuration
+#define GPS_ENABLED true                 // Enable GPS module for location tracking
+#define GPS_BAUD_RATE 9600              // GPS module baud rate (typically 9600 for NMEA)
+#define GPS_UPDATE_INTERVAL 1000        // ms - GPS update interval
+#define GPS_FIX_TIMEOUT 60000           // ms - timeout waiting for GPS fix (60 seconds)
+#define GPS_COLD_START_TIMEOUT 120000   // ms - cold start timeout for GPS module
+
+// GPS Pin Configuration - CONDITIONAL based on board and feature conflicts
+// Note: GPS pin availability varies by board and enabled features
+#if defined(CAMERA_MODEL_AI_THINKER)
+    // AI-Thinker ESP32-CAM has limited GPIO availability
+    // WARNING: Some pins conflict with camera functionality
+    
+    #if GPS_ENABLED
+        // GPS Serial Communication Pins
+        // GPS_RX_PIN: ESP32 receives data from GPS module TX
+        // GPS_TX_PIN: ESP32 transmits data to GPS module RX
+        
+        // Default GPS pins for AI-Thinker (with conflict notes):
+        #define GPS_RX_PIN 33           // GPIO 33 - Available, no camera conflict
+        #define GPS_TX_PIN 13           // GPIO 13 - Available (strapping pin, use caution)
+        #define GPS_EN_PIN 12           // GPIO 12 - GPS enable/power pin (conflicts with SD_CS when SD enabled)
+        
+        // Alternative pin assignments if SD card is disabled:
+        // #define GPS_EN_PIN 14        // Use SD_CLK_PIN when SD card disabled
+        // #define GPS_TX_PIN 2         // Use SD_MISO_PIN when SD card disabled
+        
+        // PIN CONFLICT WARNINGS:
+        // - Do NOT use GPIO 32 (PWDN_GPIO_NUM - camera power down)
+        // - Do NOT use GPIO 25 (VSYNC_GPIO_NUM - camera vertical sync)
+        // - GPIO 12 conflicts with SD_CS_PIN when SD card is enabled
+        // - GPIO 13 is a strapping pin (affects boot mode if held low)
+    #endif
+    
+#elif defined(CAMERA_MODEL_LILYGO_T_CAMERA_PLUS_S3)
+    // LilyGO T-Camera Plus S3 has more available GPIO pins
+    #if GPS_ENABLED
+        #define GPS_RX_PIN 16           // GPIO 16 - Available on ESP32-S3
+        #define GPS_TX_PIN 15           // GPIO 15 - Available on ESP32-S3
+        #define GPS_EN_PIN 10           // GPIO 10 - GPS enable/power pin
+    #endif
+    
+#else
+    // Default GPS pin configuration for other boards
+    #if GPS_ENABLED
+        #define GPS_RX_PIN 16           // Default RX pin
+        #define GPS_TX_PIN 17           // Default TX pin
+        #define GPS_EN_PIN 18           // Default enable pin
+    #endif
+#endif
+
+// GPS Features Configuration
+#define GPS_LOCATION_LOGGING true       // Log GPS coordinates with images
+#define GPS_MOVEMENT_DETECTION true     // Detect camera movement/theft
+#define GPS_MOVEMENT_THRESHOLD 5.0      // meters - movement detection threshold
+#define GPS_GEOFENCING_ENABLED false    // Enable geofencing alerts
+#define GPS_TIME_SYNC_ENABLED true      // Use GPS for accurate time synchronization
+
+// GPS Power Management
+#define GPS_POWER_SAVE_ENABLED true     // Enable GPS power saving mode
+#define GPS_STANDBY_AFTER_FIX true      // Put GPS in standby after obtaining fix
+#define GPS_PERIODIC_UPDATES true       // Wake GPS periodically for position updates
+#define GPS_UPDATE_PERIOD 300000        // ms - period for GPS updates when in power save (5 minutes)
+
+// GPS Data Storage
+#define GPS_EMBED_IN_EXIF true          // Embed GPS coordinates in JPEG EXIF data
+#define GPS_LOG_TRACK true              // Log GPS track for camera movement history
+#define GPS_TRACK_LOG_INTERVAL 60000    // ms - interval for track logging
+
+// ===========================
 // ENVIRONMENTAL SENSORS CONFIGURATION
 // ===========================
 
@@ -241,6 +314,42 @@
 // Satellite Communication - DISABLED due to multiple pin conflicts
 #define SATELLITE_ENABLED false          // Disabled due to extensive pin conflicts
 // Satellite communication would require multiple pins that conflict with camera and LoRa
+
+// ===========================
+// GPS CONFIGURATION
+// ===========================
+
+// GPS Module Enable/Disable
+// GPS provides precise location data for wildlife camera images and enables
+// geolocation features for captured images and events
+#define GPS_ENABLED true                 // Enable GPS module for location tracking
+
+// GPS Serial Communication Pins
+// These pins are used for UART communication with the GPS module
+// Note: Pins 32 and 33 are available on AI-Thinker ESP32-CAM and don't conflict with camera
+#define GPS_RX_PIN 32                    // GPS module TX -> ESP32 RX (GPIO 32)
+#define GPS_TX_PIN 33                    // GPS module RX -> ESP32 TX (GPIO 33)
+
+// GPS Module Configuration
+#define GPS_BAUD_RATE 9600               // GPS serial baud rate (standard for most GPS modules)
+#define GPS_UPDATE_RATE 1000             // ms - GPS position update rate
+#define GPS_FIX_TIMEOUT 60000            // ms - timeout waiting for GPS fix (60 seconds)
+#define GPS_ENABLE_PIN 25                // Optional: GPS module enable/power control pin (GPIO 25)
+#define GPS_POWER_CONTROL_ENABLED false  // Enable power control for GPS module
+
+// GPS Feature Configuration
+#define GPS_USE_TINYGPS_PLUS true        // Use TinyGPS++ library for NMEA parsing
+#define GPS_SAVE_LAST_POSITION true      // Save and return last known position on fix loss
+#define GPS_ALTITUDE_ENABLED true        // Include altitude in GPS data
+#define GPS_SATELLITE_COUNT_ENABLED true // Track number of satellites in view
+
+// GPS Power Management
+#define GPS_AUTO_SLEEP_ENABLED false     // Automatically sleep GPS when not in use
+#define GPS_SLEEP_TIMEOUT 300000         // ms - GPS sleep timeout (5 minutes)
+
+// GPS Data Format
+#define GPS_DECIMAL_PLACES 6             // Number of decimal places for lat/lon (6 = ~0.1m precision)
+#define GPS_COORDINATE_FORMAT_DMS false  // false = decimal degrees, true = degrees/minutes/seconds
 
 // ===========================
 // TRIGGER AND TIMING CONFIGURATION

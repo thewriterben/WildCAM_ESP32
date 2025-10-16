@@ -50,6 +50,8 @@ struct BoardCapabilities {
     BoardType boardType;
     SensorType sensorType;
     uint32_t maxResolution;
+    bool hasCamera;           // Camera sensor available
+    bool hasLoRa;             // LoRa radio available
     bool hasAI;
     bool hasPSRAM;
     bool hasSD;
