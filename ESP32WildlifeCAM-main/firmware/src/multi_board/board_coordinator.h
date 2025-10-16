@@ -192,6 +192,10 @@ private:
     BoardRole determineOptimalRole(const BoardCapabilities& caps) const;
     int selectBestNodeForTask(const String& taskType) const;
     
+    // Load balancing and task reassignment
+    void reassignTasksFromFailedNode(int failedNodeId);
+    void rebalanceTaskLoad();
+    
     void broadcastHeartbeat();
     void sendNetworkTopology();
     

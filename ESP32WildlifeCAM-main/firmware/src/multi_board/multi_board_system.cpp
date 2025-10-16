@@ -415,9 +415,101 @@ void MultiboardSystem::processSystemMessages() {
 }
 
 void MultiboardSystem::checkRoleAssignment() {
-    // TODO: Implement intelligent role assignment based on discovery results
-    // For now, default to becoming a node
-    becomeNode();
+    // Implement intelligent role assignment based on discovery results and capabilities
+    Serial.println("=== Intelligent Role Assignment ===");
+    
+    // Get current node capabilities
+    BoardCapabilities caps = MessageProtocol::getCurrentCapabilities();
+    
+    // Log detected capabilities for audit
+    Serial.printf("Node %d capabilities:\n", config_.nodeId);
+    Serial.printf("  - Camera: %s\n", caps.hasCamera ? "YES" : "NO");
+    Serial.printf("  - LoRa: %s\n", caps.hasLoRa ? "YES" : "NO");
+    Serial.printf("  - AI: %s\n", caps.hasAI ? "YES" : "NO");
+    Serial.printf("  - Battery: %d%%\n", caps.batteryLevel);
+    Serial.printf("  - Resolution: %d\n", caps.maxResolution);
+    
+    // Check if there are any discovered nodes
+    std::vector<NetworkNode> discoveredNodes;
+    if (coordinator_) {
+        discoveredNodes = coordinator_->getManagedNodes();
+    }
+    
+    // Calculate coordinator score for this node
+    float ourScore = MessageProtocol::calculateCoordinatorScore(caps);
+    
+    // Determine if we should be coordinator
+    bool shouldBeCoordinator = true;
+    
+    if (!discoveredNodes.empty()) {
+        // Check if another node has a better coordinator score
+        for (const auto& node : discoveredNodes) {
+            if (node.coordinatorScore > ourScore) {
+                shouldBeCoordinator = false;
+                Serial.printf("Node %d has higher coordinator score (%.1f > %.1f)\n",
+                             node.nodeId, node.coordinatorScore, ourScore);
+                break;
+            }
+        }
+    }
+    
+    // If automatic role selection is enabled, choose role intelligently
+    if (config_.enableAutomaticRoleSelection) {
+        if (shouldBeCoordinator && !coordinator_) {
+            Serial.printf("Becoming coordinator (score: %.1f)\n", ourScore);
+            becomeCoordinator();
+        } else if (!shouldBeCoordinator || discoveredNodes.empty()) {
+            // Determine optimal role based on capabilities
+            BoardRole optimalRole = ROLE_NODE; // Default
+            
+            // Nodes with camera become capture nodes (highest priority)
+            if (caps.hasCamera) {
+                if (caps.hasAI && caps.hasPSRAM) {
+                    optimalRole = ROLE_AI_PROCESSOR;
+                    Serial.println("Role: AI_PROCESSOR - Camera with AI capabilities");
+                } else if (caps.hasSD && caps.availableStorage > 1024 * 1024) {
+                    optimalRole = ROLE_HUB;
+                    Serial.println("Role: HUB - Camera with storage");
+                } else {
+                    optimalRole = ROLE_NODE;
+                    Serial.println("Role: NODE - Camera for capture");
+                }
+            }
+            // Nodes with LoRa become relay nodes
+            else if (caps.hasLoRa) {
+                optimalRole = ROLE_RELAY;
+                Serial.println("Role: RELAY - LoRa for network extension");
+            }
+            // Low battery or low power - stealth mode
+            else if (caps.batteryLevel < 30 || caps.powerProfile <= 1) {
+                optimalRole = ROLE_STEALTH;
+                Serial.println("Role: STEALTH - Low power/battery");
+            }
+            // Edge sensors without camera or LoRa
+            else {
+                optimalRole = ROLE_EDGE_SENSOR;
+                Serial.println("Role: EDGE_SENSOR - Basic sensor");
+            }
+            
+            // Update preferred role in config
+            config_.preferredRole = optimalRole;
+            
+            // Become node with determined role
+            becomeNode();
+        }
+    } else {
+        // Use configured preferred role
+        if (config_.preferredRole == ROLE_COORDINATOR) {
+            Serial.println("Using configured role: COORDINATOR");
+            becomeCoordinator();
+        } else {
+            Serial.printf("Using configured role: %s\n", 
+                         MessageProtocol::roleToString(config_.preferredRole));
+            becomeNode();
+        }
+    }
+    
+    Serial.println("=== Role Assignment Complete ===");
 }
 
 bool MultiboardSystem::becomeCoordinator() {
