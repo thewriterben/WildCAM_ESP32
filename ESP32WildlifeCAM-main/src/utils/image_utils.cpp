@@ -207,20 +207,20 @@ PreprocessResult preprocessFrameForModel(camera_fb_t* frame,
     uint8_t* scaledRgb = (uint8_t*)heap_caps_malloc(scaledSize, MALLOC_CAP_8BIT);
     
     if (scaledRgb == nullptr) {
-        free(rgbData);
+        freeDecodedBuffer(rgbData);
         result.errorMessage = "Failed to allocate scaled buffer";
         return result;
     }
     
     if (!scaleImage(rgbData, decodedWidth, decodedHeight, 
                    scaledRgb, targetWidth, targetHeight)) {
-        free(rgbData);
+        freeDecodedBuffer(rgbData);
         free(scaledRgb);
         result.errorMessage = "Image scaling failed";
         return result;
     }
     
-    free(rgbData);  // No longer need decoded image
+    freeDecodedBuffer(rgbData);  // No longer need decoded image
     
     // Step 3: Normalize to tensor
     result.tensorSize = targetWidth * targetHeight * 3;
