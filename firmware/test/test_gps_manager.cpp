@@ -22,8 +22,8 @@ void tearDown(void) {
 void test_initialize(void) {
     // Test with typical GPS pins and baud rate
     bool result = gps.initialize(16, 17, 9600);
-    // Stub implementation should return a value
-    TEST_ASSERT_TRUE(result == true || result == false);
+    // Stub returns false
+    TEST_ASSERT_FALSE(result);
 }
 
 /**
@@ -31,8 +31,8 @@ void test_initialize(void) {
  */
 void test_update(void) {
     bool result = gps.update();
-    // Stub implementation should return a value
-    TEST_ASSERT_TRUE(result == true || result == false);
+    // Stub returns false
+    TEST_ASSERT_FALSE(result);
 }
 
 /**
@@ -40,8 +40,8 @@ void test_update(void) {
  */
 void test_getLatitude(void) {
     float latitude = gps.getLatitude();
-    // Stub should return a valid latitude range (-90 to 90)
-    TEST_ASSERT_TRUE(latitude >= -90.0f && latitude <= 90.0f);
+    // Stub returns 0.0f
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, latitude);
 }
 
 /**
@@ -49,8 +49,8 @@ void test_getLatitude(void) {
  */
 void test_getLongitude(void) {
     float longitude = gps.getLongitude();
-    // Stub should return a valid longitude range (-180 to 180)
-    TEST_ASSERT_TRUE(longitude >= -180.0f && longitude <= 180.0f);
+    // Stub returns 0.0f
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, longitude);
 }
 
 /**
@@ -58,8 +58,8 @@ void test_getLongitude(void) {
  */
 void test_getAltitude(void) {
     float altitude = gps.getAltitude();
-    // Stub should return a valid altitude (can be positive or negative)
-    TEST_ASSERT_TRUE(altitude >= -500.0f && altitude <= 10000.0f);
+    // Stub returns 0.0f (sea level)
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, altitude);
 }
 
 /**
@@ -67,8 +67,8 @@ void test_getAltitude(void) {
  */
 void test_hasFix(void) {
     bool fix = gps.hasFix();
-    // Stub implementation should return a boolean value
-    TEST_ASSERT_TRUE(fix == true || fix == false);
+    // Stub returns false
+    TEST_ASSERT_FALSE(fix);
 }
 
 /**
@@ -76,8 +76,8 @@ void test_hasFix(void) {
  */
 void test_getSatelliteCount(void) {
     int count = gps.getSatelliteCount();
-    // Stub should return a valid satellite count (0-12 typical)
-    TEST_ASSERT_TRUE(count >= 0 && count <= 20);
+    // Stub returns 0
+    TEST_ASSERT_EQUAL_INT(0, count);
 }
 
 void setup() {
