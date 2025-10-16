@@ -222,6 +222,9 @@ private:
     void handleAPIAnalyticsActivity(AsyncWebServerRequest* request);
     void handleAPIAnalyticsPerformance(AsyncWebServerRequest* request);
     
+    // CSV Export endpoint
+    void handleAPIExportDetectionsCSV(AsyncWebServerRequest* request);
+    
     // Helper methods
     String generateSystemStatusJSON();
     String generateImageListJSON(int page = 0, int pageSize = 20);
@@ -238,6 +241,14 @@ private:
     String generateSpeciesAnalyticsJSON();
     String generateActivityAnalyticsJSON(const String& timeRange = "week");
     String generatePerformanceAnalyticsJSON(const String& timeRange = "week");
+    
+    // CSV generation helpers
+    String escapeCSVField(const String& field);
+    String generateCSVRow(const String& timestamp, const String& species, 
+                         const String& confidence, const String& imagePath,
+                         const String& gpsLat, const String& gpsLon, 
+                         const String& batteryLevel);
+    
     bool authenticateRequest(AsyncWebServerRequest* request);
     void logMessage(const String& message);
     void updatePowerMetrics();
