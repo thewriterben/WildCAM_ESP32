@@ -41,4 +41,26 @@
 // Network Status Logging
 #define NETWORK_STATUS_LOG_INTERVAL 300000 // Log network status every 5 minutes (ms)
 
+// ===========================
+// GPS CONFIGURATION
+// ===========================
+
+// GPS Module Enable/Disable
+#define GPS_ENABLED true                  // Enable GPS module for location tracking
+
+// GPS Serial Communication Pins
+#define GPS_RX_PIN 32                     // GPS module TX -> ESP32 RX (GPIO 32)
+#define GPS_TX_PIN 33                     // GPS module RX -> ESP32 TX (GPIO 33)
+
+// GPS Module Configuration
+#define GPS_BAUD_RATE 9600                // GPS serial baud rate (most modules use 9600)
+#define GPS_UPDATE_RATE 1000              // ms - GPS position update rate
+#define GPS_FIX_TIMEOUT 60000             // ms - timeout waiting for GPS fix (60 seconds)
+
+// GPS Feature Configuration
+#define GPS_USE_TINYGPS_PLUS true         // Use TinyGPS++ library
+#define GPS_SAVE_LAST_POSITION true       // Save last known position on fix loss
+#define GPS_ALTITUDE_ENABLED true         // Include altitude in GPS data
+#define GPS_SATELLITE_COUNT_ENABLED true  // Track satellites in view
+
 #endif // CONFIG_H
