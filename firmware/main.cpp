@@ -17,6 +17,11 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 #include <esp_log.h>
+#include <Preferences.h>
+#include <SD.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include "esp_camera.h"
 
 // Hardware abstraction layer
 #include "hal/board_detector.h"
@@ -90,6 +95,21 @@ struct SystemState {
     int active_cameras = 0;
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
+    
+    // Lockdown mode state
+    bool in_lockdown = false;
+    unsigned long lockdown_start_time = 0;
+    
+    // Network management state
+    unsigned long last_wifi_attempt = 0;
+    unsigned long last_upload = 0;
+    unsigned long last_ota_check = 0;
+    unsigned long last_lora_check = 0;
+    unsigned long last_network_status_log = 0;
+    int wifi_retry_count = 0;
+    int pending_uploads = 0;
+    int lora_active_nodes = 0;
+    bool ota_available = false;
 
 } system_state;
 
