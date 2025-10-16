@@ -20,6 +20,67 @@ static bool g_initialized = false;
 static PowerManager g_powerManager;
 
 /**
+ * Detect camera capabilities based on sensor type and board type
+ */
+bool detectCameraCapabilities() {
+    // Check if a sensor type is configured
+    if (g_sensorType != SENSOR_UNKNOWN) {
+        Serial.printf("Camera detected: Sensor type %d configured\n", g_sensorType);
+        return true;
+    }
+    
+    // Check for camera-capable board types
+    BoardType board_type = BoardDetector::detectBoardType();
+    switch (board_type) {
+        case BOARD_AI_THINKER_ESP32_CAM:
+        case BOARD_ESP32_S3_CAM:
+        case BOARD_ESP32_S3_EYE:
+        case BOARD_ESP_EYE:
+        case BOARD_M5STACK_PSRAM:
+        case BOARD_M5STACK_WIDE:
+        case BOARD_M5STACK_ESP32CAM:
+        case BOARD_M5STACK_UNITCAM:
+        case BOARD_WROVER_KIT:
+        case BOARD_ESP32_CAM_BOARD:
+        case BOARD_XIAO_ESP32S3_SENSE:
+            Serial.printf("Camera detected: Camera-capable board type %d\n", board_type);
+            return true;
+        default:
+            break;
+    }
+    
+    // Check if camera is initialized by attempting to access camera configuration
+    #ifdef CAMERA_MODEL_AI_THINKER
+    Serial.println("Camera detected: AI-Thinker camera model defined");
+    return true;
+    #endif
+    
+    Serial.println("No camera capabilities detected");
+    return false;
+}
+
+/**
+ * Detect LoRa capabilities based on hardware configuration
+ */
+bool detectLoRaCapabilities() {
+    // Check if LoRa mesh is initialized and operational
+    MeshNetworkStatus loraStatus = LoraMesh::getNetworkStatus();
+    if (loraStatus.initialized) {
+        Serial.println("LoRa detected: LoRa mesh network initialized");
+        return true;
+    }
+    
+    // Attempt to initialize LoRa to detect hardware
+    if (LoraMesh::init()) {
+        Serial.println("LoRa detected: Successfully initialized LoRa hardware");
+        return true;
+    }
+    
+    Serial.println("No LoRa capabilities detected");
+    return false;
+}
+
+/**
  * Detect AI capabilities based on hardware features
  */
 bool detectAICapabilities() {
@@ -118,6 +179,8 @@ String createDiscoveryMessage(const BoardCapabilities& capabilities, BoardRole p
     caps["board_type"] = capabilities.boardType;
     caps["sensor_type"] = capabilities.sensorType;
     caps["max_resolution"] = capabilities.maxResolution;
+    caps["has_camera"] = capabilities.hasCamera;
+    caps["has_lora"] = capabilities.hasLoRa;
     caps["has_ai"] = capabilities.hasAI;
     caps["has_psram"] = capabilities.hasPSRAM;
     caps["has_sd"] = capabilities.hasSD;
@@ -262,6 +325,8 @@ bool parseDiscoveryMessage(const JsonObject& data, DiscoveryMessage& discovery) 
     discovery.capabilities.boardType = static_cast<BoardType>(caps["board_type"].as<int>());
     discovery.capabilities.sensorType = static_cast<SensorType>(caps["sensor_type"].as<int>());
     discovery.capabilities.maxResolution = caps["max_resolution"];
+    discovery.capabilities.hasCamera = caps["has_camera"] | false;
+    discovery.capabilities.hasLoRa = caps["has_lora"] | false;
     discovery.capabilities.hasAI = caps["has_ai"];
     discovery.capabilities.hasPSRAM = caps["has_psram"];
     discovery.capabilities.hasSD = caps["has_sd"];
@@ -290,6 +355,8 @@ BoardCapabilities getCurrentCapabilities() {
     }
     
     // Detect hardware capabilities
+    caps.hasCamera = detectCameraCapabilities();
+    caps.hasLoRa = detectLoRaCapabilities();
     caps.hasPSRAM = BoardDetector::hasPSRAM();
     
     // Detect AI capabilities based on hardware features
