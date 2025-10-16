@@ -408,6 +408,7 @@ void BoardCoordinator::processNodeManagement() {
             }
         }
     }
+
 }
 
 void BoardCoordinator::processTaskManagement() {
@@ -705,96 +706,168 @@ bool BoardCoordinator::isElectionWinner() const {
     return true;
 }
 
-int BoardCoordinator::selectBestNodeForTask(const String& taskType) const {
-    if (managedNodes_.empty()) {
-        Serial.println("No managed nodes available for task assignment");
-        return -1;
-    }
-    
-    // Load balancing: Track task count per node
-    std::map<int, int> nodeTaskCount;
-    for (const auto& task : activeTasks_) {
-        if (!task.completed) {
-            nodeTaskCount[task.assignedNode]++;
+
+            bestNodeId = node.nodeId;
         }
     }
     
+}
+
+DiscoveryProtocol* BoardCoordinator::getDiscoveryProtocol() const {
+    return discoveryProtocol_;
+}
+
+void BoardCoordinator::checkNodeHealth() {
+    unsigned long now = millis();
+    
+    for (auto& node : managedNodes_) {
+        // Skip checking the coordinator node itself
+        if (node.nodeId == nodeId_) {
+            continue;
+        }
+        
+        // Check if node has missed heartbeat for more than NODE_FAILURE_TIMEOUT
+        if (node.isActive && (now - node.lastSeen > NODE_FAILURE_TIMEOUT)) {
+            Serial.printf("⚠ Node %d failure detected: no heartbeat for %lu ms\n", 
+                         node.nodeId, now - node.lastSeen);
+            markNodeAsFailed(node.nodeId);
+        }
+    }
+}
+
+void BoardCoordinator::markNodeAsFailed(int nodeId) {
+    // Find the node and mark it as inactive
+    for (auto& node : managedNodes_) {
+        if (node.nodeId == nodeId && node.isActive) {
+            node.isActive = false;
+            logNodeFailure(nodeId, "Heartbeat timeout");
+            
+            // Reassign tasks from this failed node
+            reassignTasksFromFailedNode(nodeId);
+            
+            Serial.printf("✗ Node %d marked as FAILED\n", nodeId);
+            break;
+        }
+    }
+}
+
+void BoardCoordinator::reassignTasksFromFailedNode(int failedNodeId) {
+    int reassignedCount = 0;
+    
+    // Find all tasks assigned to the failed node
+    for (auto& task : activeTasks_) {
+        if (task.assignedNode == failedNodeId && !task.completed) {
+            // Select a healthy node for this task
+            int newNodeId = selectHealthyNodeForTask(task.taskType);
+            
+            if (newNodeId > 0) {
+                Serial.printf("↻ Reassigning task %d from node %d to node %d\n", 
+                             task.taskId, failedNodeId, newNodeId);
+                
+                // Update task assignment
+                task.assignedNode = newNodeId;
+                task.deadline = millis() + networkConfig_.taskTimeout; // Reset deadline
+                
+                // Send new task assignment
+                if (sendTaskAssignment(task)) {
+                    reassignedCount++;
+                } else {
+                    Serial.printf("⚠ Failed to send reassigned task %d to node %d\n", 
+                                 task.taskId, newNodeId);
+                }
+            } else {
+                Serial.printf("⚠ No healthy node available to reassign task %d\n", task.taskId);
+            }
+        }
+    }
+    
+    if (reassignedCount > 0) {
+        Serial.printf("✓ Reassigned %d tasks from failed node %d\n", 
+                     reassignedCount, failedNodeId);
+    }
+}
+
+int BoardCoordinator::selectHealthyNodeForTask(const String& taskType) {
     int bestNodeId = -1;
-    float bestScore = -1.0;
+    int bestScore = -1;
     
     for (const auto& node : managedNodes_) {
-        if (!node.isActive) {
-            continue; // Skip inactive nodes
+        // Skip inactive nodes and the coordinator itself
+        if (!node.isActive || node.nodeId == nodeId_) {
+            continue;
         }
         
-        float score = 0.0;
+        // Calculate node score based on capabilities and load
+        int score = 0;
         
-        // Role-based scoring for task type
-        if (taskType == "capture" || taskType == "image" || taskType == "photo") {
-            // Prefer camera-capable nodes for image capture
-            if (node.capabilities.hasCamera) {
-                score += 50.0;
-            }
-            // Prefer nodes with high resolution
-            if (node.capabilities.maxResolution >= 1920 * 1080) {
-                score += 30.0;
-            }
-            // Prefer nodes with good storage
-            if (node.capabilities.hasSD && node.capabilities.availableStorage > 1024 * 1024) {
-                score += 10.0;
-            }
-        } else if (taskType == "relay" || taskType == "forward" || taskType == "transmit") {
-            // Prefer LoRa-capable nodes for relay tasks
-            if (node.capabilities.hasLoRa) {
-                score += 50.0;
-            }
-            // Prefer nodes with good power
-            if (node.capabilities.batteryLevel > 50) {
-                score += 20.0;
-            }
-        } else if (taskType == "analyze" || taskType == "ai" || taskType == "detection") {
-            // Prefer AI-capable nodes for analysis
-            if (node.capabilities.hasAI) {
-                score += 50.0;
-            }
-            if (node.capabilities.hasPSRAM) {
-                score += 20.0;
-            }
+        // Prefer nodes with AI capabilities for processing tasks
+        if (node.capabilities.hasAI && (taskType.indexOf("process") >= 0 || 
+                                        taskType.indexOf("detect") >= 0 || 
+                                        taskType.indexOf("analyze") >= 0)) {
+            score += 50;
         }
         
-        // General scoring factors
-        // Battery level consideration
-        score += node.capabilities.batteryLevel * 0.2;
+        // Consider battery level (prefer higher battery)
+        score += node.capabilities.batteryLevel / 2;
         
-        // Signal strength consideration
-        score += (100.0 + node.signalStrength) * 0.1; // RSSI is negative, normalize to positive
+        // Consider signal strength (prefer stronger signals)
+        score += (100 + node.signalStrength) / 2; // RSSI typically -100 to 0
         
-        // Load balancing: penalize nodes with more tasks
-        int currentLoad = nodeTaskCount[node.nodeId];
-        score -= currentLoad * 10.0;
+        // Consider current load (count active tasks for this node)
+        int nodeTaskCount = 0;
+        for (const auto& task : activeTasks_) {
+            if (task.assignedNode == node.nodeId && !task.completed) {
+                nodeTaskCount++;
+            }
+        }
+        score -= nodeTaskCount * 10; // Penalize busy nodes
         
-        // Hop count consideration (prefer closer nodes)
-        score -= node.hopCount * 5.0;
-        
-        Serial.printf("Task selection: Node %d, Role %s, Score %.1f, Load %d\n",
-                     node.nodeId, MessageProtocol::roleToString(node.role), score, currentLoad);
-        
+        // Select node with best score
         if (score > bestScore) {
             bestScore = score;
             bestNodeId = node.nodeId;
         }
     }
     
-    if (bestNodeId > 0) {
-        Serial.printf("Selected node %d for task '%s' with score %.1f\n",
-                     bestNodeId, taskType.c_str(), bestScore);
-    } else {
-        Serial.printf("No suitable node found for task '%s'\n", taskType.c_str());
-    }
-    
     return bestNodeId;
 }
 
-DiscoveryProtocol* BoardCoordinator::getDiscoveryProtocol() const {
-    return discoveryProtocol_;
+void BoardCoordinator::logNodeFailure(int nodeId, const char* reason) {
+    unsigned long now = millis();
+    
+    Serial.println("========================================");
+    Serial.println("NODE FAILURE EVENT");
+    Serial.println("========================================");
+    Serial.printf("Timestamp: %lu ms\n", now);
+    Serial.printf("Node ID: %d\n", nodeId);
+    Serial.printf("Reason: %s\n", reason);
+    Serial.printf("Uptime at failure: %lu ms\n", now - startTime_);
+    Serial.printf("Active nodes remaining: %d\n", countActiveNodes());
+    Serial.printf("Tasks to reassign: %d\n", countTasksForNode(nodeId));
+    Serial.println("========================================");
+}
+
+int BoardCoordinator::countActiveNodes() const {
+    int count = 0;
+    for (const auto& node : managedNodes_) {
+        if (node.isActive) {
+            count++;
+        }
+    }
+    return count;
+}
+
+int BoardCoordinator::countTasksForNode(int nodeId) const {
+    int count = 0;
+    for (const auto& task : activeTasks_) {
+        if (task.assignedNode == nodeId && !task.completed) {
+            count++;
+        }
+    }
+    return count;
+}
+
+void BoardCoordinator::sendNetworkTopology() {
+    String message = MessageProtocol::createTopologyMessage(managedNodes_);
+    LoraMesh::queueMessage(message);
 }

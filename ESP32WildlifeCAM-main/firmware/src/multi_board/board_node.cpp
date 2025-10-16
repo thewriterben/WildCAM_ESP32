@@ -503,8 +503,144 @@ void BoardNode::handleTaskAssignment(const MultiboardMessage& msg) {
 }
 
 void BoardNode::handleConfigUpdate(const MultiboardMessage& msg) {
-    Serial.println("Received configuration update");
-    // TODO: Update configuration based on received data
+    Serial.println("Received configuration update from coordinator");
+    
+    // Track if any errors occur during validation
+    bool validationFailed = false;
+    String errorMessage = "";
+    
+    // Create a temporary config to validate before applying
+    NodeConfig newConfig = nodeConfig_;
+    
+    // Parse and validate heartbeatInterval
+    if (msg.data.containsKey("heartbeatInterval")) {
+        unsigned long heartbeatInterval = msg.data["heartbeatInterval"];
+        // Validate: must be between 10 seconds and 10 minutes
+        if (heartbeatInterval >= 10000 && heartbeatInterval <= 600000) {
+            newConfig.heartbeatInterval = heartbeatInterval;
+            Serial.printf("  ✓ heartbeatInterval: %lu ms\n", heartbeatInterval);
+        } else {
+            validationFailed = true;
+            errorMessage += "heartbeatInterval out of range (10s-10min); ";
+            Serial.printf("  ✗ Invalid heartbeatInterval: %lu ms\n", heartbeatInterval);
+        }
+    }
+    
+    // Parse and validate coordinatorTimeout
+    if (msg.data.containsKey("coordinatorTimeout")) {
+        unsigned long coordinatorTimeout = msg.data["coordinatorTimeout"];
+        // Validate: must be between 1 minute and 30 minutes
+        if (coordinatorTimeout >= 60000 && coordinatorTimeout <= 1800000) {
+            newConfig.coordinatorTimeout = coordinatorTimeout;
+            Serial.printf("  ✓ coordinatorTimeout: %lu ms\n", coordinatorTimeout);
+        } else {
+            validationFailed = true;
+            errorMessage += "coordinatorTimeout out of range (1min-30min); ";
+            Serial.printf("  ✗ Invalid coordinatorTimeout: %lu ms\n", coordinatorTimeout);
+        }
+    }
+    
+    // Parse and validate taskTimeout
+    if (msg.data.containsKey("taskTimeout")) {
+        unsigned long taskTimeout = msg.data["taskTimeout"];
+        // Validate: must be between 30 seconds and 20 minutes
+        if (taskTimeout >= 30000 && taskTimeout <= 1200000) {
+            newConfig.taskTimeout = taskTimeout;
+            Serial.printf("  ✓ taskTimeout: %lu ms\n", taskTimeout);
+        } else {
+            validationFailed = true;
+            errorMessage += "taskTimeout out of range (30s-20min); ";
+            Serial.printf("  ✗ Invalid taskTimeout: %lu ms\n", taskTimeout);
+        }
+    }
+    
+    // Parse and validate maxRetries
+    if (msg.data.containsKey("maxRetries")) {
+        int maxRetries = msg.data["maxRetries"];
+        // Validate: must be between 0 and 10
+        if (maxRetries >= 0 && maxRetries <= 10) {
+            newConfig.maxRetries = maxRetries;
+            Serial.printf("  ✓ maxRetries: %d\n", maxRetries);
+        } else {
+            validationFailed = true;
+            errorMessage += "maxRetries out of range (0-10); ";
+            Serial.printf("  ✗ Invalid maxRetries: %d\n", maxRetries);
+        }
+    }
+    
+    // Parse and validate enableAutonomousMode
+    if (msg.data.containsKey("enableAutonomousMode")) {
+        if (msg.data["enableAutonomousMode"].is<bool>()) {
+            bool enableAutonomousMode = msg.data["enableAutonomousMode"];
+            newConfig.enableAutonomousMode = enableAutonomousMode;
+            Serial.printf("  ✓ enableAutonomousMode: %s\n", enableAutonomousMode ? "true" : "false");
+        } else {
+            validationFailed = true;
+            errorMessage += "enableAutonomousMode not boolean type; ";
+            Serial.println("  ✗ Invalid enableAutonomousMode type");
+        }
+    }
+    
+    // Parse and validate enableTaskExecution
+    if (msg.data.containsKey("enableTaskExecution")) {
+        if (msg.data["enableTaskExecution"].is<bool>()) {
+            bool enableTaskExecution = msg.data["enableTaskExecution"];
+            newConfig.enableTaskExecution = enableTaskExecution;
+            Serial.printf("  ✓ enableTaskExecution: %s\n", enableTaskExecution ? "true" : "false");
+        } else {
+            validationFailed = true;
+            errorMessage += "enableTaskExecution not boolean type; ";
+            Serial.println("  ✗ Invalid enableTaskExecution type");
+        }
+    }
+    
+    // Prepare acknowledgment message
+    DynamicJsonDocument ackDoc(512);
+    ackDoc["type"] = MSG_STATUS;
+    ackDoc["source_node"] = nodeId_;
+    ackDoc["target_node"] = msg.sourceNode;
+    ackDoc["timestamp"] = millis();
+    ackDoc["hop_count"] = 0;
+    
+    JsonObject ackData = ackDoc.createNestedObject("data");
+    
+    if (!validationFailed) {
+        // Apply the validated configuration
+        nodeConfig_ = newConfig;
+        
+        ackData["config_update_status"] = "success";
+        ackData["acknowledged"] = true;
+        
+        Serial.println("✓ Configuration update applied successfully");
+        Serial.println("  Updated configuration:");
+        Serial.printf("    - heartbeatInterval: %lu ms\n", nodeConfig_.heartbeatInterval);
+        Serial.printf("    - coordinatorTimeout: %lu ms\n", nodeConfig_.coordinatorTimeout);
+        Serial.printf("    - taskTimeout: %lu ms\n", nodeConfig_.taskTimeout);
+        Serial.printf("    - maxRetries: %d\n", nodeConfig_.maxRetries);
+        Serial.printf("    - enableAutonomousMode: %s\n", nodeConfig_.enableAutonomousMode ? "true" : "false");
+        Serial.printf("    - enableTaskExecution: %s\n", nodeConfig_.enableTaskExecution ? "true" : "false");
+    } else {
+        // Validation failed - reject configuration update
+        ackData["config_update_status"] = "failed";
+        ackData["acknowledged"] = false;
+        ackData["error"] = errorMessage;
+        
+        Serial.println("✗ Configuration update rejected due to validation errors:");
+        Serial.printf("  %s\n", errorMessage.c_str());
+    }
+    
+    // Send acknowledgment back to coordinator
+    String ackMessage;
+    serializeJson(ackDoc, ackMessage);
+    
+    if (LoraMesh::queueMessage(ackMessage)) {
+        Serial.println("✓ Configuration acknowledgment sent to coordinator");
+    } else {
+        Serial.println("✗ Failed to send configuration acknowledgment (network error)");
+    }
+    
+    // Update coordinator contact time
+    lastCoordinatorContact_ = millis();
 }
 
 void BoardNode::handleCoordinatorHeartbeat(const MultiboardMessage& msg) {

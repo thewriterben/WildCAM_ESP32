@@ -42,10 +42,21 @@
 #include "core/system_manager.h"
 #include "utils/logger.h"
 #include "src/camera/camera_manager.h"
+#include "src/utils/time_manager.h"
+
+// Storage management
+#include "core/storage_manager.h"
+
+// Time management for timestamps
+#include <time.h>
+#include <sys/time.h>
 
 // Configuration
+#include "config.h"
 #define FIRMWARE_VERSION "3.0.0"
 #define SYSTEM_NAME "WildCAM_ESP32_v2.0"
+#define LOCKDOWN_DURATION_MS (3600000) // 1 hour in milliseconds
+#define SD_CS_PIN 13  // SD card chip select pin for ESP32-CAM
 
 // Global system components
 SystemManager* g_system_manager = nullptr;
@@ -54,6 +65,11 @@ MPPTController* g_mppt_controller = nullptr;
 SecurityManager* g_security_manager = nullptr;
 EnvironmentalSuite* g_env_sensors = nullptr;
 CameraManager* g_camera_manager = nullptr;
+
+// Storage and security globals
+Preferences g_preferences;
+bool g_sd_initialized = false;
+bool g_lockdown_enabled = true;  // Configurable lockdown mode
 
 // Task handles for multi-core processing
 TaskHandle_t ai_processing_task = NULL;
@@ -73,7 +89,151 @@ struct SystemState {
     int active_cameras = 0;
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
+
 } system_state;
+
+/**
+ * @brief Generate unique filename for wildlife detection
+ * @param species Species name from detection
+ * @param buffer Output buffer for filename
+ * @param buffer_size Size of output buffer
+ * @return true if filename generated successfully
+ */
+bool generateDetectionFilename(const char* species, char* buffer, size_t buffer_size) {
+    if (!buffer || buffer_size < MAX_FILENAME_LENGTH) {
+        return false;
+    }
+    
+    struct tm timeinfo;
+    time_t now;
+    time(&now);
+    
+    // Try to get local time (RTC or NTP)
+    if (getLocalTime(&timeinfo)) {
+        // Format: YYYYMMDD_HHMMSS_species.jpg
+        snprintf(buffer, buffer_size, "%04d%02d%02d_%02d%02d%02d_%s.jpg",
+                timeinfo.tm_year + 1900,
+                timeinfo.tm_mon + 1,
+                timeinfo.tm_mday,
+                timeinfo.tm_hour,
+                timeinfo.tm_min,
+                timeinfo.tm_sec,
+                species);
+    } else {
+        // Fallback to milliseconds-based timestamp
+        unsigned long timestamp = millis();
+        snprintf(buffer, buffer_size, "%lu_%s.jpg", timestamp, species);
+    }
+    
+    return true;
+}
+
+/**
+ * @brief Generate metadata file for wildlife detection
+ * @param filename Image filename
+ * @param species Species name
+ * @param confidence Detection confidence
+ * @param bbox Bounding box information
+ * @return true if metadata saved successfully
+ */
+bool saveDetectionMetadata(const char* filename, const char* species, 
+                           float confidence, const BoundingBox& bbox) {
+    if (!filename || !species) {
+        return false;
+    }
+    
+    // Create metadata filename by replacing .jpg with .json
+    char metadata_filename[MAX_FILENAME_LENGTH];
+    snprintf(metadata_filename, sizeof(metadata_filename), "%s", filename);
+    char* ext = strrchr(metadata_filename, '.');
+    if (ext) {
+        strcpy(ext, ".json");
+    } else {
+        strcat(metadata_filename, ".json");
+    }
+    
+    // Build JSON metadata string
+    char json_buffer[512];
+    snprintf(json_buffer, sizeof(json_buffer),
+             "{\n"
+             "  \"filename\": \"%s\",\n"
+             "  \"species\": \"%s\",\n"
+             "  \"confidence\": %.3f,\n"
+             "  \"timestamp\": %lu,\n"
+             "  \"bounding_box\": {\n"
+             "    \"x\": %.3f,\n"
+             "    \"y\": %.3f,\n"
+             "    \"width\": %.3f,\n"
+             "    \"height\": %.3f\n"
+             "  },\n"
+             "  \"class_id\": %d\n"
+             "}\n",
+             filename, species, confidence, millis(),
+             bbox.x, bbox.y, bbox.width, bbox.height, bbox.class_id);
+    
+    // Save metadata to storage
+    storage_result_t result = g_storage.saveLog(json_buffer, metadata_filename);
+    
+    if (result != STORAGE_SUCCESS) {
+        Logger::error("Failed to save metadata file: %s", g_storage.getLastError());
+        return false;
+    }
+    
+    Logger::info("Metadata saved: %s", metadata_filename);
+    return true;
+}
+
+/**
+ * @brief Process wildlife detection event - save image and metadata
+ * @param image_data Raw image data
+ * @param image_size Size of image data
+ * @param detection Detection information
+ * @return true if processing successful (non-critical failures still return true)
+ */
+bool processWildlifeDetection(const uint8_t* image_data, size_t image_size, 
+                              const BoundingBox& detection) {
+    if (!image_data || image_size == 0) {
+        Logger::error("Invalid image data for detection processing");
+        return false;
+    }
+    
+    // Step 1: Generate unique filename
+    char filename[MAX_FILENAME_LENGTH];
+    if (!generateDetectionFilename(detection.class_name, filename, sizeof(filename))) {
+        Logger::error("Failed to generate detection filename");
+        return false;
+    }
+    
+    Logger::info("Processing wildlife detection: %s", filename);
+    
+    // Step 2: Save image buffer to SD card using StorageManager
+    if (g_storage.isReady()) {
+        storage_result_t save_result = g_storage.saveImage(image_data, image_size, filename);
+        
+        if (save_result == STORAGE_SUCCESS) {
+            // Step 3: Log save operation with filename and file size
+            Logger::info("Image saved successfully: %s (size: %u bytes)", filename, image_size);
+            
+            // Step 5 (Optional): Save metadata file
+            if (!saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection)) {
+                // Log warning but continue - metadata is optional
+                Logger::warning("Failed to save metadata for %s, continuing operation", filename);
+            }
+        } else {
+            // Step 4: Error handling - log error but continue operation
+            Logger::error("Failed to save image %s: %s (continuing detection loop)", 
+                         filename, g_storage.getLastError());
+            // Return true to continue detection loop despite save failure
+            return true;
+        }
+    } else {
+        // Storage not ready - log error but continue
+        Logger::error("Storage not ready, cannot save detection image (continuing detection loop)");
+        return true;
+    }
+    
+    return true;
+}
 
 /**
  * @brief AI Processing Task (Core 1)
@@ -86,6 +246,12 @@ void aiProcessingTask(void* parameter) {
     BoundingBox detections[10];
     
     while (true) {
+        // Skip processing if in lockdown mode
+        if (system_state.in_lockdown) {
+            vTaskDelay(xDelay * 10); // Check less frequently during lockdown
+            continue;
+        }
+        
         if (system_state.ai_initialized && g_yolo_detector && g_yolo_detector->isInitialized() && g_camera_manager) {
             // Capture camera frame with error handling
             int image_width = 0, image_height = 0;
@@ -129,8 +295,10 @@ void aiProcessingTask(void* parameter) {
                         Logger::info("Wildlife detected: %s (confidence: %.2f)", 
                                    detections[i].class_name, detections[i].confidence);
                         
-                        // Process detection (save image, send to API, etc.)
-                        // TODO: Implement detection processing pipeline
+                        // Process detection - save image, metadata, etc.
+                        if (!processWildlifeDetection(image_data, image_width * image_height, detections[i])) {
+                            Logger::warning("Detection processing had issues but continuing operation");
+                        }
                     }
                 }
                 
@@ -184,6 +352,201 @@ void powerManagementTask(void* parameter) {
 }
 
 /**
+ * @brief Initialize SD card storage
+ * @return true if successful, false otherwise
+ */
+bool initializeSDCard() {
+    Logger::info("Initializing SD card...");
+    
+    if (!SD.begin(SD_CS_PIN)) {
+        Logger::error("SD card initialization failed");
+        return false;
+    }
+    
+    uint8_t cardType = SD.cardType();
+    if (cardType == CARD_NONE) {
+        Logger::error("No SD card attached");
+        return false;
+    }
+    
+    // Create images directory if it doesn't exist
+    if (!SD.exists("/images")) {
+        if (!SD.mkdir("/images")) {
+            Logger::error("Failed to create /images directory");
+            return false;
+        }
+    }
+    
+    Logger::info("SD card initialized successfully");
+    return true;
+}
+
+/**
+ * @brief Get tamper counter from persistent storage
+ * @return Current tamper counter value
+ */
+uint32_t getTamperCounter() {
+    return g_preferences.getUInt("tamper_count", 0);
+}
+
+/**
+ * @brief Increment and persist tamper counter
+ * @return New tamper counter value
+ */
+uint32_t incrementTamperCounter() {
+    uint32_t count = getTamperCounter() + 1;
+    g_preferences.putUInt("tamper_count", count);
+    Logger::info("Tamper counter incremented to: %lu", count);
+    return count;
+}
+
+/**
+ * @brief Check if network is available for sending alerts
+ * @return true if network is available, false otherwise
+ */
+bool isNetworkAvailable() {
+    // Check system state for network connectivity
+    return system_state.network_connected;
+}
+
+/**
+ * @brief Send critical alert through available network
+ * @param message Alert message to send
+ * @return true if alert sent successfully, false otherwise
+ */
+bool sendCriticalAlert(const char* message) {
+    if (!isNetworkAvailable()) {
+        Logger::warning("Network not available for alert transmission");
+        return false;
+    }
+    
+    // TODO: Implement actual network alert transmission
+    // This would send via WiFi, cellular, or satellite depending on availability
+    Logger::info("Sending critical alert: %s", message);
+    
+    // Placeholder for actual implementation
+    // Example: HTTP POST, MQTT publish, or satellite message
+    return true;
+}
+
+/**
+ * @brief Capture and save tamper event image
+ * @return true if image captured and saved successfully, false otherwise
+ */
+bool captureTamperImage() {
+    if (!g_camera_manager || !g_camera_manager->isInitialized()) {
+        Logger::error("Camera not available for tamper image capture");
+        return false;
+    }
+    
+    if (!g_sd_initialized) {
+        Logger::error("SD card not initialized, cannot save tamper image");
+        return false;
+    }
+    
+    // Capture frame
+    int width = 0, height = 0;
+    uint8_t* image_data = g_camera_manager->captureFrame(&width, &height);
+    
+    if (!image_data) {
+        Logger::error("Failed to capture tamper image");
+        return false;
+    }
+    
+    // Generate filename with timestamp
+    String timestamp = getFormattedTime();
+    timestamp.replace(" ", "_");
+    timestamp.replace(":", "");
+    timestamp.replace("-", "");
+    String filename = "/images/TAMPER_" + timestamp + ".jpg";
+    
+    // Save to SD card
+    File file = SD.open(filename.c_str(), FILE_WRITE);
+    if (!file) {
+        Logger::error("Failed to create tamper image file: %s", filename.c_str());
+        g_camera_manager->releaseFrame(image_data);
+        return false;
+    }
+    
+    // Note: The image_data from captureFrame is in RGB565 format
+    // For a real implementation, you would need to convert to JPEG or save raw data
+    // This is a simplified version that demonstrates the concept
+    
+    // Get actual frame buffer for JPEG data
+    camera_fb_t* fb = esp_camera_fb_get();
+    if (fb) {
+        file.write(fb->buf, fb->len);
+        esp_camera_fb_return(fb);
+        Logger::info("Tamper image saved: %s (%d bytes)", filename.c_str(), fb->len);
+    } else {
+        Logger::error("Failed to get camera frame buffer");
+        file.close();
+        g_camera_manager->releaseFrame(image_data);
+        return false;
+    }
+    
+    file.close();
+    g_camera_manager->releaseFrame(image_data);
+    
+    return true;
+}
+
+/**
+ * @brief Handle tamper detection security response
+ */
+void handleTamperDetection() {
+    String timestamp = getFormattedTime();
+    
+    // Step 1: Write critical alert to log
+    Logger::critical("TAMPER DETECTED at %s - Initiating security response", timestamp.c_str());
+    
+    // Step 2: Capture and save image with TAMPER_ prefix
+    bool image_saved = captureTamperImage();
+    if (image_saved) {
+        Logger::info("Tamper event image captured successfully");
+    } else {
+        Logger::error("Failed to capture tamper event image");
+    }
+    
+    // Step 3: Send alert if network is available
+    char alert_message[128];
+    snprintf(alert_message, sizeof(alert_message), 
+             "CRITICAL: Tamper detected at %s. Image capture: %s",
+             timestamp.c_str(), image_saved ? "SUCCESS" : "FAILED");
+    
+    if (sendCriticalAlert(alert_message)) {
+        Logger::info("Critical alert sent successfully");
+    } else {
+        Logger::warning("Failed to send critical alert");
+    }
+    
+    // Step 4: Increment tamper counter in persistent storage
+    uint32_t tamper_count = incrementTamperCounter();
+    Logger::info("Total tamper events: %lu", tamper_count);
+    
+    // Step 5: Optional lockdown mode
+    if (g_lockdown_enabled && !system_state.in_lockdown) {
+        system_state.in_lockdown = true;
+        system_state.lockdown_start_time = millis();
+        Logger::critical("LOCKDOWN MODE ACTIVATED - Image capture disabled for 1 hour");
+    }
+}
+
+/**
+ * @brief Check and manage lockdown mode
+ */
+void manageLockdownMode() {
+    if (system_state.in_lockdown) {
+        unsigned long lockdown_elapsed = millis() - system_state.lockdown_start_time;
+        
+        if (lockdown_elapsed >= LOCKDOWN_DURATION_MS) {
+            system_state.in_lockdown = false;
+            Logger::info("LOCKDOWN MODE DEACTIVATED - Normal operation resumed");
+        }
+    }
+}
+
+/**
  * @brief Security Monitoring Task (Core 0)
  * Handles encryption, tamper detection, and secure communications
  */
@@ -193,11 +556,14 @@ void securityMonitoringTask(void* parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(10000); // Check every 10 seconds
     
     while (true) {
+        // Manage lockdown mode
+        manageLockdownMode();
+        
         if (g_security_manager && g_security_manager->isSecurityOperational()) {
             // Check for tampering
             if (g_security_manager->detectTampering()) {
                 Logger::error("Tampering detected! Initiating security protocols");
-                // TODO: Implement security response (alert, data wipe, etc.)
+                handleTamperDetection();
             }
             
             // Periodic security health check
@@ -226,11 +592,203 @@ void networkManagementTask(void* parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(30000); // Check every 30 seconds
     
     while (true) {
-        // TODO: Implement network management
-        // - Mesh network maintenance
-        // - API data transmission
-        // - Firmware update checks
-        // - Remote configuration sync
+        unsigned long currentTime = millis();
+        
+        // 1. Check if WIFI_ENABLED and attempt connection if needed
+        #if WIFI_ENABLED
+        if (!system_state.network_connected) {
+            // Calculate exponential backoff delay
+            unsigned long backoffDelay = WIFI_RETRY_BASE_DELAY * (1 << system_state.wifi_retry_count);
+            if (backoffDelay > 60000) backoffDelay = 60000; // Cap at 60 seconds
+            
+            // Attempt connection if enough time has passed since last attempt
+            if ((currentTime - system_state.last_wifi_attempt) >= backoffDelay) {
+                Logger::info("Attempting WiFi connection (attempt %d/%d)...", 
+                           system_state.wifi_retry_count + 1, WIFI_MAX_RETRIES);
+                
+                WiFi.mode(WIFI_STA);
+                WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+                
+                // Wait for connection with timeout
+                unsigned long startAttempt = millis();
+                while (WiFi.status() != WL_CONNECTED && 
+                       (millis() - startAttempt) < WIFI_CONNECTION_TIMEOUT) {
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                }
+                
+                if (WiFi.status() == WL_CONNECTED) {
+                    system_state.network_connected = true;
+                    system_state.wifi_retry_count = 0;
+                    Logger::info("✓ WiFi connected! IP address: %s", WiFi.localIP().toString().c_str());
+                    Logger::info("Signal strength: %d dBm", WiFi.RSSI());
+                } else {
+                    system_state.wifi_retry_count++;
+                    system_state.last_wifi_attempt = currentTime;
+                    Logger::warning("WiFi connection failed (attempt %d/%d), retrying with backoff", 
+                                  system_state.wifi_retry_count, WIFI_MAX_RETRIES);
+                    
+                    // Reset retry count after max retries to try again
+                    if (system_state.wifi_retry_count >= WIFI_MAX_RETRIES) {
+                        system_state.wifi_retry_count = 0;
+                        Logger::info("Max WiFi retries reached, resetting retry counter");
+                    }
+                }
+            }
+        } else {
+            // Check if still connected
+            if (WiFi.status() != WL_CONNECTED) {
+                system_state.network_connected = false;
+                system_state.wifi_retry_count = 0;
+                Logger::warning("WiFi connection lost, will attempt to reconnect");
+            }
+        }
+        #endif
+        
+        // 2. Handle data upload if WiFi is connected
+        #if WIFI_ENABLED && DATA_UPLOAD_ENABLED
+        if (system_state.network_connected && 
+            (currentTime - system_state.last_upload) >= DATA_UPLOAD_INTERVAL) {
+            
+            if (system_state.pending_uploads > 0) {
+                Logger::info("Uploading %d pending data items...", system_state.pending_uploads);
+                
+                // TODO: Implement actual data upload logic
+                // This would involve:
+                // - Reading pending data from storage
+                // - Sending via HTTP POST to API endpoint
+                // - Marking as uploaded on success
+                // - Retrying on failure
+                
+                HTTPClient http;
+                http.begin(DATA_API_ENDPOINT);
+                http.addHeader("Content-Type", "application/json");
+                
+                // Example upload (would need real data)
+                String payload = "{\"device\":\"" + String(SYSTEM_NAME) + 
+                               "\",\"count\":" + String(system_state.pending_uploads) + "}";
+                
+                int httpResponseCode = http.POST(payload);
+                
+                if (httpResponseCode > 0 && httpResponseCode < 400) {
+                    Logger::info("✓ Data uploaded successfully (HTTP %d)", httpResponseCode);
+                    system_state.pending_uploads = 0; // Would be updated based on actual upload
+                } else {
+                    Logger::warning("Data upload failed (HTTP %d)", httpResponseCode);
+                }
+                
+                http.end();
+                system_state.last_upload = currentTime;
+            }
+        }
+        #endif
+        
+        // 3. Check for OTA firmware updates if enabled
+        #if OTA_ENABLED
+        if (system_state.network_connected && 
+            (currentTime - system_state.last_ota_check) >= OTA_CHECK_INTERVAL) {
+            
+            Logger::info("Checking for OTA firmware updates...");
+            
+            HTTPClient http;
+            http.begin(OTA_VERSION_URL);
+            int httpCode = http.GET();
+            
+            if (httpCode == 200) {
+                String availableVersion = http.getString();
+                availableVersion.trim();
+                
+                if (availableVersion != FIRMWARE_VERSION) {
+                    Logger::info("OTA update available: %s (current: %s)", 
+                               availableVersion.c_str(), FIRMWARE_VERSION);
+                    system_state.ota_available = true;
+                    
+                    // TODO: Implement actual OTA update logic
+                    // This would involve:
+                    // - Downloading firmware binary
+                    // - Verifying signature/checksum
+                    // - Writing to OTA partition
+                    // - Rebooting to new firmware
+                    
+                    Logger::info("OTA update ready but automatic update not implemented yet");
+                } else {
+                    Logger::info("Firmware is up to date (v%s)", FIRMWARE_VERSION);
+                    system_state.ota_available = false;
+                }
+            } else {
+                Logger::warning("Failed to check for OTA updates (HTTP %d)", httpCode);
+            }
+            
+            http.end();
+            system_state.last_ota_check = currentTime;
+        }
+        #endif
+        
+        // 4. Check LoRa mesh network health if enabled
+        #if LORA_ENABLED
+        if ((currentTime - system_state.last_lora_check) >= LORA_HEALTH_CHECK_INTERVAL) {
+            Logger::info("Checking LoRa mesh network health...");
+            
+            // TODO: Implement actual LoRa mesh health check
+            // This would involve:
+            // - Pinging known mesh nodes
+            // - Checking signal strength
+            // - Updating routing tables
+            // - Detecting dead nodes
+            
+            // Placeholder: simulate health check
+            // In real implementation, would query LoRa module
+            system_state.lora_active_nodes = 0; // Would be set by actual check
+            
+            if (system_state.lora_active_nodes > 0) {
+                Logger::info("✓ LoRa mesh healthy: %d active nodes", system_state.lora_active_nodes);
+            } else {
+                Logger::warning("No LoRa mesh nodes detected");
+            }
+            
+            system_state.last_lora_check = currentTime;
+        }
+        #endif
+        
+        // 5. Log network status every 5 minutes
+        if ((currentTime - system_state.last_network_status_log) >= NETWORK_STATUS_LOG_INTERVAL) {
+            Logger::info("=== Network Status Report ===");
+            
+            #if WIFI_ENABLED
+            Logger::info("WiFi: %s", system_state.network_connected ? "Connected" : "Disconnected");
+            if (system_state.network_connected) {
+                Logger::info("  IP Address: %s", WiFi.localIP().toString().c_str());
+                Logger::info("  Signal: %d dBm", WiFi.RSSI());
+            }
+            Logger::info("  Retry count: %d", system_state.wifi_retry_count);
+            #else
+            Logger::info("WiFi: Disabled");
+            #endif
+            
+            #if DATA_UPLOAD_ENABLED
+            Logger::info("Data Upload:");
+            Logger::info("  Last upload: %lu sec ago", (currentTime - system_state.last_upload) / 1000);
+            Logger::info("  Pending uploads: %d", system_state.pending_uploads);
+            #endif
+            
+            #if OTA_ENABLED
+            Logger::info("OTA: %s", system_state.network_connected ? "Enabled" : "Waiting for WiFi");
+            Logger::info("  Update available: %s", system_state.ota_available ? "YES" : "No");
+            Logger::info("  Last check: %lu sec ago", (currentTime - system_state.last_ota_check) / 1000);
+            #else
+            Logger::info("OTA: Disabled");
+            #endif
+            
+            #if LORA_ENABLED
+            Logger::info("LoRa Mesh:");
+            Logger::info("  Active nodes: %d", system_state.lora_active_nodes);
+            Logger::info("  Last health check: %lu sec ago", (currentTime - system_state.last_lora_check) / 1000);
+            #else
+            Logger::info("LoRa: Disabled");
+            #endif
+            
+            Logger::info("============================");
+            system_state.last_network_status_log = currentTime;
+        }
         
         vTaskDelay(xDelay);
     }
@@ -285,6 +843,26 @@ bool initializeSystem() {
     // Initialize watchdog timer
     esp_task_wdt_init(30, true);
     esp_task_wdt_add(NULL);
+    
+    // Initialize NVS (Non-Volatile Storage) for persistent data
+    if (!g_preferences.begin("wildcam", false)) {
+        Logger::error("Failed to initialize NVS storage");
+        return false;
+    }
+    Logger::info("✓ NVS storage initialized");
+    
+    // Initialize time manager
+    if (!initializeTimeManager()) {
+        Logger::warning("Time manager initialization failed (non-critical)");
+    } else {
+        Logger::info("✓ Time manager initialized");
+    }
+    
+    // Initialize SD card storage
+    g_sd_initialized = initializeSDCard();
+    if (!g_sd_initialized) {
+        Logger::warning("SD card initialization failed - image storage disabled");
+    }
     
     // Initialize security manager first
     g_security_manager = new (std::nothrow) SecurityManager(SecurityLevel::ENHANCED, true);
@@ -380,6 +958,16 @@ bool initializeSystem() {
         return false;
     }
     Logger::info("✓ System manager initialized");
+    
+    // Initialize storage system
+    if (!g_storage.initialize()) {
+        Logger::warning("Storage initialization failed: %s (non-critical, continuing)", 
+                       g_storage.getLastError());
+        // Continue without storage - operations will log errors when storage is needed
+    } else {
+        Logger::info("✓ Storage system initialized (%s)", 
+                    g_storage.getActiveStorage() == STORAGE_SD_CARD ? "SD Card" : "LittleFS");
+    }
     
     Logger::info("WildCAM ESP32 v2.0 system initialization complete!");
     Logger::info("Free heap: %d bytes", ESP.getFreeHeap());

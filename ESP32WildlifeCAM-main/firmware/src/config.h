@@ -243,6 +243,42 @@
 // Satellite communication would require multiple pins that conflict with camera and LoRa
 
 // ===========================
+// GPS CONFIGURATION
+// ===========================
+
+// GPS Module Enable/Disable
+// GPS provides precise location data for wildlife camera images and enables
+// geolocation features for captured images and events
+#define GPS_ENABLED true                 // Enable GPS module for location tracking
+
+// GPS Serial Communication Pins
+// These pins are used for UART communication with the GPS module
+// Note: Pins 32 and 33 are available on AI-Thinker ESP32-CAM and don't conflict with camera
+#define GPS_RX_PIN 32                    // GPS module TX -> ESP32 RX (GPIO 32)
+#define GPS_TX_PIN 33                    // GPS module RX -> ESP32 TX (GPIO 33)
+
+// GPS Module Configuration
+#define GPS_BAUD_RATE 9600               // GPS serial baud rate (standard for most GPS modules)
+#define GPS_UPDATE_RATE 1000             // ms - GPS position update rate
+#define GPS_FIX_TIMEOUT 60000            // ms - timeout waiting for GPS fix (60 seconds)
+#define GPS_ENABLE_PIN 25                // Optional: GPS module enable/power control pin (GPIO 25)
+#define GPS_POWER_CONTROL_ENABLED false  // Enable power control for GPS module
+
+// GPS Feature Configuration
+#define GPS_USE_TINYGPS_PLUS true        // Use TinyGPS++ library for NMEA parsing
+#define GPS_SAVE_LAST_POSITION true      // Save and return last known position on fix loss
+#define GPS_ALTITUDE_ENABLED true        // Include altitude in GPS data
+#define GPS_SATELLITE_COUNT_ENABLED true // Track number of satellites in view
+
+// GPS Power Management
+#define GPS_AUTO_SLEEP_ENABLED false     // Automatically sleep GPS when not in use
+#define GPS_SLEEP_TIMEOUT 300000         // ms - GPS sleep timeout (5 minutes)
+
+// GPS Data Format
+#define GPS_DECIMAL_PLACES 6             // Number of decimal places for lat/lon (6 = ~0.1m precision)
+#define GPS_COORDINATE_FORMAT_DMS false  // false = decimal degrees, true = degrees/minutes/seconds
+
+// ===========================
 // TRIGGER AND TIMING CONFIGURATION
 // ===========================
 
