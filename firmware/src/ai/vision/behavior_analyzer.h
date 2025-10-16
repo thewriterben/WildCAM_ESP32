@@ -10,11 +10,7 @@
 #define BEHAVIOR_ANALYZER_H
 
 #include "../ai_common.h"
-#include "../inference_engine.h"
-#include "species_classifier.h"
-#include <vector>
-#include <queue>
-#include <map>
+
 
 /**
  * Detailed Behavior Analysis Result
