@@ -328,8 +328,6 @@ void networkManagementTask(void* parameter) {
                 
                 http.end();
                 system_state.last_upload = currentTime;
-            } else {
-                Logger::debug("No pending uploads");
             }
         }
         #endif
