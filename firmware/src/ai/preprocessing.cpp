@@ -4,6 +4,7 @@
  */
 
 #include "preprocessing.h"
+#include "../utils/jpeg_decoder.h"
 #include <esp_log.h>
 #include <esp_heap_caps.h>
 #include <math.h>
@@ -130,11 +131,20 @@ PreprocessingResult ImagePreprocessor::process(const ImageData& input, float* ou
     uint16_t imageWidth = input.width;
     uint16_t imageHeight = input.height;
     uint8_t imageChannels = input.channels;
+    uint8_t* decodedData = nullptr;
     
     if (input.format == FORMAT_JPEG) {
-        // For JPEG, we would need to decode first
-        // For now, assume it's already decoded RGB data
-        ESP_LOGW(TAG, "JPEG decoding not implemented, assuming RGB data");
+        // Decode JPEG to RGB888
+        int decoded_width, decoded_height;
+        if (!decodeJPEG(input.data, input.dataSize, &decodedData, &decoded_width, &decoded_height)) {
+            ESP_LOGE(TAG, "Failed to decode JPEG image");
+            return result;
+        }
+        imageData = decodedData;
+        imageWidth = decoded_width;
+        imageHeight = decoded_height;
+        imageChannels = 3; // RGB888
+        ESP_LOGI(TAG, "JPEG decoded to %dx%d RGB888", imageWidth, imageHeight);
     }
     
     // Convert to float and store in output
@@ -194,6 +204,11 @@ PreprocessingResult ImagePreprocessor::process(const ImageData& input, float* ou
     
     // Update statistics
     updateStatistics(result.processingTime);
+    
+    // Free decoded JPEG buffer if allocated
+    if (decodedData) {
+        freeDecodedBuffer(decodedData);
+    }
     
     ESP_LOGD(TAG, "Preprocessing completed in %lu ms, output: %dx%dx%d", 
              result.processingTime, result.width, result.height, result.channels);
@@ -358,10 +373,23 @@ void ImagePreprocessor::convertToFloat(const uint8_t* input, float* output, size
 
 bool ImagePreprocessor::decodeJPEG(const uint8_t* jpegData, size_t jpegSize, uint8_t* output,
                                   uint16_t* outputWidth, uint16_t* outputHeight) {
-    // JPEG decoding would require a JPEG library like TJpgDec
-    // For now, return false to indicate not implemented
-    ESP_LOGW(TAG, "JPEG decoding not implemented");
-    return false;
+    // Use the standalone JPEG decoder from utils
+    uint8_t* decoded_buffer = nullptr;
+    int width, height;
+    
+    if (!::decodeJPEG(jpegData, jpegSize, &decoded_buffer, &width, &height)) {
+        return false;
+    }
+    
+    // Copy decoded data to output buffer
+    size_t data_size = width * height * 3;
+    memcpy(output, decoded_buffer, data_size);
+    
+    if (outputWidth) *outputWidth = width;
+    if (outputHeight) *outputHeight = height;
+    
+    freeDecodedBuffer(decoded_buffer);
+    return true;
 }
 
 void ImagePreprocessor::updateStatistics(uint32_t processingTime) {
