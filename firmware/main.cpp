@@ -43,6 +43,13 @@
 #include "utils/logger.h"
 #include "src/camera/camera_manager.h"
 
+// Storage management
+#include "core/storage_manager.h"
+
+// Time management for timestamps
+#include <time.h>
+#include <sys/time.h>
+
 // Configuration
 #define FIRMWARE_VERSION "3.0.0"
 #define SYSTEM_NAME "WildCAM_ESP32_v2.0"
@@ -74,6 +81,149 @@ struct SystemState {
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
 } system_state;
+
+/**
+ * @brief Generate unique filename for wildlife detection
+ * @param species Species name from detection
+ * @param buffer Output buffer for filename
+ * @param buffer_size Size of output buffer
+ * @return true if filename generated successfully
+ */
+bool generateDetectionFilename(const char* species, char* buffer, size_t buffer_size) {
+    if (!buffer || buffer_size < MAX_FILENAME_LENGTH) {
+        return false;
+    }
+    
+    struct tm timeinfo;
+    time_t now;
+    time(&now);
+    
+    // Try to get local time (RTC or NTP)
+    if (getLocalTime(&timeinfo)) {
+        // Format: YYYYMMDD_HHMMSS_species.jpg
+        snprintf(buffer, buffer_size, "%04d%02d%02d_%02d%02d%02d_%s.jpg",
+                timeinfo.tm_year + 1900,
+                timeinfo.tm_mon + 1,
+                timeinfo.tm_mday,
+                timeinfo.tm_hour,
+                timeinfo.tm_min,
+                timeinfo.tm_sec,
+                species);
+    } else {
+        // Fallback to milliseconds-based timestamp
+        unsigned long timestamp = millis();
+        snprintf(buffer, buffer_size, "%lu_%s.jpg", timestamp, species);
+    }
+    
+    return true;
+}
+
+/**
+ * @brief Generate metadata file for wildlife detection
+ * @param filename Image filename
+ * @param species Species name
+ * @param confidence Detection confidence
+ * @param bbox Bounding box information
+ * @return true if metadata saved successfully
+ */
+bool saveDetectionMetadata(const char* filename, const char* species, 
+                           float confidence, const BoundingBox& bbox) {
+    if (!filename || !species) {
+        return false;
+    }
+    
+    // Create metadata filename by replacing .jpg with .json
+    char metadata_filename[MAX_FILENAME_LENGTH];
+    snprintf(metadata_filename, sizeof(metadata_filename), "%s", filename);
+    char* ext = strrchr(metadata_filename, '.');
+    if (ext) {
+        strcpy(ext, ".json");
+    } else {
+        strcat(metadata_filename, ".json");
+    }
+    
+    // Build JSON metadata string
+    char json_buffer[512];
+    snprintf(json_buffer, sizeof(json_buffer),
+             "{\n"
+             "  \"filename\": \"%s\",\n"
+             "  \"species\": \"%s\",\n"
+             "  \"confidence\": %.3f,\n"
+             "  \"timestamp\": %lu,\n"
+             "  \"bounding_box\": {\n"
+             "    \"x\": %.3f,\n"
+             "    \"y\": %.3f,\n"
+             "    \"width\": %.3f,\n"
+             "    \"height\": %.3f\n"
+             "  },\n"
+             "  \"class_id\": %d\n"
+             "}\n",
+             filename, species, confidence, millis(),
+             bbox.x, bbox.y, bbox.width, bbox.height, bbox.class_id);
+    
+    // Save metadata to storage
+    storage_result_t result = g_storage.saveLog(json_buffer, metadata_filename);
+    
+    if (result != STORAGE_SUCCESS) {
+        Logger::error("Failed to save metadata file: %s", g_storage.getLastError());
+        return false;
+    }
+    
+    Logger::info("Metadata saved: %s", metadata_filename);
+    return true;
+}
+
+/**
+ * @brief Process wildlife detection event - save image and metadata
+ * @param image_data Raw image data
+ * @param image_size Size of image data
+ * @param detection Detection information
+ * @return true if processing successful (non-critical failures still return true)
+ */
+bool processWildlifeDetection(const uint8_t* image_data, size_t image_size, 
+                              const BoundingBox& detection) {
+    if (!image_data || image_size == 0) {
+        Logger::error("Invalid image data for detection processing");
+        return false;
+    }
+    
+    // Step 1: Generate unique filename
+    char filename[MAX_FILENAME_LENGTH];
+    if (!generateDetectionFilename(detection.class_name, filename, sizeof(filename))) {
+        Logger::error("Failed to generate detection filename");
+        return false;
+    }
+    
+    Logger::info("Processing wildlife detection: %s", filename);
+    
+    // Step 2: Save image buffer to SD card using StorageManager
+    if (g_storage.isReady()) {
+        storage_result_t save_result = g_storage.saveImage(image_data, image_size, filename);
+        
+        if (save_result == STORAGE_SUCCESS) {
+            // Step 3: Log save operation with filename and file size
+            Logger::info("Image saved successfully: %s (size: %u bytes)", filename, image_size);
+            
+            // Step 5 (Optional): Save metadata file
+            if (!saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection)) {
+                // Log warning but continue - metadata is optional
+                Logger::warning("Failed to save metadata for %s, continuing operation", filename);
+            }
+        } else {
+            // Step 4: Error handling - log error but continue operation
+            Logger::error("Failed to save image %s: %s (continuing detection loop)", 
+                         filename, g_storage.getLastError());
+            // Return true to continue detection loop despite save failure
+            return true;
+        }
+    } else {
+        // Storage not ready - log error but continue
+        Logger::error("Storage not ready, cannot save detection image (continuing detection loop)");
+        return true;
+    }
+    
+    return true;
+}
 
 /**
  * @brief AI Processing Task (Core 1)
@@ -129,8 +279,10 @@ void aiProcessingTask(void* parameter) {
                         Logger::info("Wildlife detected: %s (confidence: %.2f)", 
                                    detections[i].class_name, detections[i].confidence);
                         
-                        // Process detection (save image, send to API, etc.)
-                        // TODO: Implement detection processing pipeline
+                        // Process detection - save image, metadata, etc.
+                        if (!processWildlifeDetection(image_data, image_width * image_height, detections[i])) {
+                            Logger::warning("Detection processing had issues but continuing operation");
+                        }
                     }
                 }
                 
@@ -380,6 +532,16 @@ bool initializeSystem() {
         return false;
     }
     Logger::info("✓ System manager initialized");
+    
+    // Initialize storage system
+    if (!g_storage.initialize()) {
+        Logger::warning("Storage initialization failed: %s (non-critical, continuing)", 
+                       g_storage.getLastError());
+        // Continue without storage - operations will log errors when storage is needed
+    } else {
+        Logger::info("✓ Storage system initialized (%s)", 
+                    g_storage.getActiveStorage() == STORAGE_SD_CARD ? "SD Card" : "LittleFS");
+    }
     
     Logger::info("WildCAM ESP32 v2.0 system initialization complete!");
     Logger::info("Free heap: %d bytes", ESP.getFreeHeap());
