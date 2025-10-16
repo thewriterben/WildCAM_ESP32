@@ -22,6 +22,63 @@ The AI-Thinker ESP32-CAM has limited available GPIO pins, which creates conflict
 - **GPIO 12**: SD card D2, internal pull-down, affects flash voltage
 - **GPIO 15**: SD card CMD, internal pull-up, affects boot mode
 
+## Visual Pin Conflict Diagram
+
+```
+AI-Thinker ESP32-CAM GPIO Conflict Map
+========================================
+
+CAMERA PINS (Fixed, Highest Priority):
+┌──────────────────────────────────────┐
+│ GPIO 0  : XCLK    ●──────────────────┤ Boot mode
+│ GPIO 5  : Y2      ●──────────────────┤ LoRa CS (CONFLICT!)
+│ GPIO 18 : Y3      ●──────────────────┤ LoRa SCK (CONFLICT!)
+│ GPIO 19 : Y4      ●──────────────────┤ LoRa MISO (CONFLICT!)
+│ GPIO 21 : Y5      ●                  │
+│ GPIO 22 : PCLK    ●                  │
+│ GPIO 23 : HREF    ●──────────────────┤ LoRa MOSI (CONFLICT!)
+│ GPIO 25 : VSYNC   ●                  │
+│ GPIO 26 : SIOD    ●──────────────────┤ I2C SDA / LoRa DIO0
+│ GPIO 27 : SIOC    ●──────────────────┤ I2C SCL
+│ GPIO 32 : PWDN    ●──────────────────┤ Solar voltage (CONFLICT!)
+│ GPIO 34 : Y8      ●──────────────────┤ Battery voltage (shareable)
+│ GPIO 35 : Y9      ●                  │
+│ GPIO 36 : Y6      ●                  │
+│ GPIO 39 : Y7      ●                  │
+└──────────────────────────────────────┘
+
+SD CARD PINS (When Enabled):
+┌──────────────────────────────────────┐
+│ GPIO 2  : D0      ●──────────────────┤ Power LED (CONFLICT!)
+│ GPIO 4  : D1      ●──────────────────┤ Built-in LED (CONFLICT!)
+│ GPIO 12 : D2      ●──────────────────┤ LoRa CS (shareable with caution)
+│ GPIO 13 : D3/CS   ●                  │
+│ GPIO 14 : CLK     ●──────────────────┤ Charging control
+│ GPIO 15 : CMD     ●──────────────────┤ Charging LED
+└──────────────────────────────────────┘
+
+AVAILABLE PINS (After Camera + SD):
+┌──────────────────────────────────────┐
+│ GPIO 1  : Available ●────────────────┤ PIR / UART TX
+│ GPIO 3  : Available ●────────────────┤ UART RX
+│ GPIO 16 : Available ●────────────────┤ LoRa RST / IR LED
+│ GPIO 17 : Available ●────────────────┤ PIR power / Servo
+│ GPIO 33 : Available ●────────────────┤ Battery/Light sensor (ADC)
+└──────────────────────────────────────┘
+
+RESERVED (NEVER USE):
+┌──────────────────────────────────────┐
+│ GPIO 6-11 : FLASH MEMORY             │
+│ (Connected to SPI flash - DO NOT USE)│
+└──────────────────────────────────────┘
+
+Legend:
+  ● = Pin in use
+  ── = Conflict/shared usage
+  (CONFLICT!) = Incompatible functions
+  (shareable) = Can share with coordination
+```
+
 ## Complete GPIO Pin Matrix for AI-Thinker ESP32-CAM
 
 | GPIO | Primary Function | Alternative/Shared Function | Type | Conflict Group |
