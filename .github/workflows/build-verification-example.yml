@@ -1,0 +1,109 @@
+# Example GitHub Actions workflow for WildCAM ESP32 Build Verification
+# This is a template - customize as needed for your CI/CD pipeline
+
+name: Build Verification
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Run code quality checks
+      run: |
+        python scripts/verify_build.py --skip-build
+      continue-on-error: true
+    
+    - name: Upload verification report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-quality-report
+        path: verification_report.txt
+        if-no-files-found: ignore
+
+  build-firmware:
+    name: Build Firmware
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    strategy:
+      matrix:
+        board: [esp32cam_advanced, esp32s3cam_ai, ttgo-t-camera-display]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install PlatformIO
+      run: |
+        pip install platformio
+    
+    - name: Build firmware for ${{ matrix.board }}
+      run: |
+        python scripts/verify_build.py --boards ${{ matrix.board }}
+      timeout-minutes: 15
+    
+    - name: Upload firmware binary
+      if: success()
+      uses: actions/upload-artifact@v3
+      with:
+        name: firmware-${{ matrix.board }}
+        path: firmware/.pio/build/${{ matrix.board }}/firmware.bin
+        if-no-files-found: ignore
+
+  full-verification:
+    name: Full Verification (All Boards)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install PlatformIO
+      run: |
+        pip install platformio
+    
+    - name: Run full verification
+      run: |
+        python scripts/verify_build.py
+      timeout-minutes: 30
+    
+    - name: Generate build report
+      if: always()
+      run: |
+        echo "Build verification completed at $(date)" > build_report.txt
+        echo "---" >> build_report.txt
+        python scripts/verify_build.py --skip-build >> build_report.txt
+    
+    - name: Upload build report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: full-build-report
+        path: build_report.txt
