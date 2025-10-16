@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <Preferences.h>
 
 // WiFi connection status enumeration
 enum WiFiStatus {
@@ -186,6 +187,39 @@ public:
      */
     bool isAPMode() const { return apMode; }
 
+    /**
+     * @brief Save WiFi credentials to non-volatile storage (NVS)
+     * @param ssid WiFi network SSID
+     * @param password WiFi network password
+     * @return true if credentials saved successfully, false otherwise
+     * 
+     * Stores WiFi credentials in ESP32 Preferences (NVS) for persistent storage.
+     * Credentials are stored in namespace "wifi_config" with keys "ssid" and "password".
+     * Password is encrypted using simple XOR obfuscation before storage.
+     */
+    bool saveWiFiCredentials(const char* ssid, const char* password);
+
+    /**
+     * @brief Load WiFi credentials from non-volatile storage (NVS)
+     * @param ssid Reference to String to store loaded SSID
+     * @param password Reference to String to store loaded password
+     * @return true if credentials loaded successfully, false if not found or error
+     * 
+     * Reads WiFi credentials from ESP32 Preferences (NVS).
+     * Returns empty strings if credentials not found.
+     * Password is decrypted after loading.
+     * Handles corrupted or missing data gracefully.
+     */
+    bool loadWiFiCredentials(String& ssid, String& password);
+
+    /**
+     * @brief Clear all WiFi credentials from non-volatile storage (NVS)
+     * 
+     * Factory reset function that clears all stored WiFi credentials.
+     * Removes all entries from the "wifi_config" namespace in Preferences.
+     */
+    void clearWiFiCredentials();
+
 private:
     // Member variables
     bool initialized;
@@ -203,6 +237,8 @@ private:
     bool attemptConnection();
     void handleConnectionTimeout();
     void logConnectionStatus();
+    String encryptPassword(const String& password);
+    String decryptPassword(const String& encryptedPassword);
 };
 
 #endif // WIFI_MANAGER_H

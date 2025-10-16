@@ -8,6 +8,7 @@
 #include "wifi_manager.h"
 #include "config.h"
 #include <WiFi.h>
+#include <Preferences.h>
 
 // Constructor
 WiFiManager::WiFiManager() 
@@ -31,6 +32,16 @@ void WiFiManager::applyConfigurationSettings() {
     config.timeout = WIFI_TIMEOUT;
     config.retryCount = WIFI_RETRY_COUNT;
     config.powerSaveMode = WIFI_SLEEP_MODE;
+    
+    // Try to load saved credentials from NVS if config.h values are empty
+    if (config.ssid.isEmpty()) {
+        String savedSSID, savedPassword;
+        if (loadWiFiCredentials(savedSSID, savedPassword)) {
+            config.ssid = savedSSID;
+            config.password = savedPassword;
+            DEBUG_PRINTLN("Loaded WiFi credentials from NVS storage");
+        }
+    }
 }
 
 /**
@@ -396,4 +407,123 @@ void WiFiManager::logConnectionStatus() {
     DEBUG_PRINTF("Signal Strength: %d dBm\n", WiFi.RSSI());
     DEBUG_PRINTF("Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
     DEBUG_PRINTF("DNS: %s\n", WiFi.dnsIP().toString().c_str());
+}
+
+/**
+ * Encrypt password using simple XOR obfuscation
+ * Note: This provides basic obfuscation, not cryptographic security
+ */
+String WiFiManager::encryptPassword(const String& password) {
+    if (password.isEmpty()) return "";
+    
+    String encrypted = "";
+    // Simple XOR encryption key (can be customized)
+    const uint8_t key[] = {0xA5, 0x3C, 0x7E, 0x91, 0x5D, 0xB2, 0x48, 0xF6};
+    const int keyLen = sizeof(key);
+    
+    for (size_t i = 0; i < password.length(); i++) {
+        encrypted += (char)(password[i] ^ key[i % keyLen]);
+    }
+    
+    return encrypted;
+}
+
+/**
+ * Decrypt password using simple XOR obfuscation
+ * Note: XOR encryption is symmetric - same operation for encrypt/decrypt
+ */
+String WiFiManager::decryptPassword(const String& encryptedPassword) {
+    // XOR is symmetric, so decryption is the same as encryption
+    return encryptPassword(encryptedPassword);
+}
+
+/**
+ * Save WiFi credentials to non-volatile storage
+ */
+bool WiFiManager::saveWiFiCredentials(const char* ssid, const char* password) {
+    if (!ssid || strlen(ssid) == 0) {
+        DEBUG_PRINTLN("ERROR: Cannot save empty SSID");
+        return false;
+    }
+    
+    Preferences preferences;
+    
+    // Open Preferences with namespace "wifi_config" in read-write mode
+    if (!preferences.begin("wifi_config", false)) {
+        DEBUG_PRINTLN("ERROR: Failed to open Preferences for writing");
+        return false;
+    }
+    
+    // Encrypt password before storing
+    String encryptedPassword = encryptPassword(String(password));
+    
+    // Store SSID and encrypted password
+    size_t ssidWritten = preferences.putString("ssid", ssid);
+    size_t passwordWritten = preferences.putString("password", encryptedPassword);
+    
+    preferences.end();
+    
+    if (ssidWritten == 0 || passwordWritten == 0) {
+        DEBUG_PRINTLN("ERROR: Failed to write credentials to Preferences");
+        return false;
+    }
+    
+    DEBUG_PRINTF("WiFi credentials saved successfully (SSID: %s)\n", ssid);
+    return true;
+}
+
+/**
+ * Load WiFi credentials from non-volatile storage
+ */
+bool WiFiManager::loadWiFiCredentials(String& ssid, String& password) {
+    Preferences preferences;
+    
+    // Open Preferences with namespace "wifi_config" in read-only mode
+    if (!preferences.begin("wifi_config", true)) {
+        DEBUG_PRINTLN("WARNING: Failed to open Preferences for reading");
+        ssid = "";
+        password = "";
+        return false;
+    }
+    
+    // Read SSID
+    ssid = preferences.getString("ssid", "");
+    
+    // Read encrypted password
+    String encryptedPassword = preferences.getString("password", "");
+    
+    preferences.end();
+    
+    // Check if credentials were found
+    if (ssid.isEmpty()) {
+        DEBUG_PRINTLN("No WiFi credentials found in storage");
+        password = "";
+        return false;
+    }
+    
+    // Decrypt password
+    password = decryptPassword(encryptedPassword);
+    
+    DEBUG_PRINTF("WiFi credentials loaded successfully (SSID: %s)\n", ssid.c_str());
+    return true;
+}
+
+/**
+ * Clear all WiFi credentials from non-volatile storage
+ */
+void WiFiManager::clearWiFiCredentials() {
+    Preferences preferences;
+    
+    // Open Preferences with namespace "wifi_config" in read-write mode
+    if (!preferences.begin("wifi_config", false)) {
+        DEBUG_PRINTLN("ERROR: Failed to open Preferences for clearing");
+        return;
+    }
+    
+    // Clear all data in this namespace
+    preferences.clear();
+    
+    preferences.end();
+    
+    DEBUG_PRINTLN("WiFi credentials cleared from storage");
 }
