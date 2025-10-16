@@ -200,21 +200,17 @@ private:
     void processElectionVotes();
     bool isElectionWinner() const;
     
+    // Node failure detection
+    void checkFailedNodes();
+    void reassignTasksFromFailedNode(int failedNodeId);
+    int selectHealthyNodeForTask(const String& taskType) const;
+    
     // Default configuration
     static const NetworkConfig DEFAULT_CONFIG;
     static const unsigned long HEARTBEAT_INTERVAL = 30000;      // 30 seconds
     static const unsigned long TASK_CHECK_INTERVAL = 10000;    // 10 seconds
     static const unsigned long ELECTION_TIMEOUT = 60000;       // 1 minute
-    static const unsigned long NODE_FAILURE_TIMEOUT = 60000;   // 60 seconds - node marked as failed if no heartbeat
-    
-    // Node failure detection and task reassignment
-    void checkNodeHealth();
-    void markNodeAsFailed(int nodeId);
-    void reassignTasksFromFailedNode(int failedNodeId);
-    int selectHealthyNodeForTask(const String& taskType);
-    void logNodeFailure(int nodeId, const char* reason);
-    int countActiveNodes() const;
-    int countTasksForNode(int nodeId) const;
+
 };
 
 #endif // BOARD_COORDINATOR_H
