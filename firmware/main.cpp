@@ -17,6 +17,10 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 #include <esp_log.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoOTA.h>
+#include <LoRa.h>
 
 // Hardware abstraction layer
 #include "hal/board_detector.h"
@@ -44,6 +48,7 @@
 #include "src/camera/camera_manager.h"
 
 // Configuration
+#include "config.h"
 #define FIRMWARE_VERSION "3.0.0"
 #define SYSTEM_NAME "WildCAM_ESP32_v2.0"
 
@@ -73,6 +78,17 @@ struct SystemState {
     int active_cameras = 0;
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
+    
+    // Network management state
+    unsigned long last_wifi_attempt = 0;
+    unsigned long last_upload = 0;
+    unsigned long last_ota_check = 0;
+    unsigned long last_lora_check = 0;
+    unsigned long last_network_status_log = 0;
+    int wifi_retry_count = 0;
+    int pending_uploads = 0;
+    bool ota_available = false;
+    int lora_active_nodes = 0;
 } system_state;
 
 /**
@@ -226,11 +242,205 @@ void networkManagementTask(void* parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(30000); // Check every 30 seconds
     
     while (true) {
-        // TODO: Implement network management
-        // - Mesh network maintenance
-        // - API data transmission
-        // - Firmware update checks
-        // - Remote configuration sync
+        unsigned long currentTime = millis();
+        
+        // 1. Check if WIFI_ENABLED and attempt connection if needed
+        #if WIFI_ENABLED
+        if (!system_state.network_connected) {
+            // Calculate exponential backoff delay
+            unsigned long backoffDelay = WIFI_RETRY_BASE_DELAY * (1 << system_state.wifi_retry_count);
+            if (backoffDelay > 60000) backoffDelay = 60000; // Cap at 60 seconds
+            
+            // Attempt connection if enough time has passed since last attempt
+            if ((currentTime - system_state.last_wifi_attempt) >= backoffDelay) {
+                Logger::info("Attempting WiFi connection (attempt %d/%d)...", 
+                           system_state.wifi_retry_count + 1, WIFI_MAX_RETRIES);
+                
+                WiFi.mode(WIFI_STA);
+                WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+                
+                // Wait for connection with timeout
+                unsigned long startAttempt = millis();
+                while (WiFi.status() != WL_CONNECTED && 
+                       (millis() - startAttempt) < WIFI_CONNECTION_TIMEOUT) {
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                }
+                
+                if (WiFi.status() == WL_CONNECTED) {
+                    system_state.network_connected = true;
+                    system_state.wifi_retry_count = 0;
+                    Logger::info("✓ WiFi connected! IP address: %s", WiFi.localIP().toString().c_str());
+                    Logger::info("Signal strength: %d dBm", WiFi.RSSI());
+                } else {
+                    system_state.wifi_retry_count++;
+                    system_state.last_wifi_attempt = currentTime;
+                    Logger::warning("WiFi connection failed (attempt %d/%d), retrying with backoff", 
+                                  system_state.wifi_retry_count, WIFI_MAX_RETRIES);
+                    
+                    // Reset retry count after max retries to try again
+                    if (system_state.wifi_retry_count >= WIFI_MAX_RETRIES) {
+                        system_state.wifi_retry_count = 0;
+                        Logger::info("Max WiFi retries reached, resetting retry counter");
+                    }
+                }
+            }
+        } else {
+            // Check if still connected
+            if (WiFi.status() != WL_CONNECTED) {
+                system_state.network_connected = false;
+                system_state.wifi_retry_count = 0;
+                Logger::warning("WiFi connection lost, will attempt to reconnect");
+            }
+        }
+        #endif
+        
+        // 2. Handle data upload if WiFi is connected
+        #if WIFI_ENABLED && DATA_UPLOAD_ENABLED
+        if (system_state.network_connected && 
+            (currentTime - system_state.last_upload) >= DATA_UPLOAD_INTERVAL) {
+            
+            if (system_state.pending_uploads > 0) {
+                Logger::info("Uploading %d pending data items...", system_state.pending_uploads);
+                
+                // TODO: Implement actual data upload logic
+                // This would involve:
+                // - Reading pending data from storage
+                // - Sending via HTTP POST to API endpoint
+                // - Marking as uploaded on success
+                // - Retrying on failure
+                
+                HTTPClient http;
+                http.begin(DATA_API_ENDPOINT);
+                http.addHeader("Content-Type", "application/json");
+                
+                // Example upload (would need real data)
+                String payload = "{\"device\":\"" + String(SYSTEM_NAME) + 
+                               "\",\"count\":" + String(system_state.pending_uploads) + "}";
+                
+                int httpResponseCode = http.POST(payload);
+                
+                if (httpResponseCode > 0 && httpResponseCode < 400) {
+                    Logger::info("✓ Data uploaded successfully (HTTP %d)", httpResponseCode);
+                    system_state.pending_uploads = 0; // Would be updated based on actual upload
+                } else {
+                    Logger::warning("Data upload failed (HTTP %d)", httpResponseCode);
+                }
+                
+                http.end();
+                system_state.last_upload = currentTime;
+            } else {
+                Logger::debug("No pending uploads");
+            }
+        }
+        #endif
+        
+        // 3. Check for OTA firmware updates if enabled
+        #if OTA_ENABLED
+        if (system_state.network_connected && 
+            (currentTime - system_state.last_ota_check) >= OTA_CHECK_INTERVAL) {
+            
+            Logger::info("Checking for OTA firmware updates...");
+            
+            HTTPClient http;
+            http.begin(OTA_VERSION_URL);
+            int httpCode = http.GET();
+            
+            if (httpCode == 200) {
+                String availableVersion = http.getString();
+                availableVersion.trim();
+                
+                if (availableVersion != FIRMWARE_VERSION) {
+                    Logger::info("OTA update available: %s (current: %s)", 
+                               availableVersion.c_str(), FIRMWARE_VERSION);
+                    system_state.ota_available = true;
+                    
+                    // TODO: Implement actual OTA update logic
+                    // This would involve:
+                    // - Downloading firmware binary
+                    // - Verifying signature/checksum
+                    // - Writing to OTA partition
+                    // - Rebooting to new firmware
+                    
+                    Logger::info("OTA update ready but automatic update not implemented yet");
+                } else {
+                    Logger::info("Firmware is up to date (v%s)", FIRMWARE_VERSION);
+                    system_state.ota_available = false;
+                }
+            } else {
+                Logger::warning("Failed to check for OTA updates (HTTP %d)", httpCode);
+            }
+            
+            http.end();
+            system_state.last_ota_check = currentTime;
+        }
+        #endif
+        
+        // 4. Check LoRa mesh network health if enabled
+        #if LORA_ENABLED
+        if ((currentTime - system_state.last_lora_check) >= LORA_HEALTH_CHECK_INTERVAL) {
+            Logger::info("Checking LoRa mesh network health...");
+            
+            // TODO: Implement actual LoRa mesh health check
+            // This would involve:
+            // - Pinging known mesh nodes
+            // - Checking signal strength
+            // - Updating routing tables
+            // - Detecting dead nodes
+            
+            // Placeholder: simulate health check
+            // In real implementation, would query LoRa module
+            system_state.lora_active_nodes = 0; // Would be set by actual check
+            
+            if (system_state.lora_active_nodes > 0) {
+                Logger::info("✓ LoRa mesh healthy: %d active nodes", system_state.lora_active_nodes);
+            } else {
+                Logger::warning("No LoRa mesh nodes detected");
+            }
+            
+            system_state.last_lora_check = currentTime;
+        }
+        #endif
+        
+        // 5. Log network status every 5 minutes
+        if ((currentTime - system_state.last_network_status_log) >= NETWORK_STATUS_LOG_INTERVAL) {
+            Logger::info("=== Network Status Report ===");
+            
+            #if WIFI_ENABLED
+            Logger::info("WiFi: %s", system_state.network_connected ? "Connected" : "Disconnected");
+            if (system_state.network_connected) {
+                Logger::info("  IP Address: %s", WiFi.localIP().toString().c_str());
+                Logger::info("  Signal: %d dBm", WiFi.RSSI());
+            }
+            Logger::info("  Retry count: %d", system_state.wifi_retry_count);
+            #else
+            Logger::info("WiFi: Disabled");
+            #endif
+            
+            #if DATA_UPLOAD_ENABLED
+            Logger::info("Data Upload:");
+            Logger::info("  Last upload: %lu sec ago", (currentTime - system_state.last_upload) / 1000);
+            Logger::info("  Pending uploads: %d", system_state.pending_uploads);
+            #endif
+            
+            #if OTA_ENABLED
+            Logger::info("OTA: %s", system_state.network_connected ? "Enabled" : "Waiting for WiFi");
+            Logger::info("  Update available: %s", system_state.ota_available ? "YES" : "No");
+            Logger::info("  Last check: %lu sec ago", (currentTime - system_state.last_ota_check) / 1000);
+            #else
+            Logger::info("OTA: Disabled");
+            #endif
+            
+            #if LORA_ENABLED
+            Logger::info("LoRa Mesh:");
+            Logger::info("  Active nodes: %d", system_state.lora_active_nodes);
+            Logger::info("  Last health check: %lu sec ago", (currentTime - system_state.last_lora_check) / 1000);
+            #else
+            Logger::info("LoRa: Disabled");
+            #endif
+            
+            Logger::info("============================");
+            system_state.last_network_status_log = currentTime;
+        }
         
         vTaskDelay(xDelay);
     }
