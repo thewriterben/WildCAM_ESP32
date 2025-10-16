@@ -11,9 +11,13 @@
 #include "../config.h"
 #include "../sensors/advanced_environmental_sensors.h"
 #include "../../src/data/storage_manager.h"
+#include "../../sensors/gps_manager.h"
 #include <FS.h>
 #include <LittleFS.h>
 #include <esp_system.h>
+
+// External GPS manager instance (can be nullptr if not available)
+extern GPSManager* g_gpsManager;
 
 // External function from environmental integration
 extern AdvancedEnvironmentalData getLatestEnvironmentalData();
@@ -698,16 +702,42 @@ bool WildlifeTelemetry::collectLocationData() {
     LocationData location;
     location.timestamp = getCurrentTimestamp();
     
-    // TODO: Read from actual GPS module
-    // For now, use placeholder values
-    location.latitude = 0.0;
-    location.longitude = 0.0;
-    location.altitude = 0.0;
-    location.accuracy = 0.0;
-    location.satellites = 0;
-    location.fixValid = false;
-    location.speed = 0.0;
-    location.heading = 0.0;
+    // Get GPS data from GPS manager if available
+    if (g_gpsManager != nullptr) {
+        // Update GPS data
+        g_gpsManager->update();
+        
+        if (g_gpsManager->hasFix()) {
+            location.latitude = g_gpsManager->getLatitude();
+            location.longitude = g_gpsManager->getLongitude();
+            location.altitude = g_gpsManager->getAltitude();
+            location.satellites = g_gpsManager->getSatelliteCount();
+            location.fixValid = true;
+            location.accuracy = 5.0;  // Approximate accuracy in meters
+            location.speed = 0.0;     // Speed not available in current GPS implementation
+            location.heading = 0.0;   // Heading not available in current GPS implementation
+        } else {
+            // No fix available, use last known position
+            location.latitude = g_gpsManager->getLatitude();
+            location.longitude = g_gpsManager->getLongitude();
+            location.altitude = g_gpsManager->getAltitude();
+            location.satellites = g_gpsManager->getSatelliteCount();
+            location.fixValid = false;
+            location.accuracy = 0.0;
+            location.speed = 0.0;
+            location.heading = 0.0;
+        }
+    } else {
+        // GPS manager not available, use default values
+        location.latitude = 0.0;
+        location.longitude = 0.0;
+        location.altitude = 0.0;
+        location.accuracy = 0.0;
+        location.satellites = 0;
+        location.fixValid = false;
+        location.speed = 0.0;
+        location.heading = 0.0;
+    }
     
     return recordLocationData(location);
 }
