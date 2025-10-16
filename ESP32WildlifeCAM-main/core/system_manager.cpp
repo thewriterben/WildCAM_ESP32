@@ -795,12 +795,82 @@ void SystemManager::powerManagementTask(void* parameter) {
     
     Logger::info("Power Management Task started");
     
+    // Power save mode state tracking
+    bool inPowerSaveMode = false;
+    uint8_t normalCpuFreq = getCpuFrequencyMhz();
+    bool wifiWasEnabled = false;
+    
     for (;;) {
         if (g_powerManager && system->m_initialized) {
             // Update power measurements
             g_powerManager->updateMeasurements();
             
-            // Check for low power conditions
+            // Get current battery voltage
+            float batteryVoltage = g_powerManager->getBatteryVoltage();
+            
+            // Power Save Mode Logic: Enter when battery < 3.0V, restore when > 3.4V
+            if (!inPowerSaveMode && batteryVoltage > 0.0f && batteryVoltage < 3.0f) {
+                // Enter Power Save Mode
+                Logger::warning("Entering Power Save Mode - Battery: %.2fV", batteryVoltage);
+                inPowerSaveMode = true;
+                
+                // 1. Reduce CPU frequency to 80MHz
+                normalCpuFreq = getCpuFrequencyMhz();
+                setCpuFrequencyMhz(80);
+                Logger::info("  CPU frequency reduced: %dMHz -> 80MHz", normalCpuFreq);
+                
+                // 2. Increase deep sleep duration from 300s to 600s
+                // Note: This is implemented in PowerManager::enterDeepSleep()
+                Logger::info("  Deep sleep duration increased: 300s -> 600s (enforced by power manager)");
+                
+                // 3. Disable WiFi if enabled
+                wifiWasEnabled = (WiFi.getMode() != WIFI_MODE_NULL);
+                if (wifiWasEnabled) {
+                    WiFi.disconnect(true);
+                    WiFi.mode(WIFI_OFF);
+                    Logger::info("  WiFi disabled for power conservation");
+                }
+                
+                // 4. TODO: Reduce camera frame rate or resolution
+                // Camera adjustments would require camera manager integration
+                Logger::info("  TODO: Camera adjustments - reduce frame rate/resolution");
+                
+                // 5. TODO: Disable non-essential sensors (if any are enabled)
+                // Sensor management would require sensor manager integration
+                Logger::info("  TODO: Sensor management - disable non-essential sensors");
+                
+                Logger::info("Power Save Mode activated - Battery: %.2fV", batteryVoltage);
+                
+            } else if (inPowerSaveMode && batteryVoltage >= 3.4f) {
+                // Restore Normal Operation
+                Logger::info("Restoring Normal Operation - Battery: %.2fV", batteryVoltage);
+                inPowerSaveMode = false;
+                
+                // 1. Restore CPU frequency
+                setCpuFrequencyMhz(normalCpuFreq);
+                Logger::info("  CPU frequency restored: 80MHz -> %dMHz", normalCpuFreq);
+                
+                // 2. Restore deep sleep duration to 300s
+                // Note: PowerManager will use normal duration when battery > 3.0V
+                Logger::info("  Deep sleep duration restored: 600s -> 300s (enforced by power manager)");
+                
+                // 3. Re-enable WiFi if it was enabled before
+                if (wifiWasEnabled) {
+                    // TODO: WiFi re-initialization would require proper credentials and network config
+                    // This is a placeholder - actual implementation needs WiFi configuration manager
+                    Logger::info("  TODO: WiFi re-initialization - requires WiFi credentials and config");
+                }
+                
+                // 4. TODO: Restore camera frame rate or resolution
+                Logger::info("  TODO: Camera restoration - restore frame rate/resolution");
+                
+                // 5. TODO: Re-enable sensors (if they were disabled)
+                Logger::info("  TODO: Sensor restoration - re-enable sensors");
+                
+                Logger::info("Normal Operation restored - Battery: %.2fV", batteryVoltage);
+            }
+            
+            // Check for low power conditions (existing logic)
             if (g_powerManager->isBatteryCritical()) {
                 Logger::error("Critical battery level - initiating emergency shutdown");
                 g_powerManager->handleEmergencyShutdown();
