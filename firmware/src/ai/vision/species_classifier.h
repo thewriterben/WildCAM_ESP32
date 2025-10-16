@@ -10,7 +10,7 @@
 #define SPECIES_CLASSIFIER_H
 
 #include "../ai_common.h"
-#include "../tinyml/inference_engine.h"
+
 #include <vector>
 
 /**
