@@ -43,6 +43,7 @@
 #include "utils/logger.h"
 #include "src/camera/camera_manager.h"
 #include "src/utils/time_manager.h"
+#include "src/diagnostics.h"
 
 // Storage management
 #include "core/storage_manager.h"
@@ -1062,6 +1063,15 @@ void setup() {
             delay(1000);
             digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
         }
+    }
+    
+    // Run system diagnostics
+    Logger::info("Running system diagnostics...");
+    bool diagnosticsPass = runSystemDiagnostics();
+    
+    if (!diagnosticsPass) {
+        Logger::warning("System diagnostics detected issues - review diagnostics.log");
+        // Continue operation but log the warning
     }
     
     // Create and start all system tasks
