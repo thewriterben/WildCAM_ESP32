@@ -276,6 +276,11 @@ void EnhancedWebServer::setupAPIEndpoints() {
         this->handleAPIAnalyticsPerformance(request);
     });
     
+    // CSV Export endpoint
+    server_.on("/api/export/detections.csv", HTTP_GET, [this](AsyncWebServerRequest* request) {
+        this->handleAPIExportDetectionsCSV(request);
+    });
+    
     // Setup language API endpoints if language integration is available
     if (languageIntegration_) {
         languageIntegration_->setupAPIEndpoints(server_);
@@ -1456,6 +1461,151 @@ String EnhancedWebServer::generatePerformanceAnalyticsJSON(const String& timeRan
     String result;
     serializeJson(doc, result);
     return result;
+}
+
+// CSV Export Handler Implementation
+void EnhancedWebServer::handleAPIExportDetectionsCSV(AsyncWebServerRequest* request) {
+    ESP_LOGI(TAG, "CSV export request received");
+    
+    // Parse date range query parameters
+    String startDate = "";
+    String endDate = "";
+    
+    if (request->hasParam("start")) {
+        startDate = request->getParam("start")->value();
+        ESP_LOGI(TAG, "Start date filter: %s", startDate.c_str());
+    }
+    
+    if (request->hasParam("end")) {
+        endDate = request->getParam("end")->value();
+        ESP_LOGI(TAG, "End date filter: %s", endDate.c_str());
+    }
+    
+    // Generate filename with current date
+    time_t now = time(nullptr);
+    struct tm timeinfo;
+    localtime_r(&now, &timeinfo);
+    char dateStr[16];
+    strftime(dateStr, sizeof(dateStr), "%Y%m%d", &timeinfo);
+    String filename = "detections_" + String(dateStr) + ".csv";
+    
+    // Create CSV response with proper headers
+    AsyncWebServerResponse* response = request->beginChunkedResponse(
+        "text/csv",
+        [this, startDate, endDate](uint8_t* buffer, size_t maxLen, size_t index) -> size_t {
+            static bool headerSent = false;
+            static uint32_t recordCount = 0;
+            const uint32_t MAX_RECORDS = 10000;
+            
+            // Reset state on first call
+            if (index == 0) {
+                headerSent = false;
+                recordCount = 0;
+            }
+            
+            String chunk = "";
+            
+            // Send CSV header on first chunk
+            if (!headerSent) {
+                chunk = "Timestamp,Species,Confidence,Image_Path,GPS_Lat,GPS_Lon,Battery_Level\n";
+                headerSent = true;
+            }
+            
+            // Check if we've reached the limit
+            if (recordCount >= MAX_RECORDS) {
+                ESP_LOGI(TAG, "CSV export completed with %d records", recordCount);
+                return 0; // End of data
+            }
+            
+            // Generate mock detection data for demonstration
+            // In production, this would query actual detection database/log files
+            // For now, generate sample data based on existing wildlife log pattern
+            const uint32_t recordsPerChunk = 50;
+            uint32_t recordsToAdd = min(recordsPerChunk, MAX_RECORDS - recordCount);
+            
+            for (uint32_t i = 0; i < recordsToAdd; i++) {
+                // Generate timestamp (mock data - going back in time)
+                unsigned long timestamp = millis() - (recordCount + i) * 3600000;
+                String timestampStr = String(timestamp / 1000);
+                
+                // Generate species data (cycling through common species)
+                const char* species[] = {"deer", "fox", "raccoon", "bird", "squirrel", "rabbit"};
+                uint8_t speciesIndex = (recordCount + i) % 6;
+                String speciesName = String(species[speciesIndex]);
+                
+                // Generate confidence (0.70 - 0.95)
+                float confidence = 0.70 + ((recordCount + i) % 26) * 0.01;
+                String confidenceStr = String(confidence, 2);
+                
+                // Generate image path
+                String imagePath = "/images/wildlife_" + String(timestamp) + ".jpg";
+                
+                // Generate GPS coordinates (mock data)
+                String gpsLat = String(45.5 + ((recordCount + i) % 100) * 0.001, 6);
+                String gpsLon = String(-122.7 + ((recordCount + i) % 100) * 0.001, 6);
+                
+                // Generate battery level (70-100%)
+                String batteryLevel = String(70 + ((recordCount + i) % 31));
+                
+                // Generate CSV row with proper escaping
+                chunk += generateCSVRow(timestampStr, speciesName, confidenceStr, 
+                                       imagePath, gpsLat, gpsLon, batteryLevel);
+            }
+            
+            recordCount += recordsToAdd;
+            
+            // Copy chunk to buffer
+            size_t len = min(chunk.length(), maxLen);
+            memcpy(buffer, chunk.c_str(), len);
+            
+            // Check if we're done
+            if (recordCount >= MAX_RECORDS || recordsToAdd == 0) {
+                ESP_LOGI(TAG, "CSV export completed with %d records", recordCount);
+                if (len < maxLen) {
+                    return len; // Last chunk
+                }
+            }
+            
+            return len;
+        }
+    );
+    
+    // Set proper headers for CSV download
+    response->addHeader("Content-Type", "text/csv");
+    response->addHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response->addHeader("Pragma", "no-cache");
+    response->addHeader("Expires", "0");
+    
+    ESP_LOGI(TAG, "Starting CSV export as file: %s", filename.c_str());
+    request->send(response);
+}
+
+// CSV Helper Functions
+String EnhancedWebServer::escapeCSVField(const String& field) {
+    // Escape CSV field by wrapping in quotes if it contains comma, quote, or newline
+    if (field.indexOf(',') >= 0 || field.indexOf('"') >= 0 || field.indexOf('\n') >= 0) {
+        String escaped = field;
+        // Replace " with ""
+        escaped.replace("\"", "\"\"");
+        return "\"" + escaped + "\"";
+    }
+    return field;
+}
+
+String EnhancedWebServer::generateCSVRow(const String& timestamp, const String& species, 
+                                         const String& confidence, const String& imagePath,
+                                         const String& gpsLat, const String& gpsLon, 
+                                         const String& batteryLevel) {
+    String row = "";
+    row += escapeCSVField(timestamp) + ",";
+    row += escapeCSVField(species) + ",";
+    row += escapeCSVField(confidence) + ",";
+    row += escapeCSVField(imagePath) + ",";
+    row += escapeCSVField(gpsLat) + ",";
+    row += escapeCSVField(gpsLon) + ",";
+    row += escapeCSVField(batteryLevel) + "\n";
+    return row;
 }
 
 // Utility functions
