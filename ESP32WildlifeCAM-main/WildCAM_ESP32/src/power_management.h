@@ -146,6 +146,7 @@ public:
     
     /**
      * @brief Destructor
+     * Ensures proper cleanup of RTOS resources (semaphores, tasks)
      */
     ~PowerManager();
     
@@ -158,12 +159,14 @@ public:
     
     /**
      * @brief Update power management (call regularly)
+     * @note Thread-safe: Protected by internal mutex
      */
     void update();
     
     /**
      * @brief Get current battery information
      * @return BatteryInfo structure
+     * @note Thread-safe: Returns copy of internal state
      */
     BatteryInfo getBatteryInfo() const;
     

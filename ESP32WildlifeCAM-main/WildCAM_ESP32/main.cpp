@@ -181,11 +181,24 @@ void setup() {
     Logger::info("Detected board: %s", BoardDetector::getBoardName(board));
     
     // Create and initialize system manager
-    g_system = new SystemManager(board);
+    g_system = new (std::nothrow) SystemManager(board);
+    if (!g_system) {
+        Logger::error("Failed to allocate SystemManager! Out of memory.");
+        Logger::error("Free heap: %d bytes", ESP.getFreeHeap());
+        Logger::error("Entering safe mode...");
+        
+        // Enter comprehensive safe mode
+        enterSafeMode();
+    }
+    
     if (!g_system->initialize()) {
         Logger::error("Failed to initialize system!");
         Logger::error("Last error: %s", g_system->getLastError());
         Logger::error("Entering safe mode...");
+        
+        // Cleanup failed system manager
+        delete g_system;
+        g_system = nullptr;
         
         // Enter comprehensive safe mode
         enterSafeMode();
@@ -199,8 +212,8 @@ void setup() {
 }
 
 void loop() {
-    // Main system loop
-    if (g_system) {
+    // Main system loop - validate pointer before use
+    if (g_system != nullptr) {
         g_system->update();
         
         // Check for serial commands to test camera

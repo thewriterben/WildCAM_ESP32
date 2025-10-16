@@ -107,6 +107,7 @@ public:
     
     /**
      * @brief Destructor
+     * Ensures proper cleanup of camera resources, frame buffers, and RTOS objects
      */
     ~CameraModule();
     
@@ -131,8 +132,10 @@ public:
     
     /**
      * @brief Capture a single image
-     * @param metadata Pointer to store image metadata (optional)
+     * @param metadata Pointer to store image metadata (optional, can be nullptr)
      * @return CameraResult capture result
+     * @note Thread-safe: Protected by internal mutex
+     * @warning Caller must call returnFrameBuffer() on retrieved frame buffer
      */
     CameraResult captureImage(ImageMetadata* metadata = nullptr);
     
@@ -147,12 +150,16 @@ public:
     /**
      * @brief Get the last captured frame buffer
      * @return Pointer to frame buffer or nullptr if none available
+     * @warning Caller MUST call returnFrameBuffer() when done to prevent memory leak
+     * @warning Always check for nullptr before using returned pointer
      */
     camera_fb_t* getLastFrameBuffer();
     
     /**
      * @brief Return frame buffer to system
-     * @param fb Frame buffer to return
+     * @param fb Frame buffer to return (must not be nullptr)
+     * @note Safe to call with nullptr (no-op)
+     * @note After calling, the fb pointer is invalid and must not be used
      */
     void returnFrameBuffer(camera_fb_t* fb);
     
