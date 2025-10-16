@@ -782,26 +782,12 @@ bool WildlifeTelemetry::collectDeviceHealth() {
     health.timestamp = getCurrentTimestamp();
     
     // Read CPU temperature from ESP32 internal sensor
-    float cpuTemp = 0.0;
-    #ifdef __cplusplus
-    extern "C" {
-    #endif
-        uint8_t temprature_sens_read();
-    #ifdef __cplusplus
-    }
-    #endif
+    float cpuTemp = 45.0; // Default fallback value
     
-    // Use ESP32 internal temperature sensor (available on ESP32, returns value in Fahrenheit)
-    // Convert to Celsius: (F - 32) * 5/9
     #if defined(ESP32)
-        #ifdef temperatureRead
-            cpuTemp = temperatureRead(); // This returns Celsius on ESP32-S3
-        #else
-            // Fallback for older ESP32
-            cpuTemp = (temprature_sens_read() - 32) / 1.8;
-        #endif
-    #else
-        cpuTemp = 45.0; // Fallback value
+        // temperatureRead() is available on ESP32-S3 and newer chips
+        // Returns temperature in Celsius
+        cpuTemp = temperatureRead();
     #endif
     
     health.cpuTemperature = cpuTemp;
