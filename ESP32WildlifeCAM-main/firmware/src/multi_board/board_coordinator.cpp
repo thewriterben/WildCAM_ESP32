@@ -348,7 +348,7 @@ void BoardCoordinator::processNodeManagement() {
     }
     
     // Check for failed nodes and reassign tasks if needed
-    // TODO: Implement node failure detection and task reassignment
+    checkFailedNodes();
 }
 
 void BoardCoordinator::processTaskManagement() {
@@ -540,6 +540,166 @@ bool BoardCoordinator::isElectionWinner() const {
     }
     
     return true;
+}
+
+void BoardCoordinator::checkFailedNodes() {
+    unsigned long now = millis();
+    std::vector<int> failedNodeIds;
+    
+    // Check each managed node for heartbeat timeout
+    for (auto& node : managedNodes_) {
+        // Skip the coordinator itself
+        if (node.nodeId == nodeId_) {
+            continue;
+        }
+        
+        // Check if node has exceeded failure timeout
+        if (node.isActive && (now - node.lastSeen) > NODE_FAILURE_TIMEOUT) {
+            // Mark node as failed
+            node.isActive = false;
+            failedNodeIds.push_back(node.nodeId);
+            
+            // Log node failure event
+            Serial.printf("❌ NODE FAILURE DETECTED: Node %d - Last seen %lu ms ago (timeout: %lu ms)\n",
+                         node.nodeId, 
+                         now - node.lastSeen,
+                         NODE_FAILURE_TIMEOUT);
+            
+            Serial.printf("   Node details: Role=%s, Signal=%d dBm, HopCount=%d\n",
+                         MessageProtocol::roleToString(node.role),
+                         node.signalStrength,
+                         node.hopCount);
+        }
+    }
+    
+    // Reassign tasks from failed nodes
+    for (int failedNodeId : failedNodeIds) {
+        reassignTasksFromFailedNode(failedNodeId);
+    }
+    
+    // Update network topology if any nodes failed
+    if (!failedNodeIds.empty()) {
+        Serial.printf("⚠️  Network degradation: %d node(s) failed, %d active nodes remaining\n",
+                     failedNodeIds.size(),
+                     std::count_if(managedNodes_.begin(), managedNodes_.end(),
+                                  [](const NetworkNode& n) { return n.isActive; }));
+        
+        // Broadcast updated topology to inform remaining nodes
+        sendNetworkTopology();
+    }
+}
+
+void BoardCoordinator::reassignTasksFromFailedNode(int failedNodeId) {
+    std::vector<Task> tasksToReassign;
+    
+    // Find all tasks assigned to the failed node
+    for (auto& task : activeTasks_) {
+        if (task.assignedNode == failedNodeId && !task.completed) {
+            tasksToReassign.push_back(task);
+        }
+    }
+    
+    if (tasksToReassign.empty()) {
+        Serial.printf("   No active tasks to reassign from failed node %d\n", failedNodeId);
+        return;
+    }
+    
+    Serial.printf("   Reassigning %d task(s) from failed node %d\n", 
+                 tasksToReassign.size(), failedNodeId);
+    
+    // Attempt to reassign each task
+    for (auto& task : tasksToReassign) {
+        int newNodeId = selectHealthyNodeForTask(task.taskType);
+        
+        if (newNodeId > 0) {
+            // Update task assignment
+            task.assignedNode = newNodeId;
+            
+            // Send new task assignment
+            if (sendTaskAssignment(task)) {
+                Serial.printf("   ✓ Task %d (%s) reassigned: %d -> %d (Priority: %d)\n",
+                             task.taskId,
+                             task.taskType.c_str(),
+                             failedNodeId,
+                             newNodeId,
+                             task.priority);
+            } else {
+                Serial.printf("   ✗ Failed to send reassignment for task %d to node %d\n",
+                             task.taskId, newNodeId);
+            }
+        } else {
+            Serial.printf("   ⚠️  No healthy node available to reassign task %d (%s)\n",
+                         task.taskId,
+                         task.taskType.c_str());
+            
+            // Mark task as failed if we can't reassign it
+            task.completed = false;
+            // Could extend deadline to give more time when network recovers
+            task.deadline = millis() + networkConfig_.taskTimeout;
+        }
+    }
+}
+
+int BoardCoordinator::selectHealthyNodeForTask(const String& taskType) const {
+    int bestNodeId = -1;
+    int highestScore = -1;
+    
+    // Select the best healthy node based on capabilities and load
+    for (const auto& node : managedNodes_) {
+        // Skip inactive nodes and the coordinator itself
+        if (!node.isActive || node.nodeId == nodeId_) {
+            continue;
+        }
+        
+        // Calculate node score based on capabilities and current load
+        int score = 0;
+        
+        // Task type specific scoring
+        if (taskType == "AI_INFERENCE" && node.capabilities.hasAI) {
+            score += 50;
+        }
+        if (taskType == "IMAGE_STORAGE" && node.capabilities.hasSD) {
+            score += 40;
+        }
+        if (taskType == "RELAY" && node.role == ROLE_RELAY) {
+            score += 30;
+        }
+        
+        // Battery level consideration (higher is better)
+        score += node.capabilities.batteryLevel / 4;
+        
+        // Signal strength consideration (closer/stronger signal is better)
+        // Convert signal strength from negative dBm to positive score
+        score += (node.signalStrength + 120) / 2;
+        
+        // Hop count consideration (fewer hops is better)
+        score -= node.hopCount * 5;
+        
+        // Load balancing: count how many tasks are already assigned to this node
+        int nodeTaskCount = std::count_if(activeTasks_.begin(), activeTasks_.end(),
+                                         [&node](const Task& t) { 
+                                             return t.assignedNode == node.nodeId && !t.completed; 
+                                         });
+        score -= nodeTaskCount * 10;
+        
+        // Select node with highest score
+        if (score > highestScore) {
+            highestScore = score;
+            bestNodeId = node.nodeId;
+        }
+    }
+    
+    return bestNodeId;
+}
+
+void BoardCoordinator::sendNetworkTopology() {
+    String message = MessageProtocol::createTopologyMessage(managedNodes_);
+    
+    if (LoraMesh::queueMessage(message)) {
+        Serial.printf("📡 Network topology broadcast: %d nodes\n", managedNodes_.size());
+    } else {
+        Serial.println("⚠️  Failed to broadcast network topology");
+    }
 }
 
 DiscoveryProtocol* BoardCoordinator::getDiscoveryProtocol() const {
