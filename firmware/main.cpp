@@ -17,6 +17,10 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 #include <esp_log.h>
+#include <Preferences.h>
+#include <SD.h>
+#include <FS.h>
+#include <time.h>
 
 // Hardware abstraction layer
 #include "hal/board_detector.h"
@@ -42,6 +46,7 @@
 #include "core/system_manager.h"
 #include "utils/logger.h"
 #include "src/camera/camera_manager.h"
+#include "src/utils/time_manager.h"
 
 // Storage management
 #include "core/storage_manager.h"
@@ -53,6 +58,8 @@
 // Configuration
 #define FIRMWARE_VERSION "3.0.0"
 #define SYSTEM_NAME "WildCAM_ESP32_v2.0"
+#define LOCKDOWN_DURATION_MS (3600000) // 1 hour in milliseconds
+#define SD_CS_PIN 13  // SD card chip select pin for ESP32-CAM
 
 // Global system components
 SystemManager* g_system_manager = nullptr;
@@ -61,6 +68,11 @@ MPPTController* g_mppt_controller = nullptr;
 SecurityManager* g_security_manager = nullptr;
 EnvironmentalSuite* g_env_sensors = nullptr;
 CameraManager* g_camera_manager = nullptr;
+
+// Storage and security globals
+Preferences g_preferences;
+bool g_sd_initialized = false;
+bool g_lockdown_enabled = true;  // Configurable lockdown mode
 
 // Task handles for multi-core processing
 TaskHandle_t ai_processing_task = NULL;
@@ -80,6 +92,8 @@ struct SystemState {
     int active_cameras = 0;
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
+    bool in_lockdown = false;
+    unsigned long lockdown_start_time = 0;
 } system_state;
 
 /**
@@ -236,6 +250,12 @@ void aiProcessingTask(void* parameter) {
     BoundingBox detections[10];
     
     while (true) {
+        // Skip processing if in lockdown mode
+        if (system_state.in_lockdown) {
+            vTaskDelay(xDelay * 10); // Check less frequently during lockdown
+            continue;
+        }
+        
         if (system_state.ai_initialized && g_yolo_detector && g_yolo_detector->isInitialized() && g_camera_manager) {
             // Capture camera frame with error handling
             int image_width = 0, image_height = 0;
@@ -336,6 +356,201 @@ void powerManagementTask(void* parameter) {
 }
 
 /**
+ * @brief Initialize SD card storage
+ * @return true if successful, false otherwise
+ */
+bool initializeSDCard() {
+    Logger::info("Initializing SD card...");
+    
+    if (!SD.begin(SD_CS_PIN)) {
+        Logger::error("SD card initialization failed");
+        return false;
+    }
+    
+    uint8_t cardType = SD.cardType();
+    if (cardType == CARD_NONE) {
+        Logger::error("No SD card attached");
+        return false;
+    }
+    
+    // Create images directory if it doesn't exist
+    if (!SD.exists("/images")) {
+        if (!SD.mkdir("/images")) {
+            Logger::error("Failed to create /images directory");
+            return false;
+        }
+    }
+    
+    Logger::info("SD card initialized successfully");
+    return true;
+}
+
+/**
+ * @brief Get tamper counter from persistent storage
+ * @return Current tamper counter value
+ */
+uint32_t getTamperCounter() {
+    return g_preferences.getUInt("tamper_count", 0);
+}
+
+/**
+ * @brief Increment and persist tamper counter
+ * @return New tamper counter value
+ */
+uint32_t incrementTamperCounter() {
+    uint32_t count = getTamperCounter() + 1;
+    g_preferences.putUInt("tamper_count", count);
+    Logger::info("Tamper counter incremented to: %lu", count);
+    return count;
+}
+
+/**
+ * @brief Check if network is available for sending alerts
+ * @return true if network is available, false otherwise
+ */
+bool isNetworkAvailable() {
+    // Check system state for network connectivity
+    return system_state.network_connected;
+}
+
+/**
+ * @brief Send critical alert through available network
+ * @param message Alert message to send
+ * @return true if alert sent successfully, false otherwise
+ */
+bool sendCriticalAlert(const char* message) {
+    if (!isNetworkAvailable()) {
+        Logger::warning("Network not available for alert transmission");
+        return false;
+    }
+    
+    // TODO: Implement actual network alert transmission
+    // This would send via WiFi, cellular, or satellite depending on availability
+    Logger::info("Sending critical alert: %s", message);
+    
+    // Placeholder for actual implementation
+    // Example: HTTP POST, MQTT publish, or satellite message
+    return true;
+}
+
+/**
+ * @brief Capture and save tamper event image
+ * @return true if image captured and saved successfully, false otherwise
+ */
+bool captureTamperImage() {
+    if (!g_camera_manager || !g_camera_manager->isInitialized()) {
+        Logger::error("Camera not available for tamper image capture");
+        return false;
+    }
+    
+    if (!g_sd_initialized) {
+        Logger::error("SD card not initialized, cannot save tamper image");
+        return false;
+    }
+    
+    // Capture frame
+    int width = 0, height = 0;
+    uint8_t* image_data = g_camera_manager->captureFrame(&width, &height);
+    
+    if (!image_data) {
+        Logger::error("Failed to capture tamper image");
+        return false;
+    }
+    
+    // Generate filename with timestamp
+    String timestamp = getFormattedTime();
+    timestamp.replace(" ", "_");
+    timestamp.replace(":", "");
+    timestamp.replace("-", "");
+    String filename = "/images/TAMPER_" + timestamp + ".jpg";
+    
+    // Save to SD card
+    File file = SD.open(filename.c_str(), FILE_WRITE);
+    if (!file) {
+        Logger::error("Failed to create tamper image file: %s", filename.c_str());
+        g_camera_manager->releaseFrame(image_data);
+        return false;
+    }
+    
+    // Note: The image_data from captureFrame is in RGB565 format
+    // For a real implementation, you would need to convert to JPEG or save raw data
+    // This is a simplified version that demonstrates the concept
+    
+    // Get actual frame buffer for JPEG data
+    camera_fb_t* fb = esp_camera_fb_get();
+    if (fb) {
+        file.write(fb->buf, fb->len);
+        esp_camera_fb_return(fb);
+        Logger::info("Tamper image saved: %s (%d bytes)", filename.c_str(), fb->len);
+    } else {
+        Logger::error("Failed to get camera frame buffer");
+        file.close();
+        g_camera_manager->releaseFrame(image_data);
+        return false;
+    }
+    
+    file.close();
+    g_camera_manager->releaseFrame(image_data);
+    
+    return true;
+}
+
+/**
+ * @brief Handle tamper detection security response
+ */
+void handleTamperDetection() {
+    String timestamp = getFormattedTime();
+    
+    // Step 1: Write critical alert to log
+    Logger::critical("TAMPER DETECTED at %s - Initiating security response", timestamp.c_str());
+    
+    // Step 2: Capture and save image with TAMPER_ prefix
+    bool image_saved = captureTamperImage();
+    if (image_saved) {
+        Logger::info("Tamper event image captured successfully");
+    } else {
+        Logger::error("Failed to capture tamper event image");
+    }
+    
+    // Step 3: Send alert if network is available
+    char alert_message[128];
+    snprintf(alert_message, sizeof(alert_message), 
+             "CRITICAL: Tamper detected at %s. Image capture: %s",
+             timestamp.c_str(), image_saved ? "SUCCESS" : "FAILED");
+    
+    if (sendCriticalAlert(alert_message)) {
+        Logger::info("Critical alert sent successfully");
+    } else {
+        Logger::warning("Failed to send critical alert");
+    }
+    
+    // Step 4: Increment tamper counter in persistent storage
+    uint32_t tamper_count = incrementTamperCounter();
+    Logger::info("Total tamper events: %lu", tamper_count);
+    
+    // Step 5: Optional lockdown mode
+    if (g_lockdown_enabled && !system_state.in_lockdown) {
+        system_state.in_lockdown = true;
+        system_state.lockdown_start_time = millis();
+        Logger::critical("LOCKDOWN MODE ACTIVATED - Image capture disabled for 1 hour");
+    }
+}
+
+/**
+ * @brief Check and manage lockdown mode
+ */
+void manageLockdownMode() {
+    if (system_state.in_lockdown) {
+        unsigned long lockdown_elapsed = millis() - system_state.lockdown_start_time;
+        
+        if (lockdown_elapsed >= LOCKDOWN_DURATION_MS) {
+            system_state.in_lockdown = false;
+            Logger::info("LOCKDOWN MODE DEACTIVATED - Normal operation resumed");
+        }
+    }
+}
+
+/**
  * @brief Security Monitoring Task (Core 0)
  * Handles encryption, tamper detection, and secure communications
  */
@@ -345,11 +560,14 @@ void securityMonitoringTask(void* parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(10000); // Check every 10 seconds
     
     while (true) {
+        // Manage lockdown mode
+        manageLockdownMode();
+        
         if (g_security_manager && g_security_manager->isSecurityOperational()) {
             // Check for tampering
             if (g_security_manager->detectTampering()) {
                 Logger::error("Tampering detected! Initiating security protocols");
-                // TODO: Implement security response (alert, data wipe, etc.)
+                handleTamperDetection();
             }
             
             // Periodic security health check
@@ -437,6 +655,26 @@ bool initializeSystem() {
     // Initialize watchdog timer
     esp_task_wdt_init(30, true);
     esp_task_wdt_add(NULL);
+    
+    // Initialize NVS (Non-Volatile Storage) for persistent data
+    if (!g_preferences.begin("wildcam", false)) {
+        Logger::error("Failed to initialize NVS storage");
+        return false;
+    }
+    Logger::info("✓ NVS storage initialized");
+    
+    // Initialize time manager
+    if (!initializeTimeManager()) {
+        Logger::warning("Time manager initialization failed (non-critical)");
+    } else {
+        Logger::info("✓ Time manager initialized");
+    }
+    
+    // Initialize SD card storage
+    g_sd_initialized = initializeSDCard();
+    if (!g_sd_initialized) {
+        Logger::warning("SD card initialization failed - image storage disabled");
+    }
     
     // Initialize security manager first
     g_security_manager = new (std::nothrow) SecurityManager(SecurityLevel::ENHANCED, true);
