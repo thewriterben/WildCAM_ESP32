@@ -350,6 +350,11 @@ private:
 // UTILITY FUNCTIONS
 // ===========================
 
+// Error tracking utilities
+void incrementSystemErrorCount();
+uint32_t getSystemErrorCount();
+void resetSystemErrorCount();
+
 // Factory function
 WildlifeTelemetry* createWildlifeTelemetry(MeshInterface* meshInterface);
 
