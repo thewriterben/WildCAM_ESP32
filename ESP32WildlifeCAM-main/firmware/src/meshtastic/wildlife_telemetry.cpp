@@ -11,13 +11,25 @@
 #include "../config.h"
 #include "../sensors/advanced_environmental_sensors.h"
 #include "../../src/data/storage_manager.h"
+#include "../power_manager.h"
+#include "../camera_handler.h"
+#include "lora_driver.h"
 #include <FS.h>
 #include <LittleFS.h>
 #include <esp_system.h>
+#include <Preferences.h>
 
 // External function from environmental integration
 extern AdvancedEnvironmentalData getLatestEnvironmentalData();
 extern bool areEnvironmentalSensorsHealthy();
+
+// External camera and power instances (accessed via SolarManager namespace)
+extern CameraHandler* g_cameraHandler;
+extern LoRaDriver* g_loraDriver;
+
+// Global error counter with persistent storage
+static uint32_t g_systemErrorCount = 0;
+static Preferences g_errorPrefs;
 
 // ===========================
 // CONSTRUCTOR/DESTRUCTOR
@@ -74,6 +86,14 @@ bool WildlifeTelemetry::init(MeshInterface* meshInterface) {
         loadConfigFromFile("/telemetry_config.json");
     }
     
+    // Initialize error tracking with NVS
+    if (g_errorPrefs.begin("telemetry", false)) {
+        g_systemErrorCount = g_errorPrefs.getUInt("errorCount", 0);
+        DEBUG_PRINTF("WildlifeTelemetry: Loaded error count: %u\n", g_systemErrorCount);
+    } else {
+        DEBUG_PRINTLN("WildlifeTelemetry: Warning - Could not open NVS for error tracking");
+    }
+    
     // Reserve storage space
     motionEvents_.reserve(config_.maxStoredRecords);
     environmentalData_.reserve(config_.maxStoredRecords);
@@ -107,6 +127,12 @@ bool WildlifeTelemetry::configure(const TelemetryConfig& config) {
 
 void WildlifeTelemetry::cleanup() {
     stopAutomaticCollection();
+    
+    // Save error count to NVS before cleanup
+    if (g_errorPrefs.isValid()) {
+        g_errorPrefs.putUInt("errorCount", g_systemErrorCount);
+        g_errorPrefs.end();
+    }
     
     // Clear data vectors
     motionEvents_.clear();
@@ -676,16 +702,55 @@ bool WildlifeTelemetry::collectPowerStatus() {
     PowerStatus status;
     status.timestamp = getCurrentTimestamp();
     
-    // TODO: Read from actual power management system
-    // For now, use placeholder values
-    status.batteryVoltage = 3.8;    // Would read from ADC
-    status.solarVoltage = 0.0;      // Would read from solar panel ADC
-    status.chargingCurrent = 0.0;   // Would read from current sensor
-    status.batteryLevel = 75;       // Would calculate from voltage
-    status.isCharging = false;      // Would determine from current
-    status.lowBattery = status.batteryLevel < 20;
+    // Read from power management system with error handling
+    float batteryVoltage = 0.0;
+    float solarVoltage = 0.0;
+    
+    // Try to read from SolarManager namespace if available
+    if (SolarManager::instance) {
+        try {
+            batteryVoltage = SolarManager::getBatteryVoltage();
+            solarVoltage = SolarManager::getSolarVoltage();
+        } catch (...) {
+            DEBUG_PRINTLN("WildlifeTelemetry: Error reading from SolarManager");
+            g_systemErrorCount++;
+            // Use default safe values
+            batteryVoltage = 3.7;
+            solarVoltage = 0.0;
+        }
+    } else {
+        // Fallback: use placeholder values if power manager not available
+        batteryVoltage = 3.7;
+        solarVoltage = 0.0;
+    }
+    
+    status.batteryVoltage = batteryVoltage;
+    status.solarVoltage = solarVoltage;
+    
+    // Calculate battery percentage based on voltage thresholds
+    if (batteryVoltage >= BATTERY_FULL_VOLTAGE) {
+        status.batteryLevel = 100;
+    } else if (batteryVoltage <= BATTERY_CRITICAL_THRESHOLD) {
+        status.batteryLevel = 0;
+    } else {
+        // Linear interpolation between critical and full voltage
+        float voltageRange = BATTERY_FULL_VOLTAGE - BATTERY_CRITICAL_THRESHOLD;
+        float voltageAboveCritical = batteryVoltage - BATTERY_CRITICAL_THRESHOLD;
+        status.batteryLevel = (uint8_t)((voltageAboveCritical / voltageRange) * 100.0);
+        
+        // Clamp to 0-100 range
+        if (status.batteryLevel > 100) status.batteryLevel = 100;
+        if (status.batteryLevel < 0) status.batteryLevel = 0;
+    }
+    
+    // Determine charging status based on solar voltage
+    status.chargingCurrent = (solarVoltage > SOLAR_CHARGING_VOLTAGE_MIN) ? 100.0 : 0.0;
+    status.isCharging = (solarVoltage > SOLAR_CHARGING_VOLTAGE_MIN);
+    status.lowBattery = (batteryVoltage < BATTERY_LOW_THRESHOLD);
     status.uptimeSeconds = millis() / 1000;
-    status.powerConsumption = 0.0;  // Would calculate from current consumption
+    
+    // Estimate power consumption (placeholder, would need actual current sensor)
+    status.powerConsumption = 0.0;
     
     return recordPowerStatus(status);
 }
@@ -716,16 +781,81 @@ bool WildlifeTelemetry::collectDeviceHealth() {
     DeviceHealth health;
     health.timestamp = getCurrentTimestamp();
     
-    // Collect actual system health data
-    health.cpuTemperature = 45.0;   // TODO: Read from temperature sensor
+    // Read CPU temperature from ESP32 internal sensor
+    float cpuTemp = 0.0;
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
+        uint8_t temprature_sens_read();
+    #ifdef __cplusplus
+    }
+    #endif
+    
+    // Use ESP32 internal temperature sensor (available on ESP32, returns value in Fahrenheit)
+    // Convert to Celsius: (F - 32) * 5/9
+    #if defined(ESP32)
+        #ifdef temperatureRead
+            cpuTemp = temperatureRead(); // This returns Celsius on ESP32-S3
+        #else
+            // Fallback for older ESP32
+            cpuTemp = (temprature_sens_read() - 32) / 1.8;
+        #endif
+    #else
+        cpuTemp = 45.0; // Fallback value
+    #endif
+    
+    health.cpuTemperature = cpuTemp;
     health.freeHeap = ESP.getFreeHeap();
     health.minFreeHeap = ESP.getMinFreeHeap();
     health.wifiSignal = 0;          // WiFi disabled in config
-    health.loraSignal = 80;         // TODO: Get from LoRa driver
+    
+    // Get LoRa signal strength with null check
+    health.loraSignal = 0;
+    #if LORA_ENABLED
+    if (g_loraDriver != nullptr) {
+        try {
+            int16_t rssi = g_loraDriver->getRssi();
+            // Convert RSSI to 0-100 scale (typical range: -120 to -30 dBm)
+            health.loraSignal = (uint8_t)((rssi + 120) * 100 / 90);
+            if (health.loraSignal > 100) health.loraSignal = 100;
+        } catch (...) {
+            DEBUG_PRINTLN("WildlifeTelemetry: Error reading LoRa RSSI");
+            g_systemErrorCount++;
+            health.loraSignal = 0;
+        }
+    }
+    #endif
+    
     health.resetReason = ESP.getResetReason();
-    health.errorCount = 0;          // TODO: Implement error tracking
-    health.sdCardStatus = StorageManager::initialize(); // Check SD card status
-    health.cameraStatus = true;     // TODO: Check camera status
+    
+    // Use global error counter
+    health.errorCount = g_systemErrorCount;
+    
+    // Check SD card status
+    bool sdStatus = false;
+    try {
+        sdStatus = StorageManager::initialize();
+    } catch (...) {
+        DEBUG_PRINTLN("WildlifeTelemetry: Error checking SD card status");
+        g_systemErrorCount++;
+        sdStatus = false;
+    }
+    health.sdCardStatus = sdStatus;
+    
+    // Check camera status with null check
+    bool camStatus = false;
+    if (g_cameraHandler != nullptr) {
+        try {
+            CameraStatus camStat = g_cameraHandler->getStatus();
+            // Camera is operational if initialized and no critical error
+            camStatus = camStat.initialized && (camStat.lastError == ESP_OK);
+        } catch (...) {
+            DEBUG_PRINTLN("WildlifeTelemetry: Error checking camera status");
+            g_systemErrorCount++;
+            camStatus = false;
+        }
+    }
+    health.cameraStatus = camStatus;
     
     return recordDeviceHealth(health);
 }
@@ -1310,4 +1440,41 @@ bool isValidWildlifeDetection(const WildlifeDetection& detection) {
     return detection.timestamp > 0 &&
            !detection.species.isEmpty() &&
            detection.confidence >= 0.0 && detection.confidence <= 1.0;
+}
+
+// ===========================
+// ERROR TRACKING UTILITIES
+// ===========================
+
+/**
+ * @brief Increment the global system error counter and persist to NVS
+ */
+void incrementSystemErrorCount() {
+    g_systemErrorCount++;
+    
+    // Periodically save to NVS (every 10 errors to reduce wear)
+    if (g_systemErrorCount % 10 == 0) {
+        if (g_errorPrefs.isValid() || g_errorPrefs.begin("telemetry", false)) {
+            g_errorPrefs.putUInt("errorCount", g_systemErrorCount);
+        }
+    }
+}
+
+/**
+ * @brief Get the current system error count
+ * @return Current error count
+ */
+uint32_t getSystemErrorCount() {
+    return g_systemErrorCount;
+}
+
+/**
+ * @brief Reset the system error counter
+ */
+void resetSystemErrorCount() {
+    g_systemErrorCount = 0;
+    
+    if (g_errorPrefs.isValid() || g_errorPrefs.begin("telemetry", false)) {
+        g_errorPrefs.putUInt("errorCount", 0);
+    }
 }
