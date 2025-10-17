@@ -150,15 +150,19 @@ WildCAM_ESP32_v2.0/
 > **AI-Thinker ESP32-CAM** (Basic Configuration):
 > - ✅ Best for: Camera + Motion Detection + Environmental Sensors + SD Card
 > - ❌ Limited GPIO pins - Cannot support Camera + LoRa + Servos simultaneously
-> - 💰 Budget-friendly option for basic wildlife monitoring
+> - 💰 Budget-friendly option for basic wildlife monitoring ($15-20)
 > 
 > **ESP32-S3-CAM** (⭐ Recommended for Full Features):
 > - ✅ Supports: Camera + LoRa + Servos + All Sensors + SD Card (no conflicts!)
 > - ✅ More RAM (8MB PSRAM), faster processing, USB OTG
-> - ✅ Additional GPIO pins for peripheral expansion
+> - ✅ Additional GPIO pins (20+) for peripheral expansion
 > - 🌟 **Required for production deployments with LoRa mesh networking**
 > 
-> See [Hardware Requirements](HARDWARE_REQUIREMENTS.md) and [ESP32WildlifeCAM-main/README.md](ESP32WildlifeCAM-main/README.md) for detailed pin assignments and configuration.
+> 📚 **Detailed Guides:**
+> - [Hardware Selection Guide](docs/HARDWARE_SELECTION_GUIDE.md) - Board comparison, cost analysis, use cases
+> - [GPIO Pin Conflicts](docs/GPIO_PIN_CONFLICTS.md) - Complete pin matrix and conflict resolution
+> - [Hardware Requirements](HARDWARE_REQUIREMENTS.md) - Component specifications
+> - [ESP32WildlifeCAM-main/README.md](ESP32WildlifeCAM-main/README.md) - Detailed pin assignments
 
 ### Optional Enhancements
 - **Thermal Camera**: FLIR Lepton for heat detection
@@ -170,26 +174,34 @@ WildCAM_ESP32_v2.0/
 ## ⚠️ Known Limitations
 
 ### GPIO Pin Conflicts (AI-Thinker ESP32-CAM)
-The AI-Thinker ESP32-CAM has **limited available GPIO pins**, preventing some feature combinations:
+The AI-Thinker ESP32-CAM has **limited available GPIO pins** (5-8 usable), preventing some feature combinations:
 
 **❌ Cannot Use Together:**
 - Camera + LoRa Module (SPI pin conflicts on GPIO 18, 19, 23)
 - Camera + LoRa + Servo Motors (insufficient available pins)
-- SD Card + Some I2C sensors (GPIO 2, 4, 12-15 shared with SD)
+- Camera + Audio I2S (conflicts on GPIO 22, 25, 26)
+- Voltage monitoring on GPIO 34 with camera (used for camera Y8 data)
 
 **✅ Supported Combinations:**
 - Camera + SD Card + Motion Detection (PIR) + Environmental Sensors (BME280)
-- Camera + SD Card + Power Management + Basic sensors
+- Camera + SD Card + Power Management + Basic sensors + WiFi
+- Camera + WiFi + I2C sensors (shared I2C bus with camera)
 
 **🌟 Solution**: Use **ESP32-S3-CAM** for full feature support without pin conflicts.
+
+**📚 For Complete Details:**
+- **[GPIO Pin Conflicts Matrix](docs/GPIO_PIN_CONFLICTS.md)** - Complete pin-by-pin conflict analysis
+- **[Hardware Selection Guide](docs/HARDWARE_SELECTION_GUIDE.md)** - Board comparison and recommendations
 
 ### Hardware-Specific Limitations
 
 **AI-Thinker ESP32-CAM:**
-- LoRa mesh networking **disabled** (pin conflicts)
-- Pan/tilt servo control **disabled** (insufficient GPIO)
+- LoRa mesh networking **disabled by default** (pin conflicts - compile error if enabled with camera)
+- Pan/tilt servo control **disabled by default** (insufficient GPIO - warning if multiple features)
+- Voltage monitoring **disabled by default** (conflicts with camera GPIO 34)
 - Limited to 4MB PSRAM (vs 8MB on S3)
 - No USB OTG support
+- **⚠️ Compile-time checks prevent invalid configurations** - see `firmware/config.h`
 
 **All ESP32-CAM Boards:**
 - Camera power consumption: ~200-300mA during capture
