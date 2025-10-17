@@ -17,10 +17,7 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 #include <esp_log.h>
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <SD.h>
-#include <Preferences.h>
+
 
 // Hardware abstraction layer
 #include "hal/board_detector.h"
@@ -99,14 +96,6 @@ struct SystemState {
     float battery_level = 0.0f;
     
 
-    int wifi_retry_count = 0;
-    unsigned long last_wifi_attempt = 0;
-    int pending_uploads = 0;
-    unsigned long last_upload = 0;
-
-    int lora_active_nodes = 0;
-    unsigned long last_lora_check = 0;
-    unsigned long last_network_status_log = 0;
 
 } system_state;
 
@@ -630,8 +619,24 @@ bool captureTamperImage() {
 void handleTamperDetection() {
     String timestamp = getFormattedTime();
     
-    // Step 1: Write critical alert to log
+    // Step 1: Write critical alert to log (console and file)
     Logger::critical("TAMPER DETECTED at %s - Initiating security response", timestamp.c_str());
+    
+    // Create detailed log entry for file storage
+    char log_entry[512];
+    snprintf(log_entry, sizeof(log_entry), 
+             "[TAMPER] %s - Battery: %.2fV - Free Heap: %d bytes - Tamper Event\n",
+             timestamp.c_str(), 
+             system_state.battery_level,
+             ESP.getFreeHeap());
+    
+    // Save detailed log to SD card if storage is available
+    if (g_storage.isReady()) {
+        storage_result_t log_result = g_storage.saveLog(log_entry, "/security.log");
+        if (log_result != STORAGE_SUCCESS) {
+            Logger::warning("Failed to save security log: %s", g_storage.getLastError());
+        }
+    }
     
     // Step 2: Capture and save image with TAMPER_ prefix
     bool image_saved = captureTamperImage();
@@ -642,10 +647,12 @@ void handleTamperDetection() {
     }
     
     // Step 3: Send alert if network is available
-    char alert_message[128];
+    char alert_message[256];
     snprintf(alert_message, sizeof(alert_message), 
-             "CRITICAL: Tamper detected at %s. Image capture: %s",
-             timestamp.c_str(), image_saved ? "SUCCESS" : "FAILED");
+             "CRITICAL: Tamper detected at %s. Image capture: %s. Battery: %.2fV",
+             timestamp.c_str(), 
+             image_saved ? "SUCCESS" : "FAILED",
+             system_state.battery_level);
     
     if (sendCriticalAlert(alert_message)) {
         Logger::info("Critical alert sent successfully");
