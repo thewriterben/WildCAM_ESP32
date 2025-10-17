@@ -48,6 +48,9 @@
 // Storage management
 #include "core/storage_manager.h"
 
+// GPS management
+#include "src/sensors/gps_manager.h"
+
 // Time management for timestamps
 #include <time.h>
 #include <sys/time.h>
@@ -66,6 +69,7 @@ MPPTController* g_mppt_controller = nullptr;
 SecurityManager* g_security_manager = nullptr;
 EnvironmentalSuite* g_env_sensors = nullptr;
 CameraManager* g_camera_manager = nullptr;
+GPSManager* g_gps_manager = nullptr;
 
 // Storage and security globals
 Preferences g_preferences;
@@ -160,10 +164,11 @@ bool generateDetectionFilename(const char* species, char* buffer, size_t buffer_
  * @param species Species name
  * @param confidence Detection confidence
  * @param bbox Bounding box information
+ * @param image_size Size of the image in bytes
  * @return true if metadata saved successfully
  */
 bool saveDetectionMetadata(const char* filename, const char* species, 
-                           float confidence, const BoundingBox& bbox) {
+                           float confidence, const BoundingBox& bbox, size_t image_size) {
     if (!filename || !species) {
         return false;
     }
@@ -178,41 +183,52 @@ bool saveDetectionMetadata(const char* filename, const char* species,
         strcat(metadata_filename, ".json");
     }
     
-    // Get timestamp
+    // Get timestamp in ISO 8601 format
     struct tm timeinfo;
     char timestamp_str[32] = "unknown";
     if (getLocalTime(&timeinfo)) {
-        strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%d %H:%M:%S", &timeinfo);
+        strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%dT%H:%M:%S", &timeinfo);
     }
     
-    // Build JSON metadata
+    // Get GPS coordinates if available
+    float latitude = 0.0f;
+    float longitude = 0.0f;
+    if (g_gps_manager && g_gps_manager->isInitialized() && g_gps_manager->hasFix()) {
+        latitude = g_gps_manager->getLatitude();
+        longitude = g_gps_manager->getLongitude();
+    }
+    
+    // Get environmental data
+    float temperature = 0.0f;
+    if (g_env_sensors) {
+        temperature = g_env_sensors->getTemperature();
+    } else {
+        temperature = system_state.system_temperature;
+    }
+    
+    // Build JSON metadata matching the issue specification
     char json_buffer[768];
     snprintf(json_buffer, sizeof(json_buffer),
              "{\n"
-             "  \"filename\": \"%s\",\n"
+             "  \"timestamp\": \"%s\",\n"
              "  \"species\": \"%s\",\n"
              "  \"confidence\": %.3f,\n"
-             "  \"timestamp\": \"%s\",\n"
-             "  \"bounding_box\": {\n"
-             "    \"x\": %.3f,\n"
-             "    \"y\": %.3f,\n"
-             "    \"width\": %.3f,\n"
-             "    \"height\": %.3f\n"
-             "  },\n"
-             "  \"class_id\": %d,\n"
+             "  \"latitude\": %.6f,\n"
+             "  \"longitude\": %.6f,\n"
              "  \"battery_voltage\": %.2f,\n"
              "  \"temperature\": %.1f,\n"
-             "  \"gps_coordinates\": {\n"
-             "    \"latitude\": 0.0,\n"
-             "    \"longitude\": 0.0,\n"
-             "    \"note\": \"GPS integration pending\"\n"
-             "  }\n"
+             "  \"image_file\": \"%s\",\n"
+             "  \"image_size\": %zu\n"
              "}\n",
-             filename, species, confidence, timestamp_str,
-             bbox.x, bbox.y, bbox.width, bbox.height,
-             bbox.class_id,
+             timestamp_str,
+             species,
+             confidence,
+             latitude,
+             longitude,
              system_state.battery_level,
-             system_state.system_temperature);
+             temperature,
+             filename,
+             image_size);
     
     // Save metadata to storage
     storage_result_t result = g_storage.saveFile(metadata_filename, (const uint8_t*)json_buffer, strlen(json_buffer));
@@ -222,7 +238,7 @@ bool saveDetectionMetadata(const char* filename, const char* species,
         return false;
     }
     
-    Logger::info("Metadata saved: %s", metadata_filename);
+    Logger::info("✓ Metadata saved: %s", metadata_filename);
     return true;
 }
 
@@ -285,7 +301,7 @@ bool processWildlifeDetection(const uint8_t* image_data, size_t image_size,
                     filename, image_size, detection.confidence * 100);
         
         // Step 4: Create metadata file
-        if (!saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection)) {
+        if (!saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection, image_size)) {
             Logger::warning("Failed to save metadata (non-critical)");
         }
         
@@ -314,7 +330,7 @@ bool processWildlifeDetection(const uint8_t* image_data, size_t image_size,
             Logger::info("✓ Detection saved on retry: %s", filename);
             
             // Save metadata and update counters
-            saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection);
+            saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection, image_size);
             
             uint32_t detection_count = g_preferences.getUInt("detection_count", 0);
             detection_count++;
@@ -1192,6 +1208,11 @@ void cleanupSystemResources() {
         g_env_sensors = nullptr;
     }
     
+    if (g_gps_manager) {
+        delete g_gps_manager;
+        g_gps_manager = nullptr;
+    }
+    
     if (g_mppt_controller) {
         delete g_mppt_controller;
         g_mppt_controller = nullptr;
@@ -1277,6 +1298,23 @@ bool initializeSystem() {
         g_env_sensors = nullptr;
     } else {
         Logger::info("✓ Environmental sensors initialized");
+    }
+    
+    // Initialize GPS manager (non-critical)
+    g_gps_manager = new (std::nothrow) GPSManager();
+    if (!g_gps_manager) {
+        Logger::warning("GPS manager allocation failed - continuing without GPS");
+    } else {
+        // Initialize GPS on GPIO pins (adjust pins as needed for your hardware)
+        // Common GPS pins for ESP32: RX=16, TX=17
+        if (!g_gps_manager->initialize(16, 17, 9600)) {
+            Logger::warning("GPS initialization failed (non-critical) - GPS features disabled");
+            delete g_gps_manager;
+            g_gps_manager = nullptr;
+        } else {
+            Logger::info("✓ GPS manager initialized (waiting for fix)");
+            // Note: GPS fix will be acquired in background, metadata will use 0,0 until fix is available
+        }
     }
     
     // Initialize camera manager
@@ -1468,6 +1506,11 @@ void loop() {
     // Reset watchdog timer
     esp_task_wdt_reset();
     
+    // Update GPS data if available
+    if (g_gps_manager && g_gps_manager->isInitialized()) {
+        g_gps_manager->update();
+    }
+    
     // System health monitoring
     static unsigned long last_health_check = 0;
     if ((millis() - last_health_check) > 60000) { // Every minute
@@ -1503,6 +1546,14 @@ void loop() {
             Logger::info("Battery Level: %.2fV", system_state.battery_level);
             Logger::info("Last Detection: %lu ms ago", millis() - system_state.last_detection);
             Logger::info("Total Detections: %lu", getDetectionCounter());
+            if (g_gps_manager && g_gps_manager->isInitialized()) {
+                Logger::info("GPS: %s (Lat: %.6f, Lon: %.6f)", 
+                           g_gps_manager->hasFix() ? "FIX" : "NO FIX",
+                           g_gps_manager->getLatitude(),
+                           g_gps_manager->getLongitude());
+            } else {
+                Logger::info("GPS: Not initialized");
+            }
         } else if (command == "restart") {
             Logger::info("System restart requested...");
             ESP.restart();
