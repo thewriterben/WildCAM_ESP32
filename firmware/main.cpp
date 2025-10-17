@@ -17,10 +17,6 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 #include <esp_log.h>
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <Update.h>
-
 
 // Hardware abstraction layer
 #include "hal/board_detector.h"
@@ -474,20 +470,20 @@ void powerManagementTask(void* parameter) {
 bool initializeSDCard() {
     Logger::info("Initializing SD card...");
     
-    if (!SD.begin(SD_CS_PIN)) {
+    if (!SD_MMC.begin()) {
         Logger::error("SD card initialization failed");
         return false;
     }
     
-    uint8_t cardType = SD.cardType();
+    uint8_t cardType = SD_MMC.cardType();
     if (cardType == CARD_NONE) {
         Logger::error("No SD card attached");
         return false;
     }
     
     // Create images directory if it doesn't exist
-    if (!SD.exists("/images")) {
-        if (!SD.mkdir("/images")) {
+    if (!SD_MMC.exists("/images")) {
+        if (!SD_MMC.mkdir("/images")) {
             Logger::error("Failed to create /images directory");
             return false;
         }
@@ -584,8 +580,8 @@ bool captureTamperImage() {
     timestamp.replace("-", "");
     String filename = "/images/TAMPER_" + timestamp + ".jpg";
     
-    // Save to SD card
-    File file = SD.open(filename.c_str(), FILE_WRITE);
+    // Save to SD card using SD_MMC
+    File file = SD_MMC.open(filename.c_str(), FILE_WRITE);
     if (!file) {
         Logger::error("Failed to create tamper image file: %s", filename.c_str());
         g_camera_manager->releaseFrame(image_data);
