@@ -37,6 +37,10 @@ temp/
 
 # Testing
 test_results/
+coverage/
+*.gcda
+*.gcno
+*.gcov
 
 # Environment variables
 .env
