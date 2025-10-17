@@ -40,12 +40,12 @@
 ## 🌟 Revolutionary Wildlife Monitoring Platform
 
 Transform wildlife research and conservation with cutting-edge technology that combines:
-- **🤖 Edge AI Detection** - YOLO-tiny neural networks running on ESP32
-- **🔋 Smart Power Management** - MPPT solar charging with 6+ month battery life  
-- **🔐 Quantum-Safe Security** - Hybrid classical-quantum resistant encryption protecting data for 50+ years
-- **🌐 Real-Time Analytics** - React dashboard with live detection feeds
-- **📱 Mobile Integration** - React Native companion app for field work
-- **🛰️ Global Connectivity** - Mesh networking with satellite communication support
+- **🤖 Edge AI Detection** - YOLO-tiny neural networks (🔄 Framework stage, models in development)
+- **🔋 Smart Power Management** - MPPT solar charging (🔄 Calibration in progress) with 30+ day battery life (✅ Validated in core system)
+- **🔐 Quantum-Safe Security** - Hybrid classical-quantum resistant encryption (🔄 Framework implementation ongoing)
+- **🌐 Real-Time Analytics** - React dashboard (🔄 UI components exist, backend integration in progress)
+- **📱 Mobile Integration** - React Native companion app (🔄 Framework stage)
+- **🛰️ Global Connectivity** - Mesh networking (🔄 Framework) with satellite communication support (📋 Interface design)
 
 ## 🏗️ Advanced Modular Architecture
 
@@ -76,14 +76,18 @@ WildCAM_ESP32_v2.0/
 
 ## 🚀 Key Features & Performance
 
-**Status Legend**: ✅ **Working** (functional and tested) | 🔄 **In Progress** (partial implementation) | 📋 **Planned** (framework/placeholder only)
+**Status Legend**: 
+- ✅ **Working** - Fully functional and tested in production
+- 🔄 **Framework** - Code structure exists, partial implementation, not production-ready
+- 📋 **Planned** - Design stage only, no implementation yet
 
 ### 🤖 Edge AI & Computer Vision
-- 📋 **YOLO-tiny Detection**: Framework only - inference not operational (Est. 12-18 months)
-- 📋 **Species Classification**: Framework code exists, models not integrated (Est. 12-18 months)
-- 📋 **Inference Speed**: Framework ready, optimization needed (Est. 12-18 months)
+- 🔄 **YOLO-tiny Detection**: Framework implementation exists, no trained model integrated (Est. 12-18 months)
+- 🔄 **Species Classification**: Code structure present, models not integrated (Est. 12-18 months)
+- 🔄 **Inference Speed**: Framework ready, optimization incomplete (Est. 12-18 months)
 - 📋 **Multi-Modal Fusion**: Design documentation only, not implemented
 - 📋 **Behavioral Patterns**: API defined, logic not implemented
+- 📋 **Federated Learning**: Planned feature for distributed model training (Est. 18-24 months)
 
 ### 🔋 Advanced Power Management
 - 🔄 **MPPT Solar Charging**: Framework exists, needs calibration (Est. 9-12 months)
@@ -93,22 +97,22 @@ WildCAM_ESP32_v2.0/
 - ✅ **Low Power Modes**: Deep sleep with sub-microamp consumption fully functional
 
 ### 🔐 Quantum-Safe Security
-- 📋 **Hybrid Encryption**: Framework code exists, not integrated (Est. 12-15 months)
-- 📋 **Hash-Based Signatures**: Code structure present, testing incomplete (Est. 12-15 months)
+- 🔄 **Hybrid Encryption**: Framework code structure exists, integration incomplete (Est. 12-15 months)
+- 🔄 **Hash-Based Signatures**: Code framework present, testing incomplete (Est. 12-15 months)
 - 📋 **50+ Year Protection**: Conceptual design, implementation needed
-- 📋 **Automatic Key Rotation**: Framework exists, automation not implemented
-- 📋 **4 Security Levels**: Data structures defined, enforcement incomplete
+- 🔄 **Automatic Key Rotation**: Framework exists, automation not fully implemented
+- 🔄 **4 Security Levels**: Data structures defined, enforcement incomplete
 - 🔄 **Hardware Security**: ATECC608A driver exists, integration in progress (Est. 12-15 months)
 - **[Quick Start](QUANTUM_SAFE_QUICKSTART.md)** | **[Full Documentation](QUANTUM_SAFE_SECURITY.md)** | **[Implementation Summary](QUANTUM_SAFE_IMPLEMENTATION_SUMMARY.md)**
 
 ### 🌐 Networking & Communication
-- 📋 **ESP-MESH**: Framework only, multi-hop untested (Est. 9-12 months)
+- 🔄 **ESP-MESH**: Framework implementation exists, multi-hop untested (Est. 9-12 months)
 - 🔄 **LoRa Long Range**: Hardware drivers exist, protocol incomplete (Est. 9-12 months)
-- 🔄 **🛰️ Satellite Communication**: Basic framework in place (Est. 12-15 months for field-ready)
-  - Framework supports Swarm M138, RockBLOCK, Iridium 9603N
-  - Hardware interface working, protocol refinement needed
+- 📋 **🛰️ Satellite Communication**: Interface design only, hardware integration incomplete (Est. 12-15 months)
+  - API framework supports Swarm M138, RockBLOCK, Iridium 9603N
+  - Hardware interface partially working, protocol refinement needed
   - Cost optimization and compression not yet implemented
-  - **Requires satellite subscriptions and field testing**
+  - **Requires satellite subscriptions and extensive field testing**
   - **[Quick Start Guide](ESP32WildlifeCAM-main/docs/SATELLITE_QUICK_START.md)** | **[Hardware BOM](ESP32WildlifeCAM-main/docs/SATELLITE_HARDWARE_BOM.md)** | **[Module Comparison](ESP32WildlifeCAM-main/docs/SATELLITE_MODULE_COMPARISON.md)**
 - 📋 **🌍 Global Conservation Network**: Architectural framework only (Est. 18-24 months)
   - API framework defined, backend infrastructure not built
@@ -116,14 +120,15 @@ WildCAM_ESP32_v2.0/
   - Requires multi-organization partnerships and legal compliance work
   - **[Quick Start](ESP32WildlifeCAM-main/docs/GLOBAL_NETWORK_QUICKSTART.md)** | **[Full Documentation](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_NETWORK.md)** | **[API Reference](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_API.md)** | **[Deployment Guide](ESP32WildlifeCAM-main/docs/deployment/GLOBAL_NETWORK_DEPLOYMENT.md)**
 - 📋 **Load Balancing**: Design documentation only, not implemented
-- 🔄 **OTA Updates**: Basic framework exists, secure updates not implemented
+- 🔄 **OTA Updates**: Basic framework exists, secure updates not fully implemented
 
 ### 📊 Real-Time Analytics
-- 🔄 **Live Dashboard**: React components exist, features incomplete (Est. 12-15 months)
-- 📋 **Species Tracking**: Mockups exist, not implemented
-- 📋 **Activity Patterns**: Planning stage
-- 📋 **Environmental Data**: Design stage
+- 🔄 **Live Dashboard**: React components exist, backend integration incomplete (Est. 12-15 months)
+- 🔄 **Species Tracking**: UI mockups exist, data pipeline not implemented
+- 📋 **Activity Patterns**: Planning stage, no implementation
+- 📋 **Environmental Data**: Design stage, integration not started
 - 📋 **Conservation Metrics**: Design documentation only
+- 🔄 **Cloud Integration**: Docker/K8s configuration exists, production backend not deployed (Est. 9-12 months)
 
 ## 🛠️ Hardware Requirements
 
@@ -145,15 +150,19 @@ WildCAM_ESP32_v2.0/
 > **AI-Thinker ESP32-CAM** (Basic Configuration):
 > - ✅ Best for: Camera + Motion Detection + Environmental Sensors + SD Card
 > - ❌ Limited GPIO pins - Cannot support Camera + LoRa + Servos simultaneously
-> - 💰 Budget-friendly option for basic wildlife monitoring
+> - 💰 Budget-friendly option for basic wildlife monitoring ($15-20)
 > 
 > **ESP32-S3-CAM** (⭐ Recommended for Full Features):
 > - ✅ Supports: Camera + LoRa + Servos + All Sensors + SD Card (no conflicts!)
 > - ✅ More RAM (8MB PSRAM), faster processing, USB OTG
-> - ✅ Additional GPIO pins for peripheral expansion
+> - ✅ Additional GPIO pins (20+) for peripheral expansion
 > - 🌟 **Required for production deployments with LoRa mesh networking**
 > 
-> See [Hardware Requirements](HARDWARE_REQUIREMENTS.md) and [ESP32WildlifeCAM-main/README.md](ESP32WildlifeCAM-main/README.md) for detailed pin assignments and configuration.
+> 📚 **Detailed Guides:**
+> - [Hardware Selection Guide](docs/HARDWARE_SELECTION_GUIDE.md) - Board comparison, cost analysis, use cases
+> - [GPIO Pin Conflicts](docs/GPIO_PIN_CONFLICTS.md) - Complete pin matrix and conflict resolution
+> - [Hardware Requirements](HARDWARE_REQUIREMENTS.md) - Component specifications
+> - [ESP32WildlifeCAM-main/README.md](ESP32WildlifeCAM-main/README.md) - Detailed pin assignments
 
 ### Optional Enhancements
 - **Thermal Camera**: FLIR Lepton for heat detection
@@ -165,26 +174,34 @@ WildCAM_ESP32_v2.0/
 ## ⚠️ Known Limitations
 
 ### GPIO Pin Conflicts (AI-Thinker ESP32-CAM)
-The AI-Thinker ESP32-CAM has **limited available GPIO pins**, preventing some feature combinations:
+The AI-Thinker ESP32-CAM has **limited available GPIO pins** (5-8 usable), preventing some feature combinations:
 
 **❌ Cannot Use Together:**
 - Camera + LoRa Module (SPI pin conflicts on GPIO 18, 19, 23)
 - Camera + LoRa + Servo Motors (insufficient available pins)
-- SD Card + Some I2C sensors (GPIO 2, 4, 12-15 shared with SD)
+- Camera + Audio I2S (conflicts on GPIO 22, 25, 26)
+- Voltage monitoring on GPIO 34 with camera (used for camera Y8 data)
 
 **✅ Supported Combinations:**
 - Camera + SD Card + Motion Detection (PIR) + Environmental Sensors (BME280)
-- Camera + SD Card + Power Management + Basic sensors
+- Camera + SD Card + Power Management + Basic sensors + WiFi
+- Camera + WiFi + I2C sensors (shared I2C bus with camera)
 
 **🌟 Solution**: Use **ESP32-S3-CAM** for full feature support without pin conflicts.
+
+**📚 For Complete Details:**
+- **[GPIO Pin Conflicts Matrix](docs/GPIO_PIN_CONFLICTS.md)** - Complete pin-by-pin conflict analysis
+- **[Hardware Selection Guide](docs/HARDWARE_SELECTION_GUIDE.md)** - Board comparison and recommendations
 
 ### Hardware-Specific Limitations
 
 **AI-Thinker ESP32-CAM:**
-- LoRa mesh networking **disabled** (pin conflicts)
-- Pan/tilt servo control **disabled** (insufficient GPIO)
+- LoRa mesh networking **disabled by default** (pin conflicts - compile error if enabled with camera)
+- Pan/tilt servo control **disabled by default** (insufficient GPIO - warning if multiple features)
+- Voltage monitoring **disabled by default** (conflicts with camera GPIO 34)
 - Limited to 4MB PSRAM (vs 8MB on S3)
 - No USB OTG support
+- **⚠️ Compile-time checks prevent invalid configurations** - see `firmware/config.h`
 
 **All ESP32-CAM Boards:**
 - Camera power consumption: ~200-300mA during capture
@@ -207,11 +224,12 @@ The AI-Thinker ESP32-CAM has **limited available GPIO pins**, preventing some fe
 ### Software/Framework Limitations
 
 **Enterprise Platform Features (Root Level):**
-- 🤖 **Edge AI**: Framework only - models not integrated, inference not operational
-- 🔐 **Quantum-Safe Security**: Framework code exists but not production-ready
+- 🤖 **Edge AI**: Framework code exists - models not integrated, inference not operational
+- 🔐 **Quantum-Safe Security**: Framework code structure exists but integration incomplete
 - 🌐 **Global Conservation Network**: Architectural framework only, no backend infrastructure
-- 📊 **Real-Time Analytics**: Basic UI components exist, features incomplete
-- ☁️ **Cloud Integration**: Docker/K8s files exist but not production-tested
+- 📊 **Real-Time Analytics**: Basic UI components exist, backend integration incomplete
+- ☁️ **Cloud Integration**: Docker/K8s configuration exists but production backend not deployed
+- 📋 **Federated Learning**: Planned feature for distributed model training, no implementation
 
 **See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for detailed feature-by-feature status.**
 
@@ -240,23 +258,23 @@ The AI-Thinker ESP32-CAM has **limited available GPIO pins**, preventing some fe
 - 💧 **Weatherproofing**: Custom enclosure required for outdoor deployment (see hardware/stl_files/)
 - 📶 **WiFi Range**: Limited to ~50-100m outdoors; not suitable for remote areas without mesh/LoRa
 
-## 🛰️ Satellite Communication (Framework Stage)
+## 🛰️ Satellite Communication (Interface Design Stage)
 
 **Vision**: Deploy wildlife monitoring in areas with no cellular or WiFi coverage.
 
-⚠️ **Current Status**: Framework implementation in progress (Est. 12-15 months to field-ready)
+⚠️ **Current Status**: Interface design and partial framework (Est. 12-15 months to field-ready)
 - Hardware drivers partially implemented
-- Protocol development ongoing
-- **Requires satellite subscription and field testing**
+- Protocol development in early stages
+- **Requires satellite subscription and extensive field testing**
 - Not yet ready for production deployment
 
 ### Planned Satellite Module Support
 
 | Module | Cost/Message | Target Use | Development Status |
 |--------|--------------|------------|-------------------|
-| **Swarm M138** | $0.05 | Budget deployments | 🔄 Basic interface working |
-| **RockBLOCK 9603** | $0.04-0.14 | Professional reliability | 🔄 Hardware driver exists |
-| **Iridium 9603N** | $0.50-1.00 | Mission-critical | 📋 Framework only |
+| **Swarm M138** | $0.05 | Budget deployments | 📋 Interface design stage |
+| **RockBLOCK 9603** | $0.04-0.14 | Professional reliability | 📋 Interface design stage |
+| **Iridium 9603N** | $0.50-1.00 | Mission-critical | 📋 Interface design stage |
 
 ### Example Framework Code (Not Production-Ready)
 ```cpp
@@ -316,6 +334,105 @@ void loop() {
 - Community field reports welcome to improve reliability data
 
 **Contribute Your Deployment**: If you deploy this system, please share your results via [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues) to help build real-world validation data.
+
+## 🗺️ Development Roadmap
+
+This section provides a realistic timeline for enterprise platform features currently in development.
+
+### Phase 1: Core System Stabilization (✅ Complete)
+**Timeline**: Completed  
+**Status**: Production-ready wildlife camera system available in `ESP32WildlifeCAM-main/`
+
+- ✅ Motion detection with PIR sensors
+- ✅ Camera capture and SD card storage
+- ✅ Basic power management and deep sleep
+- ✅ Multi-board support (AI-Thinker, ESP32-S3)
+- ✅ Documentation and quick start guides
+
+### Phase 2: Advanced Power & Sensors (🔄 In Progress - 6-9 months)
+**Target**: Q2-Q3 2026  
+**Focus**: Extended deployment capabilities
+
+- 🔄 MPPT solar charging calibration
+- 🔄 Advanced battery monitoring and analytics
+- 🔄 Additional sensor integration (GPS, environmental)
+- 🔄 Improved weatherproofing and enclosure designs
+- 🔄 Field testing in diverse environments
+
+### Phase 3: Networking Infrastructure (🔄 Early Stage - 9-12 months)
+**Target**: Q3-Q4 2026  
+**Focus**: Multi-node communication
+
+- 🔄 ESP-MESH multi-hop implementation and testing
+- 🔄 LoRa protocol completion for ESP32-S3
+- 🔄 OTA update system with security
+- 📋 Basic mesh network management
+- 📋 Network health monitoring
+
+### Phase 4: Edge AI Integration (🔄 Framework - 12-18 months)
+**Target**: Q2-Q3 2027  
+**Focus**: On-device intelligence
+
+- 🔄 YOLO-tiny model integration
+- 🔄 Species classification models
+- 🔄 Inference optimization for ESP32
+- 📋 Behavioral pattern detection
+- 📋 Multi-modal sensor fusion
+
+### Phase 5: Cloud & Analytics Platform (🔄 Partial - 12-15 months)
+**Target**: Q2-Q4 2027  
+**Focus**: Data processing and visualization
+
+- 🔄 Backend API production deployment
+- 🔄 Real-time dashboard with live feeds
+- 🔄 Cloud integration (AWS/Azure/GCP)
+- 📋 Species tracking and analytics
+- 📋 Conservation metrics reporting
+
+### Phase 6: Advanced Security (🔄 Framework - 12-15 months)
+**Target**: Q3-Q4 2027  
+**Focus**: Quantum-safe encryption
+
+- 🔄 Hybrid encryption integration
+- 🔄 Hardware security module integration (ATECC608A)
+- 🔄 Automatic key rotation implementation
+- 📋 Multi-level security enforcement
+- 📋 Audit and compliance features
+
+### Phase 7: Global Connectivity (📋 Planned - 12-24 months)
+**Target**: 2027-2028  
+**Focus**: Remote area deployment
+
+- 📋 Satellite communication production implementation
+- 📋 Cost optimization algorithms
+- 📋 Message compression and prioritization
+- 📋 Emergency alert system
+- 📋 Field testing in remote locations
+
+### Phase 8: International Collaboration (📋 Planned - 18-24 months)
+**Target**: 2028+  
+**Focus**: Worldwide conservation network
+
+- 📋 Global Conservation Network backend infrastructure
+- 📋 Multi-organization data sharing platform
+- 📋 Treaty compliance automation
+- 📋 Blockchain verification system
+- 📋 Multi-language support (20+ languages)
+- 📋 Federated learning for distributed model training
+
+### Contributing to the Roadmap
+
+We welcome community contributions to accelerate development:
+
+- 💻 **Code Contributions**: Help implement framework features
+- 🧪 **Testing**: Field test features in diverse environments
+- 📝 **Documentation**: Improve guides and tutorials
+- 💡 **Feature Requests**: Suggest improvements via GitHub Issues
+- 🤝 **Partnerships**: Organizations interested in collaboration
+
+**Note**: Timelines are estimates based on current development velocity and may adjust based on community contributions, funding, and field testing results.
+
+For detailed technical specifications, see [ESP32WildlifeCAM-main/ROADMAP.md](ESP32WildlifeCAM-main/ROADMAP.md).
 
 ## 🌍 Global Conservation Network Platform (Architectural Framework)
 
@@ -421,11 +538,11 @@ Built-in support for international collaboration in 20+ languages:
 
 ### Documentation & Resources
 
-1. **[Quick Start Guide](ESP32WildlifeCAM-main/docs/GLOBAL_NETWORK_QUICKSTART.md)** - Get connected in 5 minutes
+1. **[Quick Start Guide](ESP32WildlifeCAM-main/docs/GLOBAL_NETWORK_QUICKSTART.md)** - Framework design documentation
 2. **[Full Documentation](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_NETWORK.md)** - Comprehensive platform guide (23KB)
 3. **[API Reference](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_API.md)** - Complete API documentation (20KB)
 4. **[Deployment Guide](ESP32WildlifeCAM-main/docs/deployment/GLOBAL_NETWORK_DEPLOYMENT.md)** - Multi-continent deployment planning
-5. **[Example Code](ESP32WildlifeCAM-main/examples/global_conservation_network_example.cpp)** - Working demonstration
+5. **[Example Code](ESP32WildlifeCAM-main/examples/global_conservation_network_example.cpp)** - Framework demonstration code
 
 ### Planned Use Cases (Design Stage)
 

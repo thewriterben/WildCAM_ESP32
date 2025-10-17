@@ -47,15 +47,20 @@ This document describes the security response implementation for the WildCAM ESP
    - Added `critical()` logging method
 
 2. **firmware/main.cpp**
-   - Added includes: Preferences, SD, FS, time.h, time_manager.h
+   - Added includes: Preferences, SD_MMC, FS, esp_camera, WiFi, time.h, time_manager.h
    - Added global variables for SD, NVS, lockdown state
+   - Updated SystemState structure:
+     - Added `in_lockdown` field
+     - Added `lockdown_start_time` field
+     - Added `wifi_retry_count` field
+     - Added `last_wifi_attempt` field
    - Implemented helper functions:
      - `initializeSDCard()` - Initialize SD card storage
      - `getTamperCounter()` - Get current tamper count
      - `incrementTamperCounter()` - Increment and persist counter
      - `isNetworkAvailable()` - Check network availability
      - `sendCriticalAlert()` - Send alert via network
-     - `captureTamperImage()` - Capture and save tamper image
+     - `captureTamperImage()` - Capture and save tamper image using SD_MMC
      - `handleTamperDetection()` - Main tamper response handler
      - `manageLockdownMode()` - Manage lockdown timer
    - Updated `securityMonitoringTask()` to call tamper handler

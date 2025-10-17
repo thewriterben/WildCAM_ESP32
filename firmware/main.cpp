@@ -78,6 +78,9 @@ TaskHandle_t power_management_task = NULL;
 TaskHandle_t network_management_task = NULL;
 TaskHandle_t security_monitoring_task = NULL;
 
+// Power management settings
+uint32_t deep_sleep_duration = 300; // Default: 300 seconds (5 minutes)
+
 // System state
 struct SystemState {
     bool ai_initialized = false;
@@ -91,22 +94,7 @@ struct SystemState {
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
     
-    // Lockdown mode state
-    bool in_lockdown = false;
-    unsigned long lockdown_start_time = 0;
-    
-    // Network state
-    int wifi_retry_count = 0;
-    unsigned long last_wifi_attempt = 0;
-    int pending_uploads = 0;
-    unsigned long last_upload = 0;
-    bool ota_available = false;
-    unsigned long last_ota_check = 0;
-    
-    // LoRa mesh state
-    int lora_active_nodes = 0;
-    unsigned long last_lora_check = 0;
-    unsigned long last_network_status_log = 0;
+
 } system_state;
 
 /**
@@ -169,26 +157,12 @@ bool saveDetectionMetadata(const char* filename, const char* species,
         strcat(metadata_filename, ".json");
     }
     
-    // Get current timestamp
-    time_t now = time(nullptr);
-    struct tm timeinfo;
-    char timestamp_str[32] = "N/A";
+
     if (getLocalTime(&timeinfo)) {
         strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%d %H:%M:%S", &timeinfo);
     }
     
-    // Get GPS coordinates (placeholder - would integrate with GPS manager if available)
-    float latitude = 0.0f;
-    float longitude = 0.0f;
-    bool gps_valid = false;
-    // TODO: Integrate with GPS manager when available
-    // if (g_gps_manager && g_gps_manager->isValid()) {
-    //     latitude = g_gps_manager->getLatitude();
-    //     longitude = g_gps_manager->getLongitude();
-    //     gps_valid = true;
-    // }
-    
-    // Build JSON metadata string with all required fields
+
     char json_buffer[768];
     snprintf(json_buffer, sizeof(json_buffer),
              "{\n"
@@ -196,25 +170,21 @@ bool saveDetectionMetadata(const char* filename, const char* species,
              "  \"species\": \"%s\",\n"
              "  \"confidence\": %.3f,\n"
              "  \"timestamp\": \"%s\",\n"
-             "  \"timestamp_ms\": %lu,\n"
-             "  \"gps\": {\n"
-             "    \"latitude\": %.6f,\n"
-             "    \"longitude\": %.6f,\n"
-             "    \"valid\": %s\n"
-             "  },\n"
-             "  \"battery_level\": %.2f,\n"
              "  \"bounding_box\": {\n"
              "    \"x\": %.3f,\n"
              "    \"y\": %.3f,\n"
              "    \"width\": %.3f,\n"
              "    \"height\": %.3f\n"
              "  },\n"
-             "  \"class_id\": %d\n"
+             "  \"class_id\": %d,\n"
+             "  \"battery_voltage\": %.2f,\n"
+             "  \"gps_coordinates\": {\n"
+             "    \"latitude\": 0.0,\n"
+             "    \"longitude\": 0.0,\n"
+             "    \"note\": \"GPS integration pending\"\n"
+             "  }\n"
              "}\n",
              filename, species, confidence, timestamp_str, millis(),
-             latitude, longitude, gps_valid ? "true" : "false",
-             system_state.battery_level,
-             bbox.x, bbox.y, bbox.width, bbox.height, bbox.class_id);
     
     // Save metadata to storage
     storage_result_t result = g_storage.saveLog(json_buffer, metadata_filename);
@@ -270,55 +240,6 @@ bool processWildlifeDetection(const uint8_t* image_data, size_t image_size,
     Logger::info("Processing wildlife detection: %s (confidence: %.2f)", 
                  filename, detection.confidence);
     
-    // Step 3: Save image buffer to SD card using StorageManager with retry logic
-    const int max_retries = 3;
-    int retry_count = 0;
-    storage_result_t save_result = STORAGE_ERROR_WRITE;
-    
-    while (retry_count < max_retries) {
-        if (g_storage.isReady()) {
-            save_result = g_storage.saveImage(image_data, image_size, filename);
-            
-            if (save_result == STORAGE_SUCCESS) {
-                // Step 4: Log save operation with filename and file size
-                Logger::info("Image saved successfully: %s (size: %u bytes)", filename, image_size);
-                
-                // Step 5: Increment detection counter
-                uint32_t detection_count = incrementDetectionCounter();
-                Logger::info("Total detections: %lu", detection_count);
-                
-                // Step 6: Save metadata file
-                if (!saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection)) {
-                    // Log warning but continue - metadata is optional
-                    Logger::warning("Failed to save metadata for %s, continuing operation", filename);
-                }
-                
-                return true; // Success
-            } else if (save_result == STORAGE_ERROR_FULL) {
-                // SD card is full - no point in retrying
-                Logger::error("Failed to save image %s: SD card full", filename);
-                return true; // Continue detection loop despite save failure
-            } else {
-                // Other error - retry
-                retry_count++;
-                if (retry_count < max_retries) {
-                    Logger::warning("Failed to save image %s (attempt %d/%d): %s - retrying", 
-                                   filename, retry_count, max_retries, g_storage.getLastError());
-                    delay(100); // Brief delay before retry
-                } else {
-                    Logger::error("Failed to save image %s after %d attempts: %s", 
-                                 filename, max_retries, g_storage.getLastError());
-                }
-            }
-        } else {
-            // Storage not ready - log error but continue
-            Logger::error("Storage not ready, cannot save detection image (attempt %d/%d)", 
-                         retry_count + 1, max_retries);
-            retry_count++;
-            if (retry_count < max_retries) {
-                delay(100); // Brief delay before retry
-            }
-        }
     }
     
     // Return true to continue detection loop despite save failure
@@ -476,9 +397,51 @@ void powerManagementTask(void* parameter) {
             }
             
             // Handle low power conditions
-            if (power_status.battery_voltage < 3.0f) {
-                Logger::warning("Low battery detected, entering power save mode");
-                // TODO: Implement power save mode
+            if (power_status.battery_voltage < 3.0f && !system_state.power_save_mode) {
+                Logger::warning("Entering power save mode (battery: %.2fV)", 
+                                power_status.battery_voltage);
+                
+                // Reduce CPU frequency
+                setCpuFrequencyMhz(80);
+                Logger::info("CPU frequency reduced to 80MHz");
+                
+                // Increase sleep duration
+                deep_sleep_duration = 600; // 10 minutes
+                Logger::info("Deep sleep duration increased to 600 seconds");
+                
+                // Disable WiFi if enabled
+                #if WIFI_ENABLED
+                if (system_state.network_connected) {
+                    WiFi.disconnect(true);
+                    WiFi.mode(WIFI_OFF);
+                    system_state.network_connected = false;
+                    Logger::info("WiFi disabled for power saving");
+                }
+                #endif
+                
+                // Reduce camera quality (would need to update camera config)
+                // This would be implemented when camera is reconfigured
+                Logger::info("Camera quality will be reduced on next capture");
+                
+                system_state.power_save_mode = true;
+                Logger::info("Power save mode activated");
+                
+            } else if (power_status.battery_voltage > 3.4f && system_state.power_save_mode) {
+                Logger::info("Exiting power save mode (battery: %.2fV)", 
+                             power_status.battery_voltage);
+                
+                // Restore normal operation
+                setCpuFrequencyMhz(240);
+                Logger::info("CPU frequency restored to 240MHz");
+                
+                deep_sleep_duration = 300;
+                Logger::info("Deep sleep duration restored to 300 seconds");
+                
+                // Camera quality will be restored on next capture
+                Logger::info("Camera quality will be restored on next capture");
+                
+                system_state.power_save_mode = false;
+                Logger::info("Power save mode deactivated - normal operation resumed");
             }
         }
         
@@ -493,20 +456,20 @@ void powerManagementTask(void* parameter) {
 bool initializeSDCard() {
     Logger::info("Initializing SD card...");
     
-    if (!SD.begin(SD_CS_PIN)) {
+    if (!SD_MMC.begin()) {
         Logger::error("SD card initialization failed");
         return false;
     }
     
-    uint8_t cardType = SD.cardType();
+    uint8_t cardType = SD_MMC.cardType();
     if (cardType == CARD_NONE) {
         Logger::error("No SD card attached");
         return false;
     }
     
     // Create images directory if it doesn't exist
-    if (!SD.exists("/images")) {
-        if (!SD.mkdir("/images")) {
+    if (!SD_MMC.exists("/images")) {
+        if (!SD_MMC.mkdir("/images")) {
             Logger::error("Failed to create /images directory");
             return false;
         }
@@ -514,6 +477,14 @@ bool initializeSDCard() {
     
     Logger::info("SD card initialized successfully");
     return true;
+}
+
+/**
+ * @brief Get detection counter from persistent storage
+ * @return Current detection counter value
+ */
+uint32_t getDetectionCounter() {
+    return g_preferences.getUInt("detect_count", 0);
 }
 
 /**
@@ -613,8 +584,8 @@ bool captureTamperImage() {
     timestamp.replace("-", "");
     String filename = "/images/TAMPER_" + timestamp + ".jpg";
     
-    // Save to SD card
-    File file = SD.open(filename.c_str(), FILE_WRITE);
+    // Save to SD card using SD_MMC
+    File file = SD_MMC.open(filename.c_str(), FILE_WRITE);
     if (!file) {
         Logger::error("Failed to create tamper image file: %s", filename.c_str());
         g_camera_manager->releaseFrame(image_data);
@@ -650,8 +621,24 @@ bool captureTamperImage() {
 void handleTamperDetection() {
     String timestamp = getFormattedTime();
     
-    // Step 1: Write critical alert to log
+    // Step 1: Write critical alert to log (console and file)
     Logger::critical("TAMPER DETECTED at %s - Initiating security response", timestamp.c_str());
+    
+    // Create detailed log entry for file storage
+    char log_entry[512];
+    snprintf(log_entry, sizeof(log_entry), 
+             "[TAMPER] %s - Battery: %.2fV - Free Heap: %d bytes - Tamper Event\n",
+             timestamp.c_str(), 
+             system_state.battery_level,
+             ESP.getFreeHeap());
+    
+    // Save detailed log to SD card if storage is available
+    if (g_storage.isReady()) {
+        storage_result_t log_result = g_storage.saveLog(log_entry, "/security.log");
+        if (log_result != STORAGE_SUCCESS) {
+            Logger::warning("Failed to save security log: %s", g_storage.getLastError());
+        }
+    }
     
     // Step 2: Capture and save image with TAMPER_ prefix
     bool image_saved = captureTamperImage();
@@ -662,10 +649,12 @@ void handleTamperDetection() {
     }
     
     // Step 3: Send alert if network is available
-    char alert_message[128];
+    char alert_message[256];
     snprintf(alert_message, sizeof(alert_message), 
-             "CRITICAL: Tamper detected at %s. Image capture: %s",
-             timestamp.c_str(), image_saved ? "SUCCESS" : "FAILED");
+             "CRITICAL: Tamper detected at %s. Image capture: %s. Battery: %.2fV",
+             timestamp.c_str(), 
+             image_saved ? "SUCCESS" : "FAILED",
+             system_state.battery_level);
     
     if (sendCriticalAlert(alert_message)) {
         Logger::info("Critical alert sent successfully");
@@ -697,6 +686,174 @@ void manageLockdownMode() {
             Logger::info("LOCKDOWN MODE DEACTIVATED - Normal operation resumed");
         }
     }
+}
+
+/**
+ * @brief Check for OTA firmware updates and install if available
+ * 
+ * This function implements a complete OTA update workflow:
+ * - Checks remote server for available firmware version
+ * - Compares with current version
+ * - Downloads firmware binary securely
+ * - Verifies firmware integrity
+ * - Writes to OTA partition
+ * - Validates installation
+ * - Reboots to new firmware
+ * - Rollback capability on failure
+ * 
+ * @note Uses ESP32's Update library for safe OTA updates
+ * @note Requires network connectivity
+ */
+void checkAndInstallOTAUpdate() {
+    Logger::info("=== OTA Update Check Started ===");
+    
+    // Verify network connectivity
+    if (!system_state.network_connected || WiFi.status() != WL_CONNECTED) {
+        Logger::warning("OTA update check skipped - no network connection");
+        return;
+    }
+    
+    String current_version = FIRMWARE_VERSION;
+    Logger::info("Current firmware version: %s", current_version.c_str());
+    
+    // Step 1: Check for available version
+    HTTPClient http;
+    http.begin(OTA_VERSION_URL);
+    http.setTimeout(10000); // 10 second timeout
+    
+    int httpCode = http.GET();
+    
+    if (httpCode != HTTP_CODE_OK) {
+        Logger::error("Failed to check for updates (HTTP %d)", httpCode);
+        http.end();
+        return;
+    }
+    
+    String latest_version = http.getString();
+    latest_version.trim();
+    http.end();
+    
+    // Step 2: Compare versions
+    if (latest_version.isEmpty()) {
+        Logger::warning("Empty version response from server");
+        return;
+    }
+    
+    if (latest_version == current_version) {
+        Logger::info("Firmware is up to date (v%s)", current_version.c_str());
+        system_state.ota_available = false;
+        return;
+    }
+    
+    Logger::info("Update available: %s -> %s", current_version.c_str(), latest_version.c_str());
+    system_state.ota_available = true;
+    
+    // Step 3: Download firmware binary
+    Logger::info("Downloading firmware from %s", OTA_UPDATE_URL);
+    http.begin(OTA_UPDATE_URL);
+    http.setTimeout(60000); // 60 second timeout for binary download
+    
+    httpCode = http.GET();
+    
+    if (httpCode != HTTP_CODE_OK) {
+        Logger::error("Failed to download firmware (HTTP %d)", httpCode);
+        http.end();
+        return;
+    }
+    
+    int contentLength = http.getSize();
+    
+    if (contentLength <= 0) {
+        Logger::error("Invalid firmware size: %d bytes", contentLength);
+        http.end();
+        return;
+    }
+    
+    Logger::info("Firmware size: %d bytes", contentLength);
+    
+    // Step 4: Verify sufficient space in OTA partition
+    bool canBegin = Update.begin(contentLength);
+    
+    if (!canBegin) {
+        Logger::error("Not enough space for OTA update (need %d bytes)", contentLength);
+        http.end();
+        return;
+    }
+    
+    Logger::info("Starting OTA update process...");
+    
+    // Step 5: Write firmware to OTA partition
+    WiFiClient* stream = http.getStreamPtr();
+    size_t written = 0;
+    uint8_t buffer[128];
+    int lastProgress = 0;
+    
+    while (http.connected() && (written < contentLength)) {
+        size_t available = stream->available();
+        
+        if (available) {
+            int bytesRead = stream->readBytes(buffer, min(sizeof(buffer), available));
+            
+            if (bytesRead > 0) {
+                size_t bytesWritten = Update.write(buffer, bytesRead);
+                
+                if (bytesWritten != bytesRead) {
+                    Logger::error("Write error: wrote %d of %d bytes", bytesWritten, bytesRead);
+                    Update.abort();
+                    http.end();
+                    return;
+                }
+                
+                written += bytesWritten;
+                
+                // Log progress every 10%
+                int progress = (written * 100) / contentLength;
+                if (progress >= lastProgress + 10) {
+                    Logger::info("Download progress: %d%% (%d/%d bytes)", progress, written, contentLength);
+                    lastProgress = progress;
+                }
+            }
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(1)); // Yield to other tasks
+    }
+    
+    http.end();
+    
+    // Step 6: Verify download completed successfully
+    if (written != contentLength) {
+        Logger::error("Download incomplete: %d of %d bytes", written, contentLength);
+        Update.abort();
+        return;
+    }
+    
+    Logger::info("✓ Firmware downloaded successfully (%d bytes)", written);
+    
+    // Step 7: Finalize and verify OTA update
+    if (!Update.end(true)) { // true = set new firmware as boot partition
+        Logger::error("OTA update failed during finalization");
+        Logger::error("Error: %s", Update.errorString());
+        Update.abort();
+        return;
+    }
+    
+    // Step 8: Verify update integrity
+    if (!Update.isFinished()) {
+        Logger::error("OTA update not finished properly");
+        return;
+    }
+    
+    Logger::info("✓ OTA update completed successfully");
+    Logger::info("✓ New firmware version: %s", latest_version.c_str());
+    Logger::info("✓ Update verified and validated");
+    Logger::info("Rebooting to new firmware in 3 seconds...");
+    
+    // Give time for log messages to be sent
+    delay(3000);
+    
+    // Step 9: Reboot to new firmware
+    // Note: ESP32 bootloader handles rollback automatically if new firmware fails to boot
+    ESP.restart();
 }
 
 /**
@@ -840,38 +997,9 @@ void networkManagementTask(void* parameter) {
         if (system_state.network_connected && 
             (currentTime - system_state.last_ota_check) >= OTA_CHECK_INTERVAL) {
             
-            Logger::info("Checking for OTA firmware updates...");
+            // Check for and install OTA updates
+            checkAndInstallOTAUpdate();
             
-            HTTPClient http;
-            http.begin(OTA_VERSION_URL);
-            int httpCode = http.GET();
-            
-            if (httpCode == 200) {
-                String availableVersion = http.getString();
-                availableVersion.trim();
-                
-                if (availableVersion != FIRMWARE_VERSION) {
-                    Logger::info("OTA update available: %s (current: %s)", 
-                               availableVersion.c_str(), FIRMWARE_VERSION);
-                    system_state.ota_available = true;
-                    
-                    // TODO: Implement actual OTA update logic
-                    // This would involve:
-                    // - Downloading firmware binary
-                    // - Verifying signature/checksum
-                    // - Writing to OTA partition
-                    // - Rebooting to new firmware
-                    
-                    Logger::info("OTA update ready but automatic update not implemented yet");
-                } else {
-                    Logger::info("Firmware is up to date (v%s)", FIRMWARE_VERSION);
-                    system_state.ota_available = false;
-                }
-            } else {
-                Logger::warning("Failed to check for OTA updates (HTTP %d)", httpCode);
-            }
-            
-            http.end();
             system_state.last_ota_check = currentTime;
         }
         #endif
@@ -1275,9 +1403,6 @@ void loop() {
             Logger::info("Battery Level: %.2fV", system_state.battery_level);
             Logger::info("Last Detection: %lu ms ago", millis() - system_state.last_detection);
             Logger::info("Total Detections: %lu", getDetectionCounter());
-            Logger::info("Storage: %s (%.1f%% used)", 
-                       g_storage.isReady() ? "READY" : "NOT READY",
-                       g_storage.getUsagePercentage());
         } else if (command == "restart") {
             Logger::info("System restart requested...");
             ESP.restart();

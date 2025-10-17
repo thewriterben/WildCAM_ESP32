@@ -1,0 +1,72 @@
+{
+  "metadata_version": "2.0.0",
+  "created_date": "2025-10-16T23:52:11.217200",
+  "model_info": {
+    "name": "wildlife_classifier_test.tflite",
+    "version": "2.0.0-test",
+    "type": "species_classification",
+    "description": "Minimal test model for ML integration testing",
+    "file_size_bytes": 34864,
+    "quantization": "INT8"
+  },
+  "input_specification": {
+    "shape": [
+      1,
+      224,
+      224,
+      3
+    ],
+    "dtype": "uint8",
+    "format": "RGB"
+  },
+  "output_specification": {
+    "shape": [
+      1,
+      10
+    ],
+    "dtype": "uint8",
+    "classes": [
+      "white_tailed_deer",
+      "black_bear",
+      "red_fox",
+      "gray_wolf",
+      "mountain_lion",
+      "raccoon",
+      "coyote",
+      "elk",
+      "wild_turkey",
+      "unknown"
+    ]
+  },
+  "target_hardware": {
+    "platform": "ESP32-S3",
+    "min_psram_mb": 8,
+    "min_flash_mb": 4
+  },
+  "performance": {
+    "expected_inference_time_ms": 800,
+    "memory_usage_kb": 512,
+    "model_is_test": true
+  },
+  "training_info": {
+    "framework": "TensorFlow Lite",
+    "training_type": "synthetic_data",
+    "note": "This is a test model trained on synthetic data for integration testing only",
+    "final_loss": 2.288949728012085,
+    "final_accuracy": 0.11999999731779099,
+    "final_val_loss": 2.3495821952819824,
+    "final_val_accuracy": 0.0
+  },
+  "supported_species": [
+    "white_tailed_deer",
+    "black_bear",
+    "red_fox",
+    "gray_wolf",
+    "mountain_lion",
+    "raccoon",
+    "coyote",
+    "elk",
+    "wild_turkey",
+    "unknown"
+  ]
+}

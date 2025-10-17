@@ -9,11 +9,13 @@
 #define CONFIG_H
 
 // ===========================
+
+
+// ===========================
 // NETWORK CONFIGURATION
 // ===========================
 
 // WiFi Settings
-#define WIFI_ENABLED true                 // Enable WiFi connectivity
 #define WIFI_SSID "WildCAM_Network"       // Default WiFi SSID (should be configured per deployment)
 #define WIFI_PASSWORD "wildlife123"       // Default WiFi password (should be changed)
 #define WIFI_CONNECTION_TIMEOUT 10000     // WiFi connection timeout in milliseconds
@@ -26,11 +28,10 @@
 #define OTA_UPDATE_URL "http://updates.wildcam.local/firmware.bin"
 #define OTA_VERSION_URL "http://updates.wildcam.local/version.txt"
 
-// LoRa Mesh Network Settings
-#define LORA_ENABLED true                 // Enable LoRa mesh networking
 #define LORA_FREQUENCY 915E6              // LoRa frequency (915 MHz for North America)
 #define LORA_HEALTH_CHECK_INTERVAL 60000  // Check mesh health every minute (ms)
 #define LORA_NODE_TIMEOUT 300000          // Consider node dead after 5 minutes
+#endif
 
 // Data Upload Settings
 #define DATA_UPLOAD_ENABLED true          // Enable automatic data upload
@@ -40,5 +41,8 @@
 
 // Network Status Logging
 #define NETWORK_STATUS_LOG_INTERVAL 300000 // Log network status every 5 minutes (ms)
+
+// ===========================
+
 
 #endif // CONFIG_H
