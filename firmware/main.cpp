@@ -17,6 +17,11 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 #include <esp_log.h>
+#include <SD_MMC.h>
+#include <FS.h>
+#include <Preferences.h>
+#include <esp_camera.h>
+#include <WiFi.h>
 
 // Hardware abstraction layer
 #include "hal/board_detector.h"
@@ -90,6 +95,14 @@ struct SystemState {
     int active_cameras = 0;
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
+    
+    // Security and tamper detection state
+    bool in_lockdown = false;
+    unsigned long lockdown_start_time = 0;
+    
+    // Network retry state
+    int wifi_retry_count = 0;
+    unsigned long last_wifi_attempt = 0;
 
 } system_state;
 
@@ -461,8 +474,8 @@ bool captureTamperImage() {
     timestamp.replace("-", "");
     String filename = "/images/TAMPER_" + timestamp + ".jpg";
     
-    // Save to SD card
-    File file = SD.open(filename.c_str(), FILE_WRITE);
+    // Save to SD card using SD_MMC
+    File file = SD_MMC.open(filename.c_str(), FILE_WRITE);
     if (!file) {
         Logger::error("Failed to create tamper image file: %s", filename.c_str());
         g_camera_manager->releaseFrame(image_data);
