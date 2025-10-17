@@ -372,20 +372,20 @@ void powerManagementTask(void* parameter) {
 bool initializeSDCard() {
     Logger::info("Initializing SD card...");
     
-    if (!SD.begin(SD_CS_PIN)) {
+    if (!SD_MMC.begin()) {
         Logger::error("SD card initialization failed");
         return false;
     }
     
-    uint8_t cardType = SD.cardType();
+    uint8_t cardType = SD_MMC.cardType();
     if (cardType == CARD_NONE) {
         Logger::error("No SD card attached");
         return false;
     }
     
     // Create images directory if it doesn't exist
-    if (!SD.exists("/images")) {
-        if (!SD.mkdir("/images")) {
+    if (!SD_MMC.exists("/images")) {
+        if (!SD_MMC.mkdir("/images")) {
             Logger::error("Failed to create /images directory");
             return false;
         }
