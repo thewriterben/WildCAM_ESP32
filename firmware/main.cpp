@@ -94,6 +94,27 @@ struct SystemState {
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
     
+    // Power management
+    bool power_save_mode = false;
+    
+    // Security lockdown
+    bool in_lockdown = false;
+    unsigned long lockdown_start_time = 0;
+    
+    // Detection tracking
+    uint32_t total_detections = 0;
+    unsigned long last_detection_time = 0;
+    
+    // Network management
+    unsigned long last_wifi_attempt = 0;
+    int wifi_retry_count = 0;
+    unsigned long last_upload = 0;
+    int pending_uploads = 0;
+    unsigned long last_ota_check = 0;
+    bool ota_available = false;
+    unsigned long last_lora_check = 0;
+    int lora_active_nodes = 0;
+    unsigned long last_network_status_log = 0;
 
 } system_state;
 
@@ -157,12 +178,14 @@ bool saveDetectionMetadata(const char* filename, const char* species,
         strcat(metadata_filename, ".json");
     }
     
-
+    // Get timestamp
+    struct tm timeinfo;
+    char timestamp_str[32] = "unknown";
     if (getLocalTime(&timeinfo)) {
         strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%d %H:%M:%S", &timeinfo);
     }
     
-
+    // Build JSON metadata
     char json_buffer[768];
     snprintf(json_buffer, sizeof(json_buffer),
              "{\n"
@@ -178,16 +201,21 @@ bool saveDetectionMetadata(const char* filename, const char* species,
              "  },\n"
              "  \"class_id\": %d,\n"
              "  \"battery_voltage\": %.2f,\n"
+             "  \"temperature\": %.1f,\n"
              "  \"gps_coordinates\": {\n"
              "    \"latitude\": 0.0,\n"
              "    \"longitude\": 0.0,\n"
              "    \"note\": \"GPS integration pending\"\n"
              "  }\n"
              "}\n",
-             filename, species, confidence, timestamp_str, millis(),
+             filename, species, confidence, timestamp_str,
+             bbox.x, bbox.y, bbox.width, bbox.height,
+             bbox.class_id,
+             system_state.battery_level,
+             system_state.system_temperature);
     
     // Save metadata to storage
-    storage_result_t result = g_storage.saveLog(json_buffer, metadata_filename);
+    storage_result_t result = g_storage.saveFile(metadata_filename, (const uint8_t*)json_buffer, strlen(json_buffer));
     
     if (result != STORAGE_SUCCESS) {
         Logger::error("Failed to save metadata file: %s", g_storage.getLastError());
@@ -215,35 +243,94 @@ bool processWildlifeDetection(const uint8_t* image_data, size_t image_size,
     // Step 1: Check SD card space before saving
     if (g_storage.isReady()) {
         uint64_t free_space = g_storage.getFreeSpace();
-        uint64_t min_required_space = 10 * 1024 * 1024; // 10MB minimum free space
+        uint64_t required_space = image_size + 10240; // Image + 10KB for metadata
         
-        if (free_space < min_required_space) {
-            Logger::error("SD card low on space: %llu bytes free (min: %llu bytes)", 
-                         free_space, min_required_space);
-            // Continue to try saving but log the warning
+        if (free_space < required_space) {
+            Logger::error("SD card full! Free space: %llu bytes, needed: %llu bytes", 
+                         free_space, required_space);
+            return false;
         }
         
         // Check if we're approaching full capacity
         float usage = g_storage.getUsagePercentage();
         if (usage > 90.0f) {
-            Logger::warning("SD card %d%% full - consider cleanup", (int)usage);
+            Logger::warning("SD card %.1f%% full - consider cleanup", usage);
         }
     }
     
-    // Step 2: Generate unique filename
-    char filename[MAX_FILENAME_LENGTH];
-    if (!generateDetectionFilename(detection.class_name, filename, sizeof(filename))) {
-        Logger::error("Failed to generate detection filename");
-        return false;
+    // Step 2: Generate unique filename with timestamp, species, and confidence
+    time_t now = time(nullptr);
+    struct tm* timeinfo = localtime(&now);
+    
+    char filename[256];
+    snprintf(filename, sizeof(filename), 
+             "/detections/%04d%02d%02d_%02d%02d%02d_%s_%02d.jpg",
+             timeinfo->tm_year + 1900, 
+             timeinfo->tm_mon + 1, 
+             timeinfo->tm_mday,
+             timeinfo->tm_hour, 
+             timeinfo->tm_min, 
+             timeinfo->tm_sec,
+             detection.class_name,
+             (int)(detection.confidence * 100));
+    
+    Logger::info("Processing wildlife detection: %s (confidence: %.2f%%)", 
+                 filename, detection.confidence * 100);
+    
+    // Step 3: Save image to SD card
+    storage_result_t save_result = g_storage.saveFile(filename, image_data, image_size);
+    
+    if (save_result == STORAGE_SUCCESS) {
+        Logger::info("✓ Detection saved: %s (%zu bytes, %.1f%% confidence)", 
+                    filename, image_size, detection.confidence * 100);
+        
+        // Step 4: Create metadata file
+        if (!saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection)) {
+            Logger::warning("Failed to save metadata (non-critical)");
+        }
+        
+        // Step 5: Increment detection counter
+        uint32_t detection_count = g_preferences.getUInt("detection_count", 0);
+        detection_count++;
+        g_preferences.putUInt("detection_count", detection_count);
+        
+        Logger::info("📊 Total detections: %lu", detection_count);
+        
+        // Step 6: Update system state
+        system_state.total_detections = detection_count;
+        system_state.last_detection_time = millis();
+        
+        return true;
+        
+    } else {
+        Logger::error("✗ Failed to save detection image: %s (error: %s)", 
+                     filename, g_storage.getLastError());
+        
+        // Step 7: Retry once after brief delay
+        vTaskDelay(pdMS_TO_TICKS(100));
+        save_result = g_storage.saveFile(filename, image_data, image_size);
+        
+        if (save_result == STORAGE_SUCCESS) {
+            Logger::info("✓ Detection saved on retry: %s", filename);
+            
+            // Save metadata and update counters
+            saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection);
+            
+            uint32_t detection_count = g_preferences.getUInt("detection_count", 0);
+            detection_count++;
+            g_preferences.putUInt("detection_count", detection_count);
+            
+            Logger::info("📊 Total detections: %lu", detection_count);
+            
+            system_state.total_detections = detection_count;
+            system_state.last_detection_time = millis();
+            
+            return true;
+        } else {
+            Logger::error("✗ Detection save failed after retry");
+            return false;
+        }
     }
-    
-    Logger::info("Processing wildlife detection: %s (confidence: %.2f)", 
-                 filename, detection.confidence);
-    
-    }
-    
-    // Return true to continue detection loop despite save failure
-    return true;
 }
 
 /**
@@ -1248,6 +1335,19 @@ bool initializeSystem() {
     } else {
         Logger::info("✓ Storage system initialized (%s)", 
                     g_storage.getActiveStorage() == STORAGE_SD_CARD ? "SD Card" : "LittleFS");
+        
+        // Create /detections directory if it doesn't exist
+        if (g_storage.getActiveStorage() == STORAGE_SD_CARD) {
+            if (!SD_MMC.exists("/detections")) {
+                if (SD_MMC.mkdir("/detections")) {
+                    Logger::info("✓ Created /detections directory");
+                } else {
+                    Logger::error("Failed to create /detections directory");
+                }
+            } else {
+                Logger::info("✓ /detections directory already exists");
+            }
+        }
     }
     
     Logger::info("WildCAM ESP32 v2.0 system initialization complete!");

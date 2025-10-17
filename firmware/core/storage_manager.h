@@ -69,6 +69,7 @@ public:
     // File operations
     storage_result_t saveImage(const uint8_t* data, size_t length, const char* filename);
     storage_result_t saveLog(const char* message, const char* filename = nullptr);
+    storage_result_t saveFile(const char* path, const uint8_t* data, size_t length);
     storage_result_t saveConfig(const char* key, const char* value);
     storage_result_t readConfig(const char* key, char* value, size_t max_length);
     

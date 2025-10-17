@@ -133,6 +133,14 @@ storage_result_t StorageManager::saveLog(const char* message, const char* filena
     return writeFile(fullPath, (const uint8_t*)message, strlen(message));
 }
 
+storage_result_t StorageManager::saveFile(const char* path, const uint8_t* data, size_t length) {
+    if (!isReady()) {
+        return STORAGE_ERROR_INIT;
+    }
+    
+    return writeFile(path, data, length);
+}
+
 storage_result_t StorageManager::writeFile(const char* path, const uint8_t* data, size_t length) {
     File file;
     
