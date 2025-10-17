@@ -96,7 +96,6 @@ struct SystemState {
     float battery_level = 0.0f;
     
 
-
 } system_state;
 
 /**
