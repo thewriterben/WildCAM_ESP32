@@ -11,23 +11,19 @@
 
 void tearDown(void) {
     // Cleanup after each test
-
-    TEST_ASSERT_FALSE(result);
-}
-
-/**
-
 }
 
 void setup() {
     delay(2000);
     UNITY_BEGIN();
     
+    RUN_TEST(test_gps_manager_instantiation);
 
     
     UNITY_END();
 }
 
 void loop() {
-    // Nothing here
+    // Tests run once in setup
 }
+

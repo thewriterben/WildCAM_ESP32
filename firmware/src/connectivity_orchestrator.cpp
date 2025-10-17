@@ -5,9 +5,6 @@
 
 #include "connectivity_orchestrator.h"
 
-// Global instance
-ConnectivityOrchestrator* g_connectivityOrchestrator = nullptr;
-
 // Constructor
 ConnectivityOrchestrator::ConnectivityOrchestrator() 
     : wifiManager_(nullptr)

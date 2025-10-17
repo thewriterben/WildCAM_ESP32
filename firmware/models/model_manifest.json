@@ -177,14 +177,15 @@
       "model_id": "test_classifier",
       "model_name": "wildlife_classifier_test_quantized.tflite",
       "version": "2.0.0-test",
-      "status": "test_only",
+      "status": "available",
       "type": "species_classification",
-      "description": "Minimal test model for integration testing (DO NOT USE IN PRODUCTION)",
+      "description": "Minimal test model for integration testing - Generated 2025-10-16 (DO NOT USE IN PRODUCTION)",
       
       "files": {
         "model_file": "test/wildlife_classifier_test_quantized.tflite",
         "metadata_file": "test/model_metadata.json",
-        "labels_file": "test/class_labels.json"
+        "labels_file": "test/class_labels.json",
+        "readme_file": "test/README.md"
       },
       
       "model_specs": {
@@ -196,23 +197,42 @@
       },
       
       "performance": {
-        "model_size_mb": 0.5,
+        "model_size_kb": 34,
+        "model_size_mb": 0.033,
         "inference_time_ms": 500,
+        "memory_usage_kb": 512,
         "memory_usage_mb": 0.5,
-        "note": "Performance metrics for testing only"
+        "training_accuracy": 0.12,
+        "validation_accuracy": 0.0,
+        "note": "Test model trained on synthetic data - accuracy metrics not meaningful"
       },
+      
+      "supported_species": [
+        "white_tailed_deer",
+        "black_bear", 
+        "red_fox",
+        "gray_wolf",
+        "mountain_lion",
+        "raccoon",
+        "coyote",
+        "elk",
+        "wild_turkey",
+        "unknown"
+      ],
       
       "hardware_requirements": {
         "platform": "ESP32-S3",
         "min_psram_mb": 2,
-        "min_flash_mb": 4
+        "min_flash_mb": 4,
+        "recommended_psram_mb": 8
       },
       
       "deployment_info": {
         "load_path": "/models/test/wildlife_classifier_test_quantized.tflite",
         "auto_load": false,
         "priority": 999,
-        "test_mode": true
+        "test_mode": true,
+        "usage": "Integration testing only - train production model for field deployment"
       }
     }
   ],
