@@ -157,17 +157,12 @@ bool saveDetectionMetadata(const char* filename, const char* species,
         strcat(metadata_filename, ".json");
     }
     
-    // Get current timestamp for metadata
-    struct tm timeinfo;
-    char timestamp_str[32] = "unknown";
+
     if (getLocalTime(&timeinfo)) {
         strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%d %H:%M:%S", &timeinfo);
     }
     
-    // Get battery level from system state
-    float battery_voltage = system_state.battery_level;
-    
-    // Build JSON metadata string with GPS and battery info
+
     char json_buffer[768];
     snprintf(json_buffer, sizeof(json_buffer),
              "{\n"
@@ -175,7 +170,6 @@ bool saveDetectionMetadata(const char* filename, const char* species,
              "  \"species\": \"%s\",\n"
              "  \"confidence\": %.3f,\n"
              "  \"timestamp\": \"%s\",\n"
-             "  \"timestamp_millis\": %lu,\n"
              "  \"bounding_box\": {\n"
              "    \"x\": %.3f,\n"
              "    \"y\": %.3f,\n"
@@ -191,8 +185,6 @@ bool saveDetectionMetadata(const char* filename, const char* species,
              "  }\n"
              "}\n",
              filename, species, confidence, timestamp_str, millis(),
-             bbox.x, bbox.y, bbox.width, bbox.height, bbox.class_id,
-             battery_voltage);
     
     // Save metadata to storage
     storage_result_t result = g_storage.saveLog(json_buffer, metadata_filename);
@@ -208,8 +200,8 @@ bool saveDetectionMetadata(const char* filename, const char* species,
 
 /**
  * @brief Process wildlife detection event - save image and metadata
- * @param image_data Raw image data
- * @param image_size Size of image data
+ * @param image_data Raw image data (JPEG format from camera)
+ * @param image_size Size of image data in bytes
  * @param detection Detection information
  * @return true if processing successful (non-critical failures still return true)
  */
@@ -220,88 +212,37 @@ bool processWildlifeDetection(const uint8_t* image_data, size_t image_size,
         return false;
     }
     
-    // Step 1: Generate unique filename
+    // Step 1: Check SD card space before saving
+    if (g_storage.isReady()) {
+        uint64_t free_space = g_storage.getFreeSpace();
+        uint64_t min_required_space = 10 * 1024 * 1024; // 10MB minimum free space
+        
+        if (free_space < min_required_space) {
+            Logger::error("SD card low on space: %llu bytes free (min: %llu bytes)", 
+                         free_space, min_required_space);
+            // Continue to try saving but log the warning
+        }
+        
+        // Check if we're approaching full capacity
+        float usage = g_storage.getUsagePercentage();
+        if (usage > 90.0f) {
+            Logger::warning("SD card %d%% full - consider cleanup", (int)usage);
+        }
+    }
+    
+    // Step 2: Generate unique filename
     char filename[MAX_FILENAME_LENGTH];
     if (!generateDetectionFilename(detection.class_name, filename, sizeof(filename))) {
         Logger::error("Failed to generate detection filename");
         return false;
     }
     
-    Logger::info("Processing wildlife detection: %s", filename);
+    Logger::info("Processing wildlife detection: %s (confidence: %.2f)", 
+                 filename, detection.confidence);
     
-    // Step 2: Check if storage is ready
-    if (!g_storage.isReady()) {
-        Logger::error("Storage not ready, cannot save detection image (continuing detection loop)");
-        return true; // Continue detection loop despite storage failure
     }
     
-    // Step 3: Check available storage space
-    uint64_t free_space = g_storage.getFreeSpace();
-    uint64_t required_space = image_size + 4096; // Image + metadata buffer
-    
-    if (free_space < required_space) {
-        Logger::error("Insufficient storage space: %llu bytes free, %llu bytes required", 
-                     free_space, required_space);
-        Logger::error("SD card full condition - cannot save detection");
-        return true; // Continue detection loop despite storage full
-    }
-    
-    // Step 4: Save image buffer to SD card with retry logic
-    const int max_retries = 3;
-    int retry_delay_ms = 100; // Start with 100ms delay
-    storage_result_t save_result = STORAGE_ERROR_WRITE;
-    
-    for (int retry = 0; retry < max_retries; retry++) {
-        save_result = g_storage.saveImage(image_data, image_size, filename);
-        
-        if (save_result == STORAGE_SUCCESS) {
-            break; // Success - exit retry loop
-        }
-        
-        // Log retry attempt
-        Logger::warning("Image save failed (attempt %d/%d): %s", 
-                       retry + 1, max_retries, g_storage.getLastError());
-        
-        // Wait before retry with exponential backoff
-        if (retry < max_retries - 1) {
-            delay(retry_delay_ms);
-            retry_delay_ms *= 2; // Exponential backoff
-        }
-    }
-    
-    if (save_result == STORAGE_SUCCESS) {
-        // Step 5: Log save operation with filename and file size
-        Logger::info("Image saved successfully: %s (size: %u bytes)", filename, image_size);
-        
-        // Step 6: Save metadata file with retry logic
-        bool metadata_saved = false;
-        for (int retry = 0; retry < max_retries && !metadata_saved; retry++) {
-            metadata_saved = saveDetectionMetadata(filename, detection.class_name, 
-                                                  detection.confidence, detection);
-            if (!metadata_saved && retry < max_retries - 1) {
-                delay(100); // Brief delay before retry
-            }
-        }
-        
-        if (!metadata_saved) {
-            // Log warning but continue - metadata is optional
-            Logger::warning("Failed to save metadata for %s after %d retries, continuing operation", 
-                          filename, max_retries);
-        }
-        
-        // Step 7: Increment detection counter (persistent across reboots)
-        uint32_t detection_count = g_preferences.getUInt("detect_count", 0);
-        detection_count++;
-        g_preferences.putUInt("detect_count", detection_count);
-        Logger::info("Detection count: %lu", detection_count);
-        
-    } else {
-        // Step 8: Error handling - log error but continue operation
-        Logger::error("Failed to save image %s after %d retries: %s (continuing detection loop)", 
-                     filename, max_retries, g_storage.getLastError());
-        // Return true to continue detection loop despite save failure
-    }
-    
+    // Return true to continue detection loop despite save failure
     return true;
 }
 
@@ -361,19 +302,64 @@ void aiProcessingTask(void* parameter) {
                 if (num_detections > 0) {
                     system_state.last_detection = millis();
                     
-                    for (int i = 0; i < num_detections; i++) {
-                        Logger::info("Wildlife detected: %s (confidence: %.2f)", 
-                                   detections[i].class_name, detections[i].confidence);
+                    // Release the RGB565 frame first
+                    g_camera_manager->releaseFrame(image_data);
+                    image_data = nullptr;
+                    
+                    // Temporarily switch camera to JPEG mode for saving
+                    sensor_t* sensor = esp_camera_sensor_get();
+                    if (sensor) {
+                        // Save current format
+                        pixformat_t original_format = sensor->pixformat;
                         
-                        // Process detection - save image, metadata, etc.
-                        if (!processWildlifeDetection(image_data, image_width * image_height, detections[i])) {
-                            Logger::warning("Detection processing had issues but continuing operation");
+                        // Switch to JPEG format
+                        sensor->set_pixformat(sensor, PIXFORMAT_JPEG);
+                        vTaskDelay(pdMS_TO_TICKS(50)); // Brief delay for format switch
+                        
+                        // Capture JPEG frame for saving
+                        camera_fb_t* jpeg_fb = esp_camera_fb_get();
+                        
+                        if (jpeg_fb && jpeg_fb->format == PIXFORMAT_JPEG) {
+                            for (int i = 0; i < num_detections; i++) {
+                                Logger::info("Wildlife detected: %s (confidence: %.2f)", 
+                                           detections[i].class_name, detections[i].confidence);
+                                
+                                // Process detection - save image, metadata, etc.
+                                if (!processWildlifeDetection(jpeg_fb->buf, jpeg_fb->len, detections[i])) {
+                                    Logger::warning("Detection processing had issues but continuing operation");
+                                }
+                            }
+                            esp_camera_fb_return(jpeg_fb);
+                        } else {
+                            // Fallback: log detection but continue without saving image
+                            Logger::warning("Could not capture JPEG frame for saving, logging detection only");
+                            for (int i = 0; i < num_detections; i++) {
+                                Logger::info("Wildlife detected: %s (confidence: %.2f) - image not saved", 
+                                           detections[i].class_name, detections[i].confidence);
+                                // Still increment detection counter even if image not saved
+                                incrementDetectionCounter();
+                            }
+                            if (jpeg_fb) {
+                                esp_camera_fb_return(jpeg_fb);
+                            }
+                        }
+                        
+                        // Restore original format for AI processing
+                        sensor->set_pixformat(sensor, original_format);
+                        vTaskDelay(pdMS_TO_TICKS(50)); // Brief delay for format switch
+                    } else {
+                        Logger::error("Could not access camera sensor for format switch");
+                        for (int i = 0; i < num_detections; i++) {
+                            Logger::info("Wildlife detected: %s (confidence: %.2f) - image not saved", 
+                                       detections[i].class_name, detections[i].confidence);
+                            // Still increment detection counter even if image not saved
+                            incrementDetectionCounter();
                         }
                     }
+                } else {
+                    // Always release camera frame if no detections
+                    g_camera_manager->releaseFrame(image_data);
                 }
-                
-                // Always release camera frame
-                g_camera_manager->releaseFrame(image_data);
             } else {
                 // Camera capture failed after retries - graceful degradation
                 Logger::error("Camera capture failed after %d retries, continuing...", max_retries);
@@ -517,6 +503,24 @@ uint32_t incrementTamperCounter() {
     uint32_t count = getTamperCounter() + 1;
     g_preferences.putUInt("tamper_count", count);
     Logger::info("Tamper counter incremented to: %lu", count);
+    return count;
+}
+
+/**
+ * @brief Get detection counter from persistent storage
+ * @return Current detection counter value
+ */
+uint32_t getDetectionCounter() {
+    return g_preferences.getUInt("detect_count", 0);
+}
+
+/**
+ * @brief Increment and persist detection counter
+ * @return New detection counter value
+ */
+uint32_t incrementDetectionCounter() {
+    uint32_t count = getDetectionCounter() + 1;
+    g_preferences.putUInt("detect_count", count);
     return count;
 }
 
@@ -1399,12 +1403,6 @@ void loop() {
             Logger::info("Battery Level: %.2fV", system_state.battery_level);
             Logger::info("Last Detection: %lu ms ago", millis() - system_state.last_detection);
             Logger::info("Total Detections: %lu", getDetectionCounter());
-            Logger::info("Storage Ready: %s", g_storage.isReady() ? "YES" : "NO");
-            if (g_storage.isReady()) {
-                Logger::info("Storage Usage: %.1f%% (%llu MB free)", 
-                           g_storage.getUsagePercentage(),
-                           g_storage.getFreeSpace() / (1024 * 1024));
-            }
         } else if (command == "restart") {
             Logger::info("System restart requested...");
             ESP.restart();
@@ -1412,6 +1410,16 @@ void loop() {
             Logger::info("WildCAM ESP32 v2.0 - Advanced AI Wildlife Monitoring Platform");
             Logger::info("Version: %s", FIRMWARE_VERSION);
             Logger::info("Features: YOLO-tiny AI, MPPT Power, AES-256 Security, Mesh Network");
+        } else if (command == "stats") {
+            Logger::info("=== Detection Statistics ===");
+            Logger::info("Total Detections: %lu", getDetectionCounter());
+            Logger::info("Tamper Events: %lu", getTamperCounter());
+            Logger::info("Storage Used: %llu / %llu bytes (%.1f%%)",
+                       g_storage.getTotalSpace() - g_storage.getFreeSpace(),
+                       g_storage.getTotalSpace(),
+                       g_storage.getUsagePercentage());
+            Logger::info("Free Space: %llu bytes", g_storage.getFreeSpace());
+            Logger::info("Last Detection: %lu ms ago", millis() - system_state.last_detection);
         }
     }
     
