@@ -9,6 +9,25 @@
 #define CONFIG_H
 
 // ===========================
+// HARDWARE CONFIGURATION
+// ===========================
+
+// Board Selection - Define ONE of these
+// #define CAMERA_MODEL_AI_THINKER    // AI-Thinker ESP32-CAM (default)
+// #define CAMERA_MODEL_ESP32S3_EYE   // ESP32-S3-CAM
+// #define CAMERA_MODEL_TTGO_T_CAMERA // TTGO T-Camera
+
+// Feature Enables - Configure based on your hardware
+#define CAMERA_ENABLED true               // Enable camera functionality
+#define SD_CARD_ENABLED true              // Enable SD card storage
+// #define LORA_ENABLED true              // Enable LoRa mesh networking (conflicts with camera on AI-Thinker)
+#define PIR_SENSOR_ENABLED true           // Enable PIR motion sensor
+#define BME280_SENSOR_ENABLED true        // Enable BME280 environmental sensor
+#define BATTERY_MONITOR_ENABLED true      // Enable battery voltage monitoring
+#define SOLAR_VOLTAGE_MONITORING_ENABLED false // Enable solar panel voltage monitoring
+#define LED_INDICATORS_ENABLED false      // Enable LED indicators (conflicts with SD card)
+
+// ===========================
 // NETWORK CONFIGURATION
 // ===========================
 
@@ -27,10 +46,11 @@
 #define OTA_VERSION_URL "http://updates.wildcam.local/version.txt"
 
 // LoRa Mesh Network Settings
-#define LORA_ENABLED true                 // Enable LoRa mesh networking
+#ifdef LORA_ENABLED
 #define LORA_FREQUENCY 915E6              // LoRa frequency (915 MHz for North America)
 #define LORA_HEALTH_CHECK_INTERVAL 60000  // Check mesh health every minute (ms)
 #define LORA_NODE_TIMEOUT 300000          // Consider node dead after 5 minutes
+#endif
 
 // Data Upload Settings
 #define DATA_UPLOAD_ENABLED true          // Enable automatic data upload
@@ -40,5 +60,8 @@
 
 // Network Status Logging
 #define NETWORK_STATUS_LOG_INTERVAL 300000 // Log network status every 5 minutes (ms)
+
+// ===========================
+
 
 #endif // CONFIG_H
