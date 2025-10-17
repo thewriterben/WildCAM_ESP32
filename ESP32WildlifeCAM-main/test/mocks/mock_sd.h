@@ -11,6 +11,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 
 #ifdef NATIVE_TEST
 
