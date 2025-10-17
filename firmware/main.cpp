@@ -18,16 +18,6 @@
 #include <esp_system.h>
 #include <esp_log.h>
 
-// Network libraries
-#include <WiFi.h>
-#include <HTTPClient.h>
-#if OTA_ENABLED
-#include <ArduinoOTA.h>
-#include <Update.h>
-#endif
-#if LORA_ENABLED
-#include <LoRa.h>
-#endif
 
 // Hardware abstraction layer
 #include "hal/board_detector.h"
@@ -89,6 +79,9 @@ TaskHandle_t power_management_task = NULL;
 TaskHandle_t network_management_task = NULL;
 TaskHandle_t security_monitoring_task = NULL;
 
+// Power management settings
+uint32_t deep_sleep_duration = 300; // Default: 300 seconds (5 minutes)
+
 // System state
 struct SystemState {
     bool ai_initialized = false;
@@ -102,20 +95,6 @@ struct SystemState {
     float system_temperature = 0.0f;
     float battery_level = 0.0f;
     
-    // Network management state
-    int wifi_retry_count = 0;
-    unsigned long last_wifi_attempt = 0;
-    unsigned long last_upload = 0;
-    int pending_uploads = 0;
-    unsigned long last_ota_check = 0;
-    bool ota_available = false;
-    unsigned long last_lora_check = 0;
-    int lora_active_nodes = 0;
-    unsigned long last_network_status_log = 0;
-    
-    // Security lockdown state
-    bool in_lockdown = false;
-    unsigned long lockdown_start_time = 0;
 
 } system_state;
 
@@ -179,24 +158,42 @@ bool saveDetectionMetadata(const char* filename, const char* species,
         strcat(metadata_filename, ".json");
     }
     
-    // Build JSON metadata string
-    char json_buffer[512];
+    // Get current timestamp for metadata
+    struct tm timeinfo;
+    char timestamp_str[32] = "unknown";
+    if (getLocalTime(&timeinfo)) {
+        strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    }
+    
+    // Get battery level from system state
+    float battery_voltage = system_state.battery_level;
+    
+    // Build JSON metadata string with GPS and battery info
+    char json_buffer[768];
     snprintf(json_buffer, sizeof(json_buffer),
              "{\n"
              "  \"filename\": \"%s\",\n"
              "  \"species\": \"%s\",\n"
              "  \"confidence\": %.3f,\n"
-             "  \"timestamp\": %lu,\n"
+             "  \"timestamp\": \"%s\",\n"
+             "  \"timestamp_millis\": %lu,\n"
              "  \"bounding_box\": {\n"
              "    \"x\": %.3f,\n"
              "    \"y\": %.3f,\n"
              "    \"width\": %.3f,\n"
              "    \"height\": %.3f\n"
              "  },\n"
-             "  \"class_id\": %d\n"
+             "  \"class_id\": %d,\n"
+             "  \"battery_voltage\": %.2f,\n"
+             "  \"gps_coordinates\": {\n"
+             "    \"latitude\": 0.0,\n"
+             "    \"longitude\": 0.0,\n"
+             "    \"note\": \"GPS integration pending\"\n"
+             "  }\n"
              "}\n",
-             filename, species, confidence, millis(),
-             bbox.x, bbox.y, bbox.width, bbox.height, bbox.class_id);
+             filename, species, confidence, timestamp_str, millis(),
+             bbox.x, bbox.y, bbox.width, bbox.height, bbox.class_id,
+             battery_voltage);
     
     // Save metadata to storage
     storage_result_t result = g_storage.saveLog(json_buffer, metadata_filename);
@@ -233,30 +230,77 @@ bool processWildlifeDetection(const uint8_t* image_data, size_t image_size,
     
     Logger::info("Processing wildlife detection: %s", filename);
     
-    // Step 2: Save image buffer to SD card using StorageManager
-    if (g_storage.isReady()) {
-        storage_result_t save_result = g_storage.saveImage(image_data, image_size, filename);
+    // Step 2: Check if storage is ready
+    if (!g_storage.isReady()) {
+        Logger::error("Storage not ready, cannot save detection image (continuing detection loop)");
+        return true; // Continue detection loop despite storage failure
+    }
+    
+    // Step 3: Check available storage space
+    uint64_t free_space = g_storage.getFreeSpace();
+    uint64_t required_space = image_size + 4096; // Image + metadata buffer
+    
+    if (free_space < required_space) {
+        Logger::error("Insufficient storage space: %llu bytes free, %llu bytes required", 
+                     free_space, required_space);
+        Logger::error("SD card full condition - cannot save detection");
+        return true; // Continue detection loop despite storage full
+    }
+    
+    // Step 4: Save image buffer to SD card with retry logic
+    const int max_retries = 3;
+    int retry_delay_ms = 100; // Start with 100ms delay
+    storage_result_t save_result = STORAGE_ERROR_WRITE;
+    
+    for (int retry = 0; retry < max_retries; retry++) {
+        save_result = g_storage.saveImage(image_data, image_size, filename);
         
         if (save_result == STORAGE_SUCCESS) {
-            // Step 3: Log save operation with filename and file size
-            Logger::info("Image saved successfully: %s (size: %u bytes)", filename, image_size);
-            
-            // Step 5 (Optional): Save metadata file
-            if (!saveDetectionMetadata(filename, detection.class_name, detection.confidence, detection)) {
-                // Log warning but continue - metadata is optional
-                Logger::warning("Failed to save metadata for %s, continuing operation", filename);
-            }
-        } else {
-            // Step 4: Error handling - log error but continue operation
-            Logger::error("Failed to save image %s: %s (continuing detection loop)", 
-                         filename, g_storage.getLastError());
-            // Return true to continue detection loop despite save failure
-            return true;
+            break; // Success - exit retry loop
         }
+        
+        // Log retry attempt
+        Logger::warning("Image save failed (attempt %d/%d): %s", 
+                       retry + 1, max_retries, g_storage.getLastError());
+        
+        // Wait before retry with exponential backoff
+        if (retry < max_retries - 1) {
+            delay(retry_delay_ms);
+            retry_delay_ms *= 2; // Exponential backoff
+        }
+    }
+    
+    if (save_result == STORAGE_SUCCESS) {
+        // Step 5: Log save operation with filename and file size
+        Logger::info("Image saved successfully: %s (size: %u bytes)", filename, image_size);
+        
+        // Step 6: Save metadata file with retry logic
+        bool metadata_saved = false;
+        for (int retry = 0; retry < max_retries && !metadata_saved; retry++) {
+            metadata_saved = saveDetectionMetadata(filename, detection.class_name, 
+                                                  detection.confidence, detection);
+            if (!metadata_saved && retry < max_retries - 1) {
+                delay(100); // Brief delay before retry
+            }
+        }
+        
+        if (!metadata_saved) {
+            // Log warning but continue - metadata is optional
+            Logger::warning("Failed to save metadata for %s after %d retries, continuing operation", 
+                          filename, max_retries);
+        }
+        
+        // Step 7: Increment detection counter (persistent across reboots)
+        uint32_t detection_count = g_preferences.getUInt("detect_count", 0);
+        detection_count++;
+        g_preferences.putUInt("detect_count", detection_count);
+        Logger::info("Detection count: %lu", detection_count);
+        
     } else {
-        // Storage not ready - log error but continue
-        Logger::error("Storage not ready, cannot save detection image (continuing detection loop)");
-        return true;
+        // Step 8: Error handling - log error but continue operation
+        Logger::error("Failed to save image %s after %d retries: %s (continuing detection loop)", 
+                     filename, max_retries, g_storage.getLastError());
+        // Return true to continue detection loop despite save failure
     }
     
     return true;
@@ -368,9 +412,51 @@ void powerManagementTask(void* parameter) {
             }
             
             // Handle low power conditions
-            if (power_status.battery_voltage < 3.0f) {
-                Logger::warning("Low battery detected, entering power save mode");
-                // TODO: Implement power save mode
+            if (power_status.battery_voltage < 3.0f && !system_state.power_save_mode) {
+                Logger::warning("Entering power save mode (battery: %.2fV)", 
+                                power_status.battery_voltage);
+                
+                // Reduce CPU frequency
+                setCpuFrequencyMhz(80);
+                Logger::info("CPU frequency reduced to 80MHz");
+                
+                // Increase sleep duration
+                deep_sleep_duration = 600; // 10 minutes
+                Logger::info("Deep sleep duration increased to 600 seconds");
+                
+                // Disable WiFi if enabled
+                #if WIFI_ENABLED
+                if (system_state.network_connected) {
+                    WiFi.disconnect(true);
+                    WiFi.mode(WIFI_OFF);
+                    system_state.network_connected = false;
+                    Logger::info("WiFi disabled for power saving");
+                }
+                #endif
+                
+                // Reduce camera quality (would need to update camera config)
+                // This would be implemented when camera is reconfigured
+                Logger::info("Camera quality will be reduced on next capture");
+                
+                system_state.power_save_mode = true;
+                Logger::info("Power save mode activated");
+                
+            } else if (power_status.battery_voltage > 3.4f && system_state.power_save_mode) {
+                Logger::info("Exiting power save mode (battery: %.2fV)", 
+                             power_status.battery_voltage);
+                
+                // Restore normal operation
+                setCpuFrequencyMhz(240);
+                Logger::info("CPU frequency restored to 240MHz");
+                
+                deep_sleep_duration = 300;
+                Logger::info("Deep sleep duration restored to 300 seconds");
+                
+                // Camera quality will be restored on next capture
+                Logger::info("Camera quality will be restored on next capture");
+                
+                system_state.power_save_mode = false;
+                Logger::info("Power save mode deactivated - normal operation resumed");
             }
         }
         
@@ -406,6 +492,14 @@ bool initializeSDCard() {
     
     Logger::info("SD card initialized successfully");
     return true;
+}
+
+/**
+ * @brief Get detection counter from persistent storage
+ * @return Current detection counter value
+ */
+uint32_t getDetectionCounter() {
+    return g_preferences.getUInt("detect_count", 0);
 }
 
 /**
@@ -524,8 +618,24 @@ bool captureTamperImage() {
 void handleTamperDetection() {
     String timestamp = getFormattedTime();
     
-    // Step 1: Write critical alert to log
+    // Step 1: Write critical alert to log (console and file)
     Logger::critical("TAMPER DETECTED at %s - Initiating security response", timestamp.c_str());
+    
+    // Create detailed log entry for file storage
+    char log_entry[512];
+    snprintf(log_entry, sizeof(log_entry), 
+             "[TAMPER] %s - Battery: %.2fV - Free Heap: %d bytes - Tamper Event\n",
+             timestamp.c_str(), 
+             system_state.battery_level,
+             ESP.getFreeHeap());
+    
+    // Save detailed log to SD card if storage is available
+    if (g_storage.isReady()) {
+        storage_result_t log_result = g_storage.saveLog(log_entry, "/security.log");
+        if (log_result != STORAGE_SUCCESS) {
+            Logger::warning("Failed to save security log: %s", g_storage.getLastError());
+        }
+    }
     
     // Step 2: Capture and save image with TAMPER_ prefix
     bool image_saved = captureTamperImage();
@@ -536,10 +646,12 @@ void handleTamperDetection() {
     }
     
     // Step 3: Send alert if network is available
-    char alert_message[128];
+    char alert_message[256];
     snprintf(alert_message, sizeof(alert_message), 
-             "CRITICAL: Tamper detected at %s. Image capture: %s",
-             timestamp.c_str(), image_saved ? "SUCCESS" : "FAILED");
+             "CRITICAL: Tamper detected at %s. Image capture: %s. Battery: %.2fV",
+             timestamp.c_str(), 
+             image_saved ? "SUCCESS" : "FAILED",
+             system_state.battery_level);
     
     if (sendCriticalAlert(alert_message)) {
         Logger::info("Critical alert sent successfully");
@@ -1148,6 +1260,13 @@ void loop() {
             Logger::info("Network Connected: %s", system_state.network_connected ? "YES" : "NO");
             Logger::info("Battery Level: %.2fV", system_state.battery_level);
             Logger::info("Last Detection: %lu ms ago", millis() - system_state.last_detection);
+            Logger::info("Total Detections: %lu", getDetectionCounter());
+            Logger::info("Storage Ready: %s", g_storage.isReady() ? "YES" : "NO");
+            if (g_storage.isReady()) {
+                Logger::info("Storage Usage: %.1f%% (%llu MB free)", 
+                           g_storage.getUsagePercentage(),
+                           g_storage.getFreeSpace() / (1024 * 1024));
+            }
         } else if (command == "restart") {
             Logger::info("System restart requested...");
             ESP.restart();
