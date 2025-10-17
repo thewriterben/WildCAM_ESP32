@@ -1,0 +1,39 @@
+{
+  "labels": [
+    "white_tailed_deer",
+    "black_bear",
+    "red_fox",
+    "gray_wolf",
+    "mountain_lion",
+    "raccoon",
+    "coyote",
+    "elk",
+    "wild_turkey",
+    "unknown"
+  ],
+  "num_classes": 10,
+  "label_to_index": {
+    "white_tailed_deer": 0,
+    "black_bear": 1,
+    "red_fox": 2,
+    "gray_wolf": 3,
+    "mountain_lion": 4,
+    "raccoon": 5,
+    "coyote": 6,
+    "elk": 7,
+    "wild_turkey": 8,
+    "unknown": 9
+  },
+  "index_to_label": {
+    "0": "white_tailed_deer",
+    "1": "black_bear",
+    "2": "red_fox",
+    "3": "gray_wolf",
+    "4": "mountain_lion",
+    "5": "raccoon",
+    "6": "coyote",
+    "7": "elk",
+    "8": "wild_turkey",
+    "9": "unknown"
+  }
+}

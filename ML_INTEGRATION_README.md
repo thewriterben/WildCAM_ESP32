@@ -67,6 +67,26 @@ Complete firmware integration:
 
 Comprehensive guides:
 
+- **YOLO-tiny Training Guide** (`ml/TRAINING_DEPLOYMENT_GUIDE.md`) ✅ **NEW**
+  - Complete 7-phase training pipeline (40-80 hours)
+  - Dataset collection and labeling
+  - YOLO-tiny model training
+  - Model optimization and quantization
+  - ESP32 deployment procedures
+  - Field testing guidelines
+
+- **YOLO-tiny Quick Start** (`ml/QUICKSTART.md`) ✅ **NEW**
+  - 5-minute test model setup
+  - Integration examples (Python & C++)
+  - Performance benchmarking
+  - FAQ and troubleshooting
+
+- **Integration Example** (`examples/test_model_integration_example.cpp`) ✅ **NEW**
+  - Complete working example
+  - Model loading and inference
+  - Result handling
+  - Performance benchmarking
+
 - **Integration Guide** (`docs/ml_integration_guide.md`) ✅
   - Complete training workflow
   - Deployment instructions
@@ -90,40 +110,81 @@ Comprehensive guides:
 
 ## 🚀 Quick Start
 
-### Option 1: Test Model (No Training)
+### Option 1: Test Model (No Training) - READY NOW ✅
+
+**A test model has been pre-generated and is ready to use!**
 
 ```bash
-# 1. Generate test model
+# 1. Test model already generated at:
+# firmware/models/test/wildlife_classifier_test_quantized.tflite (34 KB)
+
+# 2. View model documentation
+cat firmware/models/test/README.md
+cat ml/QUICKSTART.md
+
+# 3. Use the integration example
+# See: examples/test_model_integration_example.cpp
+
+# 4. Test with Python
 cd backend/ml
-python generate_test_model.py
-
-# 2. Run integration tests
-cd ../../scripts
-python ml_integration_test.py
-
-# 3. Deploy to ESP32
-cp ../firmware/models/test/wildlife_classifier_test_quantized.tflite \
-   ../ESP32WildlifeCAM-main/models/deployment/
+python -c "
+import tensorflow as tf
+interpreter = tf.lite.Interpreter(
+    model_path='../../firmware/models/test/wildlife_classifier_test_quantized.tflite'
+)
+interpreter.allocate_tensors()
+print('✅ Test model loads successfully')
+print(f'Input shape: {interpreter.get_input_details()[0][\"shape\"]}')
+print(f'Output shape: {interpreter.get_output_details()[0][\"shape\"]}')
+"
 ```
 
-### Option 2: Train Your Own
+**⚠️ Important**: This is a test model trained on synthetic data. It's perfect for:
+- Integration testing
+- Performance benchmarking
+- Development and debugging
+- Pipeline validation
+
+**DO NOT** use for production. For production, see Option 2 or 3.
+
+### Option 2: Train YOLO-tiny Model (Production-Ready)
+
+**Follow the comprehensive training guide for production deployment:**
 
 ```bash
-# 1. Install dependencies
-cd backend
-pip install -r requirements.txt
+# 1. Read the complete training guide
+cat ml/TRAINING_DEPLOYMENT_GUIDE.md
 
-# 2. Prepare dataset
-# Organize images in: /data/wildlife_dataset/{train,validation,test}/species_name/
+# Quick summary of the 7-phase pipeline:
+# - Phase 1: Data Collection (20 hours) - 1000+ images per species
+# - Phase 2: Data Labeling (10-15 hours)
+# - Phase 3: Model Training (10-20 hours) - YOLO-tiny or transfer learning
+# - Phase 4: Model Optimization (5 hours) - Quantization and pruning
+# - Phase 5: Model Evaluation (3 hours) - Test >85% accuracy target
+# - Phase 6: Deployment (5 hours) - Flash to ESP32
+# - Phase 7: Field Testing (Ongoing)
 
-# 3. Run training pipeline
-cd ml
-python deployment_pipeline.py --config pipeline_config.json
+# 2. Install dependencies
+pip install ultralytics tensorflow opencv-python
 
-# 4. Deploy model
-cp /data/models/wildlife_classifier_quantized.tflite \
-   ../firmware/models/wildlife_classifier_v2.tflite
+# 3. Train with YOLOv8 (recommended)
+python ml/train_model.py --model yolov8n --epochs 300 --data dataset/wildlife.yaml
+
+# 4. Or use transfer learning (faster)
+python backend/ml/model_trainer.py --dataset /data/wildlife --epochs 100
+
+# 5. Deploy optimized model
+cp models/wildlife_classifier_quantized.tflite firmware/models/production/
 ```
+
+**Estimated Time**: 40-80 hours total
+**Target Accuracy**: >85% (aim for >90%)
+**Model Size**: <2MB (ideally <1MB)
+**Inference Time**: <200ms on ESP32-S3
+
+**See**: `ml/TRAINING_DEPLOYMENT_GUIDE.md` for complete details
+
+### Option 3: Use Pre-trained Models (Quick Start)
 
 ## 📊 Architecture
 
