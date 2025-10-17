@@ -30,6 +30,9 @@
 #include "production/enterprise/cloud/conservation_impact_verification.h"
 #include "production/enterprise/cloud/enhanced_cloud_manager.h"
 #include "i18n/language_manager.h"
+#include "connectivity_orchestrator.h"
+#include "ai/federated_learning.h"
+#include "ai/multithreaded_inference.h"
 
 // AI & ML Systems
 WildlifeClassifier* g_wildlifeClassifier = nullptr;
@@ -59,3 +62,51 @@ CloudConfigManager* g_cloudConfigManager = nullptr;
 CloudServiceOrchestrator* g_cloudServiceOrchestrator = nullptr;
 ConservationImpactVerification* g_impactVerification = nullptr;
 EnhancedCloudManager* g_enhancedCloudManager = nullptr;
+
+// Connectivity & Advanced Features
+ConnectivityOrchestrator *g_connectivityOrchestrator = nullptr;
+FederatedLearningManager *g_fl_manager = nullptr;
+MultithreadedInferenceEngine *g_multithreaded_engine = nullptr;
+
+// Federated Learning Configuration Presets
+const FederatedLearningConfig FL_CONFIG_CONSERVATIVE = {
+    .enabled = true,
+    .privacyLevel = PRIVACY_HIGH,
+    .contributionThreshold = 0.95f,
+    .localEpochs = 1,
+    .learningRate = 0.001f,
+    .batchSize = 8,
+    .roundInterval = 3600000,  // 1 hour in milliseconds
+    .requireExpertValidation = true,
+    .differentialPrivacyEpsilon = 10.0f,
+    .serverEndpoint = "",
+    .deviceId = ""
+};
+
+const FederatedLearningConfig FL_CONFIG_BALANCED = {
+    .enabled = true,
+    .privacyLevel = PRIVACY_MEDIUM,
+    .contributionThreshold = 0.85f,
+    .localEpochs = 3,
+    .learningRate = 0.01f,
+    .batchSize = 16,
+    .roundInterval = 1800000,  // 30 minutes in milliseconds
+    .requireExpertValidation = false,
+    .differentialPrivacyEpsilon = 5.0f,
+    .serverEndpoint = "",
+    .deviceId = ""
+};
+
+const FederatedLearningConfig FL_CONFIG_AGGRESSIVE = {
+    .enabled = true,
+    .privacyLevel = PRIVACY_LOW,
+    .contributionThreshold = 0.70f,
+    .localEpochs = 5,
+    .learningRate = 0.1f,
+    .batchSize = 32,
+    .roundInterval = 600000,  // 10 minutes in milliseconds
+    .requireExpertValidation = false,
+    .differentialPrivacyEpsilon = 1.0f,
+    .serverEndpoint = "",
+    .deviceId = ""
+};
