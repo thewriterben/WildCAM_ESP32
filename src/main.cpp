@@ -9,7 +9,7 @@
 #include "WebServer.h"
 
 // Global instances
-MotionDetector motionDetector(PIR_SENSOR_PIN, MOTION_SENSITIVITY, MOTION_COOLDOWN_MS);
+MotionDetector motionDetector;
 CameraManager camera;
 StorageManager storage;
 PowerManager power(BATTERY_ADC_PIN);
@@ -72,9 +72,8 @@ void setup() {
     
     // Initialize Motion Detector
     Serial.println("\n4. Initializing Motion Detector...");
-    if (motionDetector.begin()) {
-        Serial.println("   ✓ Motion detector ready");
-    }
+    motionDetector.init(PIR_SENSOR_PIN, MOTION_COOLDOWN_MS);
+    Serial.println("   ✓ Motion detector ready");
     
     // Initialize Web Server (if enabled)
     if (enableWebServer) {
@@ -98,7 +97,7 @@ void setup() {
 
 void loop() {
     // Check for motion
-    if (motionDetector.detectMotion()) {
+    if (motionDetector.isMotionDetected()) {
         currentState = MOTION_DETECTED;
         Serial.println("\n*** MOTION DETECTED ***");
         
