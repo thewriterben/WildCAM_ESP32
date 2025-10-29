@@ -351,9 +351,6 @@ std::vector<String> StorageManager::getImageFiles() {
     int successfulScans = 0;
     int totalFilesFound = 0;
     
-    // Recursion depth limit to prevent stack overflow
-    const int MAX_RECURSION_DEPTH = 10;
-    
     // Helper function to recursively scan directories with comprehensive error handling
     std::function<void(const String&, int)> scanDirectory = [&](const String& path, int depth) {
         // 4. Check recursion depth to prevent stack overflow
@@ -372,7 +369,7 @@ std::vector<String> StorageManager::getImageFiles() {
         }
         
         // 6. Validate path length is reasonable (prevent buffer overflows)
-        if (path.length() > 255) {
+        if (path.length() > MAX_PATH_LENGTH) {
             Serial.printf("ERROR: Path too long (%d chars): %s\n", path.length(), path.c_str());
             Serial.println("RECOVERY: Skipping this directory to prevent buffer overflow");
             failedDirOpens++;
@@ -405,7 +402,6 @@ std::vector<String> StorageManager::getImageFiles() {
         // 9. Iterate through directory entries with error handling
         File file = dir.openNextFile();
         int fileCount = 0;
-        const int MAX_FILES_PER_DIR = 10000;  // Sanity check to prevent infinite loops
         
         while (file) {
             // 10. Sanity check for infinite loops
@@ -445,8 +441,6 @@ std::vector<String> StorageManager::getImageFiles() {
                     
                     // 15. Additional validation - check file size is reasonable
                     size_t fileSize = file.size();
-                    const size_t MAX_IMAGE_SIZE = 10 * 1024 * 1024;  // 10MB max
-                    const size_t MIN_IMAGE_SIZE = 100;  // 100 bytes min
                     
                     if (fileSize > MAX_IMAGE_SIZE) {
                         Serial.printf("WARNING: Image file too large (%d bytes): %s\n", 
@@ -508,7 +502,8 @@ std::vector<String> StorageManager::getImageFiles() {
         Serial.printf("Successfully sorted %d image files\n", imageFiles.size());
     } catch (const std::exception& e) {
         Serial.println("ERROR: Failed to sort image files");
-        Serial.printf("Exception: %s\n", e.what());
+        Serial.print("Exception: ");
+        Serial.println(e.what());  // Use Serial.print/println to safely handle exception message
         Serial.println("RECOVERY: Returning unsorted results");
     } catch (...) {
         Serial.println("ERROR: Unknown exception during sort operation");
