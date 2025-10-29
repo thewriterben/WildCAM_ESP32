@@ -84,7 +84,13 @@ float PowerManager::getBatteryVoltage() {
 }
 
 float PowerManager::getBatteryPercentage() {
-    batteryPercentage = voltageToPercentage(getBatteryVoltage());
+    // Use cached voltage instead of reading again (getBatteryVoltage already updates it)
+    // This avoids redundant ADC read
+    if (batteryVoltage == 0.0f) {
+        // Only read if not yet initialized
+        batteryVoltage = readBatteryVoltage();
+    }
+    batteryPercentage = voltageToPercentage(batteryVoltage);
     return batteryPercentage;
 }
 
@@ -96,16 +102,18 @@ void PowerManager::setPowerMode(PowerMode mode) {
     currentMode = mode;
     applyPowerMode(mode);
     
-    String modeStr;
+    // Use const char* instead of String to avoid heap allocation
+    const char* modeStr;
     switch (mode) {
         case PowerMode::MAX_PERFORMANCE: modeStr = "Max Performance"; break;
         case PowerMode::BALANCED: modeStr = "Balanced"; break;
         case PowerMode::ECO_MODE: modeStr = "Eco Mode"; break;
         case PowerMode::SURVIVAL: modeStr = "Survival"; break;
         case PowerMode::HIBERNATION: modeStr = "Hibernation"; break;
+        default: modeStr = "Unknown"; break;
     }
     
-    Serial.printf("Power mode changed to: %s\n", modeStr.c_str());
+    Serial.printf("Power mode changed to: %s\n", modeStr);
 }
 
 bool PowerManager::shouldEnterDeepSleep() {

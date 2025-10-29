@@ -193,31 +193,62 @@ bool AdvancedFeaturesManager::runDiagnostics() {
 }
 
 String AdvancedFeaturesManager::getStatusReport() {
-    String report = "=== Advanced Features Status Report ===\n";
+    // Preallocate buffer to avoid multiple reallocations (more efficient)
+    String report;
+    report.reserve(800); // Reserve approximate size to avoid reallocations
     
-    report += "System Status: " + String(isOperational() ? "OPERATIONAL" : "DEGRADED") + "\n";
-    report += "Initialized: " + String(initialized_ ? "Yes" : "No") + "\n";
-    report += "Features Running: " + String(features_running_ ? "Yes" : "No") + "\n\n";
+    report = "=== Advanced Features Status Report ===\n";
     
-    report += "Feature Status:\n";
-    report += "- AI Detection: " + String(ai_detection_active_ ? "ACTIVE" : "INACTIVE") + "\n";
-    report += "- Event Triggering: " + String(event_triggering_active_ ? "ACTIVE" : "INACTIVE") + "\n";
-    report += "- Mesh Networking: " + String(mesh_networking_active_ ? "ACTIVE" : "INACTIVE") + "\n\n";
+    report += "System Status: ";
+    report += isOperational() ? "OPERATIONAL" : "DEGRADED";
+    report += "\nInitialized: ";
+    report += initialized_ ? "Yes" : "No";
+    report += "\nFeatures Running: ";
+    report += features_running_ ? "Yes" : "No";
+    report += "\n\nFeature Status:\n";
+    
+    report += "- AI Detection: ";
+    report += ai_detection_active_ ? "ACTIVE" : "INACTIVE";
+    report += "\n- Event Triggering: ";
+    report += event_triggering_active_ ? "ACTIVE" : "INACTIVE";
+    report += "\n- Mesh Networking: ";
+    report += mesh_networking_active_ ? "ACTIVE" : "INACTIVE";
+    report += "\n\n";
     
     // Configuration summary
-    report += "Configuration Summary:\n";
-    report += "- AI Confidence Threshold: " + String(config_.ai_detection.confidence_threshold) + "\n";
-    report += "- Event Triggering: " + String(config_.event_triggering.enable_event_triggering ? "Enabled" : "Disabled") + "\n";
-    report += "- Mesh Channel: " + String(config_.mesh_networking.mesh_channel) + "\n";
-    report += "- Debug Logging: " + String(config_.enable_debug_logging ? "Enabled" : "Disabled") + "\n\n";
+    report += "Configuration Summary:\n- AI Confidence Threshold: ";
+    
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "%.2f", config_.ai_detection.confidence_threshold);
+    report += buffer;
+    
+    report += "\n- Event Triggering: ";
+    report += config_.event_triggering.enable_event_triggering ? "Enabled" : "Disabled";
+    report += "\n- Mesh Channel: ";
+    
+    snprintf(buffer, sizeof(buffer), "%d", config_.mesh_networking.mesh_channel);
+    report += buffer;
+    
+    report += "\n- Debug Logging: ";
+    report += config_.enable_debug_logging ? "Enabled" : "Disabled";
+    report += "\n\n";
     
     // Resource usage
-    report += "Resource Usage:\n";
-    report += "- Free Heap: " + String(ESP.getFreeHeap()) + " bytes\n";
-    report += "- Uptime: " + String(millis() / 1000) + " seconds\n";
+    report += "Resource Usage:\n- Free Heap: ";
+    
+    snprintf(buffer, sizeof(buffer), "%u", ESP.getFreeHeap());
+    report += buffer;
+    report += " bytes\n- Uptime: ";
+    
+    snprintf(buffer, sizeof(buffer), "%lu", millis() / 1000);
+    report += buffer;
+    report += " seconds\n";
     
     if (last_diagnostics_ > 0) {
-        report += "- Last Diagnostics: " + String((millis() - last_diagnostics_) / 1000) + "s ago\n";
+        report += "- Last Diagnostics: ";
+        snprintf(buffer, sizeof(buffer), "%lu", (millis() - last_diagnostics_) / 1000);
+        report += buffer;
+        report += "s ago\n";
     }
     
     report += "=====================================";

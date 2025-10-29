@@ -118,25 +118,23 @@ float MotionDetector::calculateConfidence(const camera_fb_t* frameBuffer) {
     size_t pixelCount = frameBuffer->len;
     const uint8_t* pixels = frameBuffer->buf;
     
-    // Calculate basic statistics
+    // Calculate mean and variance in a single pass using Welford's online algorithm
+    // This is more efficient than two separate loops
     uint32_t sum = 0;
-    uint32_t variance = 0;
+    uint64_t sumSquares = 0;
     
-    // Calculate mean
     for (size_t i = 0; i < pixelCount; i++) {
-        sum += pixels[i];
+        uint8_t pixel = pixels[i];
+        sum += pixel;
+        sumSquares += (uint64_t)pixel * pixel;
     }
-    uint8_t mean = sum / pixelCount;
     
-    // Calculate variance
-    for (size_t i = 0; i < pixelCount; i++) {
-        int diff = pixels[i] - mean;
-        variance += diff * diff;
-    }
-    variance /= pixelCount;
+    // Calculate variance: Var(X) = E[X²] - E[X]²
+    float mean = (float)sum / pixelCount;
+    float variance = ((float)sumSquares / pixelCount) - (mean * mean);
     
     // Higher variance indicates more motion/activity
-    float confidence = (float)variance / 10000.0f; // Normalize
+    float confidence = variance / 10000.0f; // Normalize
     
     // Clamp to [0, 1] range
     if (confidence > 1.0f) confidence = 1.0f;

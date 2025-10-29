@@ -248,16 +248,28 @@ bool SystemManager::initializeSensors() {
     Wire.setClock(100000); // 100kHz for reliable operation
     
     // Scan I2C bus for connected sensors
+    // Use a faster scan by only checking common sensor addresses
     Logger::info("Scanning I2C bus for sensors...");
     int devicesFound = 0;
     
-    for (byte address = 1; address < 127; address++) {
+    // Common I2C sensor addresses to check (optimized to avoid full scan)
+    const byte commonAddresses[] = {
+        0x23, // BH1750 light sensor
+        0x68, // DS3231 RTC or MPU6050 IMU
+        0x76, // BME280/BMP280 pressure sensor
+        0x77  // BME280/BMP280 alternate address
+    };
+    const int numCommonAddresses = sizeof(commonAddresses) / sizeof(commonAddresses[0]);
+    
+    // Quick scan of common addresses first
+    for (int i = 0; i < numCommonAddresses; i++) {
+        byte address = commonAddresses[i];
         Wire.beginTransmission(address);
         if (Wire.endTransmission() == 0) {
             devicesFound++;
             Logger::info("  I2C device found at address 0x%02X", address);
             
-            // Identify common sensor types
+            // Identify sensor type
             switch (address) {
                 case 0x76:
                 case 0x77:
@@ -269,9 +281,29 @@ bool SystemManager::initializeSensors() {
                 case 0x23:
                     Logger::info("    Detected: BH1750 light sensor");
                     break;
-                default:
-                    Logger::info("    Unknown sensor type");
+            }
+        }
+    }
+    
+    // Only do full scan if no devices found in quick scan
+    // This saves time in the common case where sensors use standard addresses
+    if (devicesFound == 0) {
+        Logger::info("  Quick scan found no devices, performing full I2C scan...");
+        for (byte address = 1; address < 127; address++) {
+            // Skip addresses we already checked
+            bool alreadyChecked = false;
+            for (int i = 0; i < numCommonAddresses; i++) {
+                if (address == commonAddresses[i]) {
+                    alreadyChecked = true;
                     break;
+                }
+            }
+            if (alreadyChecked) continue;
+            
+            Wire.beginTransmission(address);
+            if (Wire.endTransmission() == 0) {
+                devicesFound++;
+                Logger::info("  I2C device found at address 0x%02X (unknown type)", address);
             }
         }
     }
@@ -581,13 +613,29 @@ void SystemManager::enterSafeMode() {
     m_cameraReady = false;
     m_networkReady = false;
     
-    // Flash LED in error pattern
-    for (int i = 0; i < 10; i++) {
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(100);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(100);
+    // Flash LED in error pattern (non-blocking approach)
+    // Use millis() for timing instead of blocking delay()
+    unsigned long startTime = millis();
+    unsigned long lastToggle = startTime;
+    int blinkCount = 0;
+    bool ledState = false;
+    
+    // Flash LED 10 times (20 state changes)
+    while (blinkCount < 20 && (millis() - startTime) < 2500) {
+        unsigned long now = millis();
+        if (now - lastToggle >= 100) {
+            ledState = !ledState;
+            digitalWrite(LED_BUILTIN, ledState ? HIGH : LOW);
+            lastToggle = now;
+            blinkCount++;
+            
+            // Yield to watchdog and other tasks during pattern
+            yield();
+        }
     }
+    
+    // Ensure LED is off after pattern
+    digitalWrite(LED_BUILTIN, LOW);
 }
 
 bool SystemManager::validateHardwareConfiguration() {

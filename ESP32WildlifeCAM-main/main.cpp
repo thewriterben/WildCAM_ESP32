@@ -131,8 +131,9 @@ void enterSafeMode() {
                         g_system = nullptr;
                     }
                     
-                    // Attempt to restart system
-                    delay(1000);
+                    // Flush serial output before restart
+                    Serial.flush();
+                    // Attempt to restart system (no delay needed, restart is immediate)
                     ESP.restart();
                 } else {
                     Logger::error("Maximum reset attempts reached - staying in safe mode");
@@ -157,8 +158,8 @@ void enterSafeMode() {
             }
         }
         
-        // Small delay to prevent excessive CPU usage
-        delay(50);
+        // Yield to watchdog and other tasks (non-blocking alternative to delay)
+        yield();
     }
 }
 
