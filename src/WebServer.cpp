@@ -100,7 +100,10 @@ void WebServer::begin() {
 
 void WebServer::handleStatus(AsyncWebServerRequest* request) {
     // Use StaticJsonDocument with adequate size for status data
-    // Uptime (8 bytes) + freeHeap (4 bytes) + battery (16 bytes) + storage (24 bytes) + overhead
+    // JSON keys: 'uptime', 'freeHeap', 'batteryVoltage', 'batteryPercentage',
+    // 'sdCardFreeSpace', 'sdCardUsedSpace', 'imageCount' (~100 bytes)
+    // Plus values (up to 8 bytes each) and JSON overhead (~50%)
+    // Total: ~300 bytes, using 512 bytes for safety margin
     StaticJsonDocument<512> doc;
     
     // System status
@@ -184,7 +187,10 @@ void WebServer::handleCapture(AsyncWebServerRequest* request) {
     camera->releaseFrameBuffer(fb);
     
     // Return JSON with image path and size - use StaticJsonDocument with adequate size
-    // Image path can be long (e.g., '/images/2024/01/15/IMG_20240115_143022.jpg')
+    // JSON keys: 'success', 'path', 'size' (~20 bytes)
+    // Image path can be long (e.g., '/images/2024/01/15/IMG_20240115_143022.jpg' = ~45 bytes)
+    // Plus values and JSON overhead (~50%)
+    // Total: ~130 bytes, using 256 bytes for safety margin
     StaticJsonDocument<256> doc;
     doc["success"] = true;
     doc["path"] = imagePath;
