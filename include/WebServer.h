@@ -19,7 +19,7 @@ private:
 public:
     WebServer(int serverPort = 80);
     
-    void init(StorageManager* storageRef, CameraManager* cameraRef, PowerManager* powerRef);
+    bool init(StorageManager* storageRef, CameraManager* cameraRef, PowerManager* powerRef);
     void begin();
     void handleStatus(AsyncWebServerRequest* request);
     void handleLatestImage(AsyncWebServerRequest* request);

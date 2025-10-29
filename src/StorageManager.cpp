@@ -3,6 +3,9 @@
 #include <FS.h>
 #include <Preferences.h>
 #include <time.h>
+#include <vector>
+#include <algorithm>
+#include <functional>
 
 StorageManager::StorageManager() 
     : initialized(false), basePath("/images"), imageCounter(0) {
@@ -312,4 +315,55 @@ void StorageManager::printStorageInfo() {
     }
     
     Serial.println("===========================");
+}
+
+std::vector<String> StorageManager::getImageFiles() {
+    std::vector<String> imageFiles;
+    
+    if (!initialized) {
+        Serial.println("Storage not initialized");
+        return imageFiles;
+    }
+    
+    // Helper function to recursively scan directories
+    std::function<void(const String&)> scanDirectory = [&](const String& path) {
+        File dir = SD_MMC.open(path);
+        if (!dir || !dir.isDirectory()) {
+            return;
+        }
+        
+        File file = dir.openNextFile();
+        while (file) {
+            String fileName = String(file.name());
+            
+            if (file.isDirectory()) {
+                // Recursively scan subdirectories
+                scanDirectory(fileName);
+            } else {
+                // Check if file has .jpg or .jpeg extension
+                if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
+                    fileName.endsWith(".JPG") || fileName.endsWith(".JPEG")) {
+                    imageFiles.push_back(fileName);
+                }
+            }
+            
+            file = dir.openNextFile();
+        }
+        dir.close();
+    };
+    
+    // Start scanning from base path
+    scanDirectory(basePath);
+    
+    // Sort files in reverse order (newest first by filename)
+    std::sort(imageFiles.begin(), imageFiles.end(), std::greater<String>());
+    
+    return imageFiles;
+}
+
+unsigned long StorageManager::getImageCount() {
+    if (!initialized) {
+        return 0;
+    }
+    return imageCounter;
 }
