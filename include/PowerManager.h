@@ -15,7 +15,7 @@ private:
 public:
     PowerManager();
     
-    void init(int batteryMonitorPin = 35);
+    bool init(int batteryMonitorPin = 35);
     float getBatteryVoltage();
     int getBatteryPercentage();
     bool isLowBattery();

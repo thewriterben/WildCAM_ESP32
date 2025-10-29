@@ -7,7 +7,7 @@ PowerManager::PowerManager()
       lowPowerMode(false) {
 }
 
-void PowerManager::init(int batteryMonitorPin) {
+bool PowerManager::init(int batteryMonitorPin) {
     batteryPin = batteryMonitorPin;
     
     // Configure ADC for battery voltage reading
@@ -16,7 +16,13 @@ void PowerManager::init(int batteryMonitorPin) {
     // Configure ADC attenuation for full range
     analogSetAttenuation(ADC_11db);  // Full range ~3.3V
     
+    // Read initial battery voltage
+    getBatteryVoltage();
+    
     Serial.println("Power Manager initialized");
+    printPowerStatus();
+    
+    return true;
 }
 
 float PowerManager::getBatteryVoltage() {
@@ -54,18 +60,22 @@ int PowerManager::getBatteryPercentage() {
 
 bool PowerManager::isLowBattery() {
     float voltage = getBatteryVoltage();
-    return voltage < LOW_BATTERY_THRESHOLD;
+    bool isLow = voltage < BATTERY_MIN;
+    
+    if (isLow) {
+        Serial.printf("WARNING: Low battery detected! Voltage: %.2fV (minimum: %.2fV)\n", 
+                     voltage, BATTERY_MIN);
+    }
+    
+    return isLow;
 }
 
 void PowerManager::enterDeepSleep(uint64_t sleepTimeSeconds) {
     Serial.printf("Entering deep sleep for %llu seconds...\n", sleepTimeSeconds);
     Serial.flush();
     
-    // Configure wake up timer
-    esp_sleep_enable_timer_wakeup(sleepTimeSeconds * 1000000ULL);  // Convert to microseconds
-    
     // Enter deep sleep
-    esp_deep_sleep_start();
+    esp_deep_sleep(sleepTimeSeconds * 1000000ULL);
 }
 
 void PowerManager::configureWakeOnMotion(int pirPin) {
