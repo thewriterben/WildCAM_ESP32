@@ -375,50 +375,96 @@ void StorageManager::printStorageInfo() {
 std::vector<String> StorageManager::getImageFiles() {
     std::vector<String> imageFiles;
     
+    // 1. Check initialization status (pointer/state validation)
     if (!initialized) {
-        Serial.println("Storage not initialized");
+        Serial.println("ERROR: Storage not initialized - cannot retrieve image files");
+        Serial.println("RECOVERY: Call init() before attempting to list files");
+        return imageFiles;  // Return empty vector for safe degradation
+    }
+    
+    // 2. Validate basePath is not empty
+    if (basePath.length() == 0) {
+        Serial.println("ERROR: Base path is empty - invalid configuration");
+        Serial.println("RECOVERY: Re-initialize storage manager with valid configuration");
         return imageFiles;
     }
     
-    // Define recursive lambda function to scan directories
-    // Lambda captures imageFiles vector by reference to accumulate results
-    std::function<void(const String&)> scanDirectory = [&](const String& path) {
-        File dir = SD_MMC.open(path);
-        if (!dir || !dir.isDirectory()) {
-            return;  // Skip if path is invalid or not a directory
-        }
-        
-        // Iterate through all files and subdirectories in current directory
+    // 3. Check if SD card is still mounted and accessible
+    uint8_t cardType = SD_MMC.cardType();
+    if (cardType == CARD_NONE) {
+        Serial.println("ERROR: SD Card not detected - card may have been removed");
+        Serial.println("RECOVERY: Re-insert SD card and call init() again");
+        Serial.println("TROUBLESHOOTING:");
+        Serial.println("  - Verify SD card is properly inserted");
+        Serial.println("  - Check for loose connections");
+        Serial.println("  - Try reinitializing the storage manager");
+        return imageFiles;
+    }
+    
+
         File file = dir.openNextFile();
+        int fileCount = 0;
+        
         while (file) {
-            String fileName = String(file.name());
+            // 10. Sanity check for infinite loops
+            fileCount++;
+            if (fileCount > MAX_FILES_PER_DIR) {
+                Serial.printf("WARNING: Directory contains more than %d files: %s\n", 
+                             MAX_FILES_PER_DIR, path.c_str());
+                Serial.println("RECOVERY: Stopping scan of this directory to prevent excessive processing");
+                break;
+            }
             
+            // 11. Validate file name
+            const char* rawName = file.name();
+            if (rawName == nullptr) {
+                Serial.println("WARNING: Encountered file with null name - skipping");
+                file = dir.openNextFile();
+                continue;
+            }
+            
+            String fileName = String(rawName);
+            
+            // 12. Validate filename is not empty
+            if (fileName.length() == 0) {
+                Serial.println("WARNING: Encountered file with empty name - skipping");
+                file = dir.openNextFile();
+                continue;
+            }
+            
+            // 13. Process subdirectories recursively
             if (file.isDirectory()) {
-                // Recursively scan subdirectories to find all images
-                // This handles the date-based directory structure (e.g., /images/20241029/)
-                scanDirectory(fileName);
-            } else {
-                // Check if file has image extension (.jpg or .jpeg)
-                // Case-insensitive check to handle different naming conventions
+
                 if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
                     fileName.endsWith(".JPG") || fileName.endsWith(".JPEG")) {
-                    imageFiles.push_back(fileName);
+                    
+                    // 15. Additional validation - check file size is reasonable
+                    size_t fileSize = file.size();
+                    
+                    if (fileSize > MAX_IMAGE_SIZE) {
+                        Serial.printf("WARNING: Image file too large (%d bytes): %s\n", 
+                                    fileSize, fileName.c_str());
+                        Serial.println("RECOVERY: Skipping this file - may be corrupted");
+                    } else if (fileSize < MIN_IMAGE_SIZE) {
+                        Serial.printf("WARNING: Image file too small (%d bytes): %s\n", 
+                                    fileSize, fileName.c_str());
+                        Serial.println("RECOVERY: Skipping this file - may be corrupted or empty");
+                    } else {
+                        // File appears valid - add to list
+                        imageFiles.push_back(fileName);
+                        totalFilesFound++;
+                    }
                 }
             }
             
-            // Get next file in directory
-            file = dir.openNextFile();
+
         }
+        
+        // 17. Close directory handle to free resources
         dir.close();
     };
     
-    // Start recursive scan from base path (/images)
-    scanDirectory(basePath);
-    
-    // Sort files in reverse alphabetical order
-    // Since filenames include timestamps (IMG_HHMMSS_XXX.jpg or IMG_XXXXXXXX.jpg),
-    // reverse alphabetical order = newest first (higher timestamps = later files)
-    std::sort(imageFiles.begin(), imageFiles.end(), std::greater<String>());
+
     
     return imageFiles;
 }

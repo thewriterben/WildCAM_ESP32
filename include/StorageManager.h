@@ -92,17 +92,7 @@ private:
     unsigned long imageCounter;    ///< Persistent counter for unique image numbering
     Preferences preferences;       ///< Non-volatile storage for persistent counter across reboots
     
-    /**
-     * @brief Generate current date path for directory organization
-     * 
-     * Creates a date-based subdirectory path in the format /YYYYMMDD.
-     * If system time is available, uses actual date. Otherwise, falls back
-     * to a day counter based on uptime.
-     * 
-     * @return String Date path (e.g., "/20241029" or "/day_00123")
-     * @note Automatically creates the directory if it doesn't exist
-     * @note Falls back to "/day_XXXXX" format when RTC is not configured
-     */
+
     String getCurrentDatePath();
     
     /**
