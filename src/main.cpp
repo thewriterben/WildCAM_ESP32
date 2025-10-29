@@ -1,3 +1,64 @@
+/**
+ * @file main.cpp
+ * @brief WildCAM ESP32 Wildlife Camera Main Application
+ * @version 1.0.0
+ * 
+ * This is the main application that integrates all modules into a functional
+ * wildlife camera system.
+ * 
+ * FEATURES IMPLEMENTED:
+ * 
+ * 1. Global Objects:
+ *    - All manager class instances created (PowerManager, StorageManager, 
+ *      CameraManager, MotionDetector, WebServer)
+ *    - State variables for tracking system operation (lastMotionTime, imageCount)
+ * 
+ * 2. setup() function:
+ *    - Serial communication initialized at 115200 baud
+ *    - Welcome banner with firmware version displayed
+ *    - All managers initialized in proper order:
+ *      a. PowerManager
+ *      b. CameraManager  
+ *      c. StorageManager
+ *      d. MotionDetector
+ *      e. WebServer (if WiFi enabled and battery sufficient)
+ *    - Battery level checked; deep sleep entered if critical
+ *    - Wake-up sources configured (motion sensor and timer)
+ *    - Error handling: system halts on initialization failure
+ *    - Watchdog timer initialized for crash recovery
+ * 
+ * 3. loop() function:
+ *    - Watchdog timer fed to prevent resets
+ *    - Motion detection monitoring
+ *    - When motion detected:
+ *      a. Motion detection message printed
+ *      b. Stabilization delay applied (IMAGE_CAPTURE_DELAY_MS)
+ *      c. Image captured using CameraManager
+ *      d. If capture successful:
+ *         i. Image saved using StorageManager
+ *         ii. Metadata JSON created (timestamp, battery, image size, count)
+ *         iii. Metadata saved to SD card
+ *         iv. Frame buffer released
+ *         v. Image counter incremented
+ *      e. If capture failed, error logged to SD card
+ *    - Battery level checked periodically (every 60 seconds)
+ *    - Deep sleep entered if no motion for DEEP_SLEEP_DURATION
+ *    - CPU spin prevention with 100ms delay
+ * 
+ * 4. Error Handling:
+ *    - Initialization failures halt the system with error message
+ *    - Watchdog timer implemented for crash recovery (30 second timeout)
+ *    - All errors logged to /error.log on SD card
+ * 
+ * 5. State Management:
+ *    - System states: IDLE, MOTION_DETECTED, CAPTURING, SAVING, SLEEPING
+ *    - State machine tracks current operation mode
+ *    - State transitions logged to Serial
+ * 
+ * @author WildCAM Project
+ * @date 2024
+ */
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_task_wdt.h>
