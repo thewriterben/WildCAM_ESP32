@@ -4,8 +4,6 @@
 #include <Preferences.h>
 #include <time.h>
 
-Preferences preferences;
-
 StorageManager::StorageManager() 
     : initialized(false), basePath("/images"), imageCounter(0) {
 }
@@ -152,10 +150,14 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     String originalPath = fullPath;
     while (SD_MMC.exists(fullPath) && attempt < 1000) {
         // Modify filename to ensure uniqueness
-        String extension = ".jpg";
         int dotIndex = originalPath.lastIndexOf('.');
-        String baseName = originalPath.substring(0, dotIndex);
-        fullPath = baseName + "_" + String(attempt) + extension;
+        if (dotIndex > 0) {
+            String baseName = originalPath.substring(0, dotIndex);
+            String extension = originalPath.substring(dotIndex);
+            fullPath = baseName + "_" + String(attempt) + extension;
+        } else {
+            fullPath = originalPath + "_" + String(attempt);
+        }
         attempt++;
     }
     
@@ -239,15 +241,13 @@ bool StorageManager::deleteOldFiles(int daysToKeep) {
     
     Serial.printf("Cleanup requested, keeping files from last %d days\n", daysToKeep);
     
-    // Calculate cutoff time
-    unsigned long cutoffTime = millis() - (daysToKeep * 24UL * 60 * 60 * 1000);
-    
     // This is a placeholder implementation
     // In a full implementation, we would:
-    // 1. Iterate through all date directories
-    // 2. Parse directory names to get dates
-    // 3. Delete directories older than cutoff
-    // 4. Return success/failure based on operations
+    // 1. Calculate cutoff time: millis() - (daysToKeep * 24UL * 60 * 60 * 1000)
+    // 2. Iterate through all date directories
+    // 3. Parse directory names to get dates
+    // 4. Delete directories older than cutoff
+    // 5. Return success/failure based on operations
     
     Serial.println("Note: deleteOldFiles is a placeholder - full implementation requires date parsing");
     
@@ -261,12 +261,11 @@ unsigned long StorageManager::getFreeSpace() {
     
     uint64_t total = SD_MMC.totalBytes();
     uint64_t used = SD_MMC.usedBytes();
+    uint64_t free = (total > used) ? (total - used) : 0;
     
-    if (total > used) {
-        return (unsigned long)(total - used);
-    }
-    
-    return 0;
+    // Note: Casting to unsigned long may overflow for SD cards > 4GB
+    // Consider using uint64_t in the header if accurate reporting is needed for large cards
+    return (unsigned long)free;
 }
 
 unsigned long StorageManager::getUsedSpace() {
@@ -274,7 +273,11 @@ unsigned long StorageManager::getUsedSpace() {
         return 0;
     }
     
-    return (unsigned long)SD_MMC.usedBytes();
+    uint64_t used = SD_MMC.usedBytes();
+    
+    // Note: Casting to unsigned long may overflow for SD cards > 4GB
+    // Consider using uint64_t in the header if accurate reporting is needed for large cards
+    return (unsigned long)used;
 }
 
 void StorageManager::printStorageInfo() {
