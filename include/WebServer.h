@@ -1,50 +1,30 @@
 #ifndef WEB_SERVER_H
 #define WEB_SERVER_H
 
-#include <Arduino.h>
-#include <WiFi.h>
 #include <ESPAsyncWebServer.h>
-#include <ArduinoJson.h>
+
+// Forward declarations
+class StorageManager;
+class CameraManager;
+class PowerManager;
 
 class WebServer {
 private:
     AsyncWebServer* server;
-    bool serverStarted;
-    String ssid;
-    String password;
-    
-    // Setup routes
-    void setupRoutes();
-    
-    // Handle root page
-    void handleRoot(AsyncWebServerRequest* request);
-    
-    // Handle status API
-    void handleStatus(AsyncWebServerRequest* request);
-    
-    // Handle configuration API
-    void handleConfig(AsyncWebServerRequest* request);
+    StorageManager* storage;
+    CameraManager* camera;
+    PowerManager* power;
+    int port;
 
 public:
-    WebServer(const String& ssid, const String& password, int port = 80);
+    WebServer(int serverPort = 80);
     
-    // Initialize WiFi and web server
-    bool begin();
-    
-    // Check WiFi connection
-    bool isConnected();
-    
-    // Get IP address
-    String getIPAddress();
-    
-    // Stop web server
-    void stop();
-    
-    // Get server status
-    bool isRunning();
-    
-    // Update system status for web interface
-    void updateStatus(const String& status);
+    void init(StorageManager* storageRef, CameraManager* cameraRef, PowerManager* powerRef);
+    void begin();
+    void handleStatus(AsyncWebServerRequest* request);
+    void handleLatestImage(AsyncWebServerRequest* request);
+    void handleCapture(AsyncWebServerRequest* request);
+    void handleReboot(AsyncWebServerRequest* request);
 };
 
 #endif // WEB_SERVER_H

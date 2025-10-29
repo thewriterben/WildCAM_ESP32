@@ -78,7 +78,7 @@ void test_power_manager_init() {
 
 // Test WebServer initialization
 void test_web_server_init() {
-    WebServer server("TestSSID", "TestPassword");
+    WebServer server(80);
     // Test would verify server configuration
     TEST_ASSERT_TRUE(true);
 }
