@@ -104,7 +104,8 @@ String StorageManager::getCurrentDatePath() {
     } else {
         // RTC not configured or time not available
         // Fallback to uptime-based day counter
-        // Each day is 86,400,000 milliseconds (24 hours * 60 min * 60 sec * 1000 ms)
+        // millis() returns milliseconds since boot
+        // Divide by milliseconds per day: 1000 ms/s * 60 s/min * 60 min/hr * 24 hr/day = 86,400,000
         unsigned long days = millis() / (1000 * 60 * 60 * 24);
         snprintf(datePath, sizeof(datePath), "/day_%05lu", days);
     }
