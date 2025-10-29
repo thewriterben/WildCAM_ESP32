@@ -58,7 +58,7 @@ void test_set_debounce_time_validation() {
 // Test CameraManager initialization
 void test_camera_manager_init() {
     CameraManager camera;
-    // Test would verify camera configuration
+    // Test would verify camera configuration and init method
     TEST_ASSERT_TRUE(true);
 }
 
