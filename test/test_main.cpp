@@ -1,7 +1,9 @@
 #include <Arduino.h>
 #include <unity.h>
+#include <ArduinoJson.h>
 
 // Test includes
+#include "config.h"
 #include "MotionDetector.h"
 #include "CameraManager.h"
 #include "StorageManager.h"

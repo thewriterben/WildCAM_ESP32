@@ -62,6 +62,8 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_task_wdt.h>
+#include <ArduinoJson.h>
+#include <SD_MMC.h>
 
 // Include all modular components
 #include "config.h"
