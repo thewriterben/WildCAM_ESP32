@@ -52,6 +52,11 @@ void WebServer::setupRoutes() {
         handleConfig(request);
     });
     
+    // Capture API endpoint
+    server->on("/api/capture", HTTP_GET, [](AsyncWebServerRequest* request) {
+        request->send(200, "text/plain", "Capture command received");
+    });
+    
     // Handle 404
     server->onNotFound([](AsyncWebServerRequest* request) {
         request->send(404, "text/plain", "Not found");

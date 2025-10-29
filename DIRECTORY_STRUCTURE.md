@@ -173,7 +173,7 @@ Place HTML, CSS, and JavaScript files in `data/` directory. These can be uploade
 - ESP32-CAM module (AI-Thinker or compatible)
 - PIR motion sensor (connected to GPIO 13)
 - MicroSD card for storage
-- Battery with voltage divider for monitoring (connected to GPIO 34)
+- Battery with voltage divider for monitoring (connected to GPIO 33)
 - Optional: Flash LED (GPIO 4)
 
 ## Pin Configuration

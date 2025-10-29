@@ -23,7 +23,11 @@ bool PowerManager::begin() {
 float PowerManager::calculateVoltage(int adcValue) {
     // ESP32 ADC: 0-4095 maps to 0-3.3V (with 11dB attenuation)
     // Adjust for voltage divider if present
-    float voltage = (adcValue / 4095.0) * 3.3 * 2.0;  // *2 for voltage divider
+    const float ADC_MAX = 4095.0;
+    const float ADC_VREF = 3.3;
+    const float VOLTAGE_DIVIDER_RATIO = 2.0;  // Adjust based on your hardware
+    
+    float voltage = (adcValue / ADC_MAX) * ADC_VREF * VOLTAGE_DIVIDER_RATIO;
     return voltage;
 }
 

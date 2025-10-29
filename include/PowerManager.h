@@ -16,7 +16,7 @@ private:
     float calculateVoltage(int adcValue);
 
 public:
-    PowerManager(int pin = 34);
+    PowerManager(int pin = 33);
     
     // Initialize power management
     bool begin();

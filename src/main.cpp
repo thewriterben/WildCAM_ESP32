@@ -136,7 +136,8 @@ void loop() {
         int percent = power.getBatteryPercentage();
         Serial.printf("Battery check: %.2fV (%d%%)\n", voltage, percent);
         
-        if (power.isBatteryLow() && !enableWebServer) {
+        // Enter deep sleep if battery is critically low, regardless of web server status
+        if (power.isBatteryLow()) {
             Serial.println("Battery critically low - entering deep sleep");
             power.configureWakeup(PIR_SENSOR_PIN);
             power.enterDeepSleep(DEEP_SLEEP_DURATION);

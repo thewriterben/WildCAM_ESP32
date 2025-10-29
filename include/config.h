@@ -21,7 +21,7 @@
 #define MAX_IMAGES_PER_DAY 1000
 
 // Power Management Configuration
-#define BATTERY_ADC_PIN 34
+#define BATTERY_ADC_PIN 33  // Changed from 34 to avoid conflict with Y8_GPIO_NUM
 #define BATTERY_VOLTAGE_MIN 3.3
 #define BATTERY_VOLTAGE_MAX 4.2
 #define DEEP_SLEEP_DURATION 60  // Seconds
