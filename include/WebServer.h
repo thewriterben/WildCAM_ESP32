@@ -18,6 +18,7 @@ private:
 
 public:
     WebServer(int serverPort = 80);
+    ~WebServer();
     
     bool init(StorageManager* storageRef, CameraManager* cameraRef, PowerManager* powerRef);
     void begin();

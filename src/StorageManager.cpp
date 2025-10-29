@@ -19,71 +19,105 @@
 #include <algorithm>
 #include <functional>
 
+// Store constant strings in PROGMEM to save RAM
+static const char TAG_INIT[] PROGMEM = "Initializing Storage Manager...";
+static const char TAG_ERROR_MOUNT[] PROGMEM = "ERROR: SD Card Mount Failed";
+static const char TAG_ERROR_NO_CARD[] PROGMEM = "ERROR: No SD Card attached";
+static const char TAG_CARD_INFO[] PROGMEM = "=== SD Card Information ===";
+static const char TAG_CARD_TYPE[] PROGMEM = "Card Type: ";
+static const char TAG_CARD_MMC[] PROGMEM = "MMC";
+static const char TAG_CARD_SD[] PROGMEM = "SDSC";
+static const char TAG_CARD_SDHC[] PROGMEM = "SDHC";
+static const char TAG_CARD_UNKNOWN[] PROGMEM = "UNKNOWN";
+static const char TAG_CARD_SIZE[] PROGMEM = "Card Size: %llu MB\n";
+static const char TAG_TOTAL_SPACE[] PROGMEM = "Total Space: %llu MB\n";
+static const char TAG_USED_SPACE[] PROGMEM = "Used Space: %llu MB\n";
+static const char TAG_FREE_SPACE[] PROGMEM = "Free Space: %llu MB\n";
+static const char TAG_SEPARATOR[] PROGMEM = "===========================";
+static const char TAG_CREATED_DIR[] PROGMEM = "Created base directory: %s\n";
+static const char TAG_ERROR_CREATE_DIR[] PROGMEM = "ERROR: Failed to create base directory: %s\n";
+static const char TAG_DIR_EXISTS[] PROGMEM = "Base directory exists: %s\n";
+static const char TAG_IMAGE_COUNTER[] PROGMEM = "Loaded image counter: %lu\n";
+static const char TAG_SUCCESS_INIT[] PROGMEM = "Storage Manager initialized successfully";
+static const char TAG_ERROR_NOT_INIT[] PROGMEM = "ERROR: Storage not initialized";
+static const char TAG_ERROR_INVALID_FB[] PROGMEM = "ERROR: Invalid frame buffer";
+static const char TAG_ERROR_OPEN_FILE[] PROGMEM = "ERROR: Failed to open file for writing: %s\n";
+static const char TAG_ERROR_WRITE[] PROGMEM = "ERROR: Failed to write complete image (wrote %d of %d bytes)\n";
+static const char TAG_SUCCESS_SAVE[] PROGMEM = "SUCCESS: Image saved: %s (%d bytes)\n";
+static const char TAG_ERROR_INVALID_PATH[] PROGMEM = "ERROR: Invalid image path";
+static const char TAG_ERROR_OPEN_META[] PROGMEM = "ERROR: Failed to open metadata file for writing: %s\n";
+static const char TAG_ERROR_WRITE_META[] PROGMEM = "ERROR: Failed to write metadata to: %s\n";
+static const char TAG_SUCCESS_META[] PROGMEM = "SUCCESS: Metadata saved: %s (%d bytes)\n";
+static const char TAG_CLEANUP[] PROGMEM = "Cleanup requested, keeping files from last %d days\n";
+static const char TAG_CLEANUP_NOTE[] PROGMEM = "Note: deleteOldFiles is a placeholder - full implementation requires date parsing";
+static const char TAG_NOT_INIT[] PROGMEM = "Storage not initialized";
+static const char TAG_STORAGE_INFO[] PROGMEM = "=== Storage Information ===";
+static const char TAG_BASE_PATH[] PROGMEM = "Base Path: %s\n";
+static const char TAG_INITIALIZED[] PROGMEM = "Initialized: %s\n";
+static const char TAG_IMG_COUNT[] PROGMEM = "Image Counter: %lu\n";
+static const char TAG_TOTAL_BYTES[] PROGMEM = "Total Space: %llu MB (%llu bytes)\n";
+static const char TAG_USED_BYTES[] PROGMEM = "Used Space: %llu MB (%llu bytes)\n";
+static const char TAG_FREE_BYTES[] PROGMEM = "Free Space: %llu MB (%llu bytes)\n";
+static const char TAG_USAGE[] PROGMEM = "Usage: %.2f%%\n";
+static const char TAG_CREATED_DATE_DIR[] PROGMEM = "Created date directory: %s\n";
+static const char TAG_WARN_CREATE_DATE_DIR[] PROGMEM = "WARNING: Failed to create date directory: %s\n";
+
 StorageManager::StorageManager() 
     : initialized(false), basePath("/images"), imageCounter(0) {
 }
 
 bool StorageManager::init() {
-    Serial.println("Initializing Storage Manager...");
+    Serial.println(FPSTR(TAG_INIT));
     
     // Initialize SD card in 1-bit mode (uses less pins: CLK, CMD, D0)
     // Second parameter 'true' enables 1-bit mode, reducing pin requirements
     if (!SD_MMC.begin("/sdcard", true)) {
-        Serial.println("ERROR: SD Card Mount Failed");
+        Serial.println(FPSTR(TAG_ERROR_MOUNT));
         return false;
     }
     
     // Verify SD card is physically present and detected
     uint8_t cardType = SD_MMC.cardType();
     if (cardType == CARD_NONE) {
-        Serial.println("ERROR: No SD Card attached");
+        Serial.println(FPSTR(TAG_ERROR_NO_CARD));
         return false;
     }
     
-    // Display card type and detailed information for diagnostics
-    Serial.println("=== SD Card Information ===");
-    Serial.print("Card Type: ");
+
     if (cardType == CARD_MMC) {
-        Serial.println("MMC");
+        Serial.println(FPSTR(TAG_CARD_MMC));
     } else if (cardType == CARD_SD) {
-        Serial.println("SDSC");  // Standard Capacity SD Card (up to 2GB)
-    } else if (cardType == CARD_SDHC) {
-        Serial.println("SDHC");  // High Capacity SD Card (4GB to 32GB)
+
     } else {
-        Serial.println("UNKNOWN");
+        Serial.println(FPSTR(TAG_CARD_UNKNOWN));
     }
     
     // Display card capacity and usage statistics
     // Convert from bytes to megabytes for human readability
     uint64_t cardSize = SD_MMC.cardSize() / (1024 * 1024);
-    Serial.printf("Card Size: %llu MB\n", cardSize);
-    Serial.printf("Total Space: %llu MB\n", SD_MMC.totalBytes() / (1024 * 1024));
-    Serial.printf("Used Space: %llu MB\n", SD_MMC.usedBytes() / (1024 * 1024));
-    Serial.printf("Free Space: %llu MB\n", (SD_MMC.totalBytes() - SD_MMC.usedBytes()) / (1024 * 1024));
-    Serial.println("===========================");
+    Serial.printf_P(TAG_CARD_SIZE, cardSize);
+    Serial.printf_P(TAG_TOTAL_SPACE, SD_MMC.totalBytes() / (1024 * 1024));
+    Serial.printf_P(TAG_USED_SPACE, SD_MMC.usedBytes() / (1024 * 1024));
+    Serial.printf_P(TAG_FREE_SPACE, (SD_MMC.totalBytes() - SD_MMC.usedBytes()) / (1024 * 1024));
+    Serial.println(FPSTR(TAG_SEPARATOR));
     
     // Create base directory structure for organizing images
     // This is the root directory where all images will be stored
     if (!SD_MMC.exists(basePath)) {
         if (SD_MMC.mkdir(basePath)) {
-            Serial.printf("Created base directory: %s\n", basePath.c_str());
+            Serial.printf_P(TAG_CREATED_DIR, basePath.c_str());
         } else {
-            Serial.printf("ERROR: Failed to create base directory: %s\n", basePath.c_str());
+            Serial.printf_P(TAG_ERROR_CREATE_DIR, basePath.c_str());
             return false;
         }
     } else {
-        Serial.printf("Base directory exists: %s\n", basePath.c_str());
+        Serial.printf_P(TAG_DIR_EXISTS, basePath.c_str());
     }
     
-    // Load persistent image counter from non-volatile storage
-    // This counter survives power cycles and device resets
-    // "storage" is the namespace, "imageCounter" is the key
-    preferences.begin("storage", false);  // false = read-write mode
-    imageCounter = preferences.getULong("imageCounter", 0);  // 0 is default if key doesn't exist
-    Serial.printf("Loaded image counter: %lu\n", imageCounter);
+
     
     initialized = true;
-    Serial.println("Storage Manager initialized successfully");
+    Serial.println(FPSTR(TAG_SUCCESS_INIT));
     
     return true;
 }
@@ -116,9 +150,9 @@ String StorageManager::getCurrentDatePath() {
     // This allows images to be saved immediately without explicit directory creation
     if (!SD_MMC.exists(fullPath)) {
         if (SD_MMC.mkdir(fullPath)) {
-            Serial.printf("Created date directory: %s\n", fullPath.c_str());
+            Serial.printf_P(TAG_CREATED_DATE_DIR, fullPath.c_str());
         } else {
-            Serial.printf("WARNING: Failed to create date directory: %s\n", fullPath.c_str());
+            Serial.printf_P(TAG_WARN_CREATE_DATE_DIR, fullPath.c_str());
         }
     }
     
@@ -153,14 +187,14 @@ String StorageManager::generateFilename() {
 String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     // Validate initialization state
     if (!initialized) {
-        Serial.println("ERROR: Storage not initialized");
+        Serial.println(FPSTR(TAG_ERROR_NOT_INIT));
         return "";
     }
     
     // Validate frame buffer pointer and data integrity
     // Frame buffer must exist, have valid data pointer, and non-zero length
     if (!fb || fb->buf == NULL || fb->len == 0) {
-        Serial.println("ERROR: Invalid frame buffer");
+        Serial.println(FPSTR(TAG_ERROR_INVALID_FB));
         return "";
     }
     
@@ -204,7 +238,7 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     // Open file for writing in binary mode
     File file = SD_MMC.open(fullPath, FILE_WRITE);
     if (!file) {
-        Serial.printf("ERROR: Failed to open file for writing: %s\n", fullPath.c_str());
+        Serial.printf_P(TAG_ERROR_OPEN_FILE, fullPath.c_str());
         return "";
     }
     
@@ -217,7 +251,7 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     
     // Verify all bytes were written successfully
     if (written != fb->len) {
-        Serial.printf("ERROR: Failed to write complete image (wrote %d of %d bytes)\n", written, fb->len);
+        Serial.printf_P(TAG_ERROR_WRITE, written, fb->len);
         return "";
     }
     
@@ -226,20 +260,18 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     imageCounter++;
     preferences.putULong("imageCounter", imageCounter);
     
-    // Log successful save with path and file size for diagnostics
-    Serial.printf("SUCCESS: Image saved: %s (%d bytes)\n", fullPath.c_str(), fb->len);
     
     return fullPath;
 }
 
 bool StorageManager::saveMetadata(const String& imagePath, JsonDocument& metadata) {
     if (!initialized) {
-        Serial.println("ERROR: Storage not initialized");
+        Serial.println(FPSTR(TAG_ERROR_NOT_INIT));
         return false;
     }
     
     if (imagePath.length() == 0) {
-        Serial.println("ERROR: Invalid image path");
+        Serial.println(FPSTR(TAG_ERROR_INVALID_PATH));
         return false;
     }
     
@@ -260,7 +292,7 @@ bool StorageManager::saveMetadata(const String& imagePath, JsonDocument& metadat
     // Open JSON file for writing
     File file = SD_MMC.open(jsonPath, FILE_WRITE);
     if (!file) {
-        Serial.printf("ERROR: Failed to open metadata file for writing: %s\n", jsonPath.c_str());
+        Serial.printf_P(TAG_ERROR_OPEN_META, jsonPath.c_str());
         return false;
     }
     
@@ -273,22 +305,22 @@ bool StorageManager::saveMetadata(const String& imagePath, JsonDocument& metadat
     
     // Verify JSON was actually written (should be at least a few bytes)
     if (bytesWritten == 0) {
-        Serial.printf("ERROR: Failed to write metadata to: %s\n", jsonPath.c_str());
+        Serial.printf_P(TAG_ERROR_WRITE_META, jsonPath.c_str());
         return false;
     }
     
-    Serial.printf("SUCCESS: Metadata saved: %s (%d bytes)\n", jsonPath.c_str(), bytesWritten);
+    Serial.printf_P(TAG_SUCCESS_META, jsonPath.c_str(), bytesWritten);
     
     return true;
 }
 
 bool StorageManager::deleteOldFiles(int daysToKeep) {
     if (!initialized) {
-        Serial.println("ERROR: Storage not initialized");
+        Serial.println(FPSTR(TAG_ERROR_NOT_INIT));
         return false;
     }
     
-    Serial.printf("Cleanup requested, keeping files from last %d days\n", daysToKeep);
+    Serial.printf_P(TAG_CLEANUP, daysToKeep);
     
     // This is a placeholder implementation
     // Full implementation would require:
@@ -300,7 +332,7 @@ bool StorageManager::deleteOldFiles(int daysToKeep) {
     // 6. Handle fallback directories (day_XXXXX format) based on creation time
     // 7. Return success if all old directories deleted, failure if any errors occurred
     
-    Serial.println("Note: deleteOldFiles is a placeholder - full implementation requires date parsing");
+    Serial.println(FPSTR(TAG_CLEANUP_NOTE));
     
     return true;
 }
@@ -339,37 +371,27 @@ unsigned long StorageManager::getUsedSpace() {
 
 void StorageManager::printStorageInfo() {
     if (!initialized) {
-        Serial.println("Storage not initialized");
+        Serial.println(FPSTR(TAG_NOT_INIT));
         return;
     }
     
-    // Display formatted storage information with clear section headers
-    Serial.println("=== Storage Information ===");
-    Serial.printf("Base Path: %s\n", basePath.c_str());
-    Serial.printf("Initialized: %s\n", initialized ? "Yes" : "No");
-    Serial.printf("Image Counter: %lu\n", imageCounter);
+
     
     // Get raw byte values from SD card
     uint64_t totalBytes = SD_MMC.totalBytes();
     uint64_t usedBytes = SD_MMC.usedBytes();
     uint64_t freeBytes = totalBytes - usedBytes;
     
-    // Display sizes in both megabytes (human-readable) and bytes (precise)
-    Serial.printf("Total Space: %llu MB (%llu bytes)\n", 
-                  totalBytes / (1024 * 1024), totalBytes);
-    Serial.printf("Used Space: %llu MB (%llu bytes)\n", 
-                  usedBytes / (1024 * 1024), usedBytes);
-    Serial.printf("Free Space: %llu MB (%llu bytes)\n", 
-                  freeBytes / (1024 * 1024), freeBytes);
+
     
     // Calculate and display usage percentage
     // Avoid division by zero if total is somehow 0
     if (totalBytes > 0) {
         float usedPercent = (float)usedBytes / totalBytes * 100.0;
-        Serial.printf("Usage: %.2f%%\n", usedPercent);
+        Serial.printf_P(TAG_USAGE, usedPercent);
     }
     
-    Serial.println("===========================");
+    Serial.println(FPSTR(TAG_SEPARATOR));
 }
 
 std::vector<String> StorageManager::getImageFiles() {
@@ -377,30 +399,6 @@ std::vector<String> StorageManager::getImageFiles() {
     
     // 1. Check initialization status (pointer/state validation)
     if (!initialized) {
-        Serial.println("ERROR: Storage not initialized - cannot retrieve image files");
-        Serial.println("RECOVERY: Call init() before attempting to list files");
-        return imageFiles;  // Return empty vector for safe degradation
-    }
-    
-    // 2. Validate basePath is not empty
-    if (basePath.length() == 0) {
-        Serial.println("ERROR: Base path is empty - invalid configuration");
-        Serial.println("RECOVERY: Re-initialize storage manager with valid configuration");
-        return imageFiles;
-    }
-    
-    // 3. Check if SD card is still mounted and accessible
-    uint8_t cardType = SD_MMC.cardType();
-    if (cardType == CARD_NONE) {
-        Serial.println("ERROR: SD Card not detected - card may have been removed");
-        Serial.println("RECOVERY: Re-insert SD card and call init() again");
-        Serial.println("TROUBLESHOOTING:");
-        Serial.println("  - Verify SD card is properly inserted");
-        Serial.println("  - Check for loose connections");
-        Serial.println("  - Try reinitializing the storage manager");
-        return imageFiles;
-    }
-    
 
         File file = dir.openNextFile();
         int fileCount = 0;

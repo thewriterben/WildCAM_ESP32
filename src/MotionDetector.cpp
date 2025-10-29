@@ -6,6 +6,13 @@
 #include "MotionDetector.h"
 #include "config.h"
 
+// Store constant strings in PROGMEM to save RAM
+static const char TAG_ERROR_PIN[] PROGMEM = "ERROR: Invalid GPIO pin number";
+static const char TAG_ERROR_DEBOUNCE[] PROGMEM = "ERROR: Debounce time must be between 100ms and 10000ms";
+static const char TAG_INIT[] PROGMEM = "MotionDetector initialized on pin %d with %dms debounce\n";
+static const char TAG_ERROR_DEBOUNCE_SET[] PROGMEM = "ERROR: Invalid debounce time %d ms. Must be between 100-10000ms\n";
+static const char TAG_DEBOUNCE_SET[] PROGMEM = "Motion debounce time set to: %d ms\n";
+
 // Initialize static instance pointer
 MotionDetector* MotionDetector::instance = nullptr;
 
@@ -16,12 +23,12 @@ MotionDetector::MotionDetector()
 bool MotionDetector::init(int pin, int debounceMs) {
     // Validate input parameters
     if (pin < 0 || pin > 39) {
-        Serial.println("ERROR: Invalid GPIO pin number");
+        Serial.println(FPSTR(TAG_ERROR_PIN));
         return false;
     }
     
     if (debounceMs < 100 || debounceMs > 10000) {
-        Serial.println("ERROR: Debounce time must be between 100ms and 10000ms");
+        Serial.println(FPSTR(TAG_ERROR_DEBOUNCE));
         return false;
     }
     
@@ -41,7 +48,7 @@ bool MotionDetector::init(int pin, int debounceMs) {
     // Attach interrupt on rising edge (motion detected)
     attachInterrupt(digitalPinToInterrupt(pirPin), motionISR, RISING);
     
-    Serial.printf("MotionDetector initialized on pin %d with %dms debounce\n", pirPin, debounceMs);
+    Serial.printf_P(TAG_INIT, pirPin, debounceMs);
     return true;
 }
 
@@ -75,10 +82,10 @@ bool MotionDetector::isMotionDetected() {
 void MotionDetector::setDebounceTime(int ms) {
     // Validate input (minimum 100ms, maximum 10000ms)
     if (ms < 100 || ms > 10000) {
-        Serial.printf("ERROR: Invalid debounce time %d ms. Must be between 100-10000ms\n", ms);
+        Serial.printf_P(TAG_ERROR_DEBOUNCE_SET, ms);
         return;
     }
     
     debounceMs = ms;
-    Serial.printf("Motion debounce time set to: %d ms\n", debounceMs);
+    Serial.printf_P(TAG_DEBOUNCE_SET, debounceMs);
 }
