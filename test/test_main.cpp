@@ -72,9 +72,8 @@ void test_storage_manager_init() {
 // Test PowerManager initialization
 void test_power_manager_init() {
     PowerManager power;
-    power.init(35);
-    // Test would verify power management
-    TEST_ASSERT_TRUE(true);
+    bool result = power.init(35);
+    TEST_ASSERT_TRUE(result);
 }
 
 // Test WebServer initialization
