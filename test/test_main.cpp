@@ -79,8 +79,55 @@ void test_power_manager_init() {
 // Test WebServer initialization
 void test_web_server_init() {
     WebServer server(80);
-    // Test would verify server configuration
-    TEST_ASSERT_TRUE(true);
+    StorageManager storage;
+    CameraManager camera;
+    PowerManager power;
+    
+    // Test successful init with all managers
+    bool result = server.init(&storage, &camera, &power);
+    TEST_ASSERT_TRUE(result);
+}
+
+// Test WebServer init with null references
+void test_web_server_init_null_refs() {
+    WebServer server(80);
+    StorageManager storage;
+    CameraManager camera;
+    PowerManager power;
+    
+    // Test with null storage
+    bool result = server.init(nullptr, &camera, &power);
+    TEST_ASSERT_FALSE(result);
+    
+    // Test with null camera
+    result = server.init(&storage, nullptr, &power);
+    TEST_ASSERT_FALSE(result);
+    
+    // Test with null power
+    result = server.init(&storage, &camera, nullptr);
+    TEST_ASSERT_FALSE(result);
+    
+    // Test with all null
+    result = server.init(nullptr, nullptr, nullptr);
+    TEST_ASSERT_FALSE(result);
+}
+
+// Test StorageManager getImageCount
+void test_storage_manager_image_count() {
+    StorageManager storage;
+    
+    // Before init, should return 0
+    unsigned long count = storage.getImageCount();
+    TEST_ASSERT_EQUAL(0, count);
+}
+
+// Test StorageManager getImageFiles
+void test_storage_manager_image_files() {
+    StorageManager storage;
+    
+    // Before init, should return empty vector
+    std::vector<String> files = storage.getImageFiles();
+    TEST_ASSERT_TRUE(files.empty());
 }
 
 // Test battery voltage calculation
@@ -127,8 +174,11 @@ void setup() {
     RUN_TEST(test_set_debounce_time_validation);
     RUN_TEST(test_camera_manager_init);
     RUN_TEST(test_storage_manager_init);
+    RUN_TEST(test_storage_manager_image_count);
+    RUN_TEST(test_storage_manager_image_files);
     RUN_TEST(test_power_manager_init);
     RUN_TEST(test_web_server_init);
+    RUN_TEST(test_web_server_init_null_refs);
     RUN_TEST(test_battery_percentage);
     RUN_TEST(test_power_manager_new_methods);
     RUN_TEST(test_motion_cooldown);
