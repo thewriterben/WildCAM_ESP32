@@ -22,6 +22,10 @@
 #define ENABLE_PREDATOR_ALERTS
 #define CONFIDENCE_THRESHOLD 0.7
 
+// Pin definitions
+#define LED_PIN 4      // Adjust based on your hardware
+#define PIR_PIN 13     // Adjust based on your hardware
+
 // Model paths
 const char* PRODUCTION_MODEL = "/models/production/wildlife_classifier_v2_quantized.tflite";
 const char* DEER_MODEL = "/models/species_detection/deer/deer_classifier.tflite";
@@ -215,7 +219,7 @@ void processCascadedDetection() {
 /**
  * Power-optimized predator monitoring
  */
-void processPreatoryMonitoring() {
+void processPredatorMonitoring() {
     Serial.println("\n--- Predator Monitoring (Power-Optimized) ---");
     
     // Only process if motion detected (saves power)

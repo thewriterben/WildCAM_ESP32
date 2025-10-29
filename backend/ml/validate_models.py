@@ -178,8 +178,10 @@ class ModelValidator:
     def save_report(self, output_path: str):
         """Save validation report to JSON"""
         
+        from datetime import datetime
+        
         report = {
-            "validation_date": "2025-10-29",
+            "validation_date": datetime.now().isoformat(),
             "models_directory": str(self.models_dir),
             "summary": {
                 "total_models": len(self.results),
