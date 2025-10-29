@@ -61,16 +61,19 @@ void test_init_success(void) {
     // Call init() - may fail in CI environment without SD card
     bool result = storage->init();
     
-    // Test passes whether init succeeds or fails gracefully
-    // The important part is that it doesn't crash
+    // Test passes if init doesn't crash (returns either true or false)
     // In real hardware with SD card, this should return true
-    TEST_ASSERT_TRUE(result == true || result == false);
+    // In CI environment without hardware, this should return false
+    // Both cases are valid - the important part is no crash or exception
     
     // If initialization succeeded, verify we can get image count
     if (result) {
         unsigned long count = storage->getImageCount();
         TEST_ASSERT_GREATER_OR_EQUAL(0, count);
     }
+    
+    // Test completes successfully if we reach here without crashing
+    TEST_ASSERT_NOT_NULL(storage);
 }
 
 //==============================================================================
@@ -147,9 +150,6 @@ void test_generate_filename(void) {
             TEST_ASSERT_TRUE(filename1 != filename3);
         }
     }
-    
-    // Test passes - filename generation logic is sound
-    TEST_ASSERT_TRUE(true);
 }
 
 //==============================================================================
@@ -208,9 +208,6 @@ void test_save_image_success(void) {
             TEST_ASSERT_GREATER_THAN(0, freeSpace);
         }
     }
-    
-    // Test completes successfully
-    TEST_ASSERT_TRUE(true);
 }
 
 //==============================================================================
@@ -295,13 +292,12 @@ void test_save_metadata(void) {
         // Save metadata
         bool result = storage->saveMetadata(imagePath, metadata);
         
-        // If SD card is available, this should succeed
-        // If not available, it should fail gracefully
-        TEST_ASSERT_TRUE(result == true || result == false);
-        
-        // Test with empty path - should fail
+        // Test with empty path - should always fail
         bool result2 = storage->saveMetadata("", metadata);
         TEST_ASSERT_FALSE(result2);
+        
+        // If saveMetadata with valid path succeeded, test passes
+        // If it failed (no SD card), test still passes as long as no crash occurred
         
     } else {
         // Without initialization, saveMetadata should fail gracefully
@@ -311,9 +307,6 @@ void test_save_metadata(void) {
         bool result = storage->saveMetadata("/test.jpg", metadata);
         TEST_ASSERT_FALSE(result);
     }
-    
-    // Test completes successfully
-    TEST_ASSERT_TRUE(true);
 }
 
 //==============================================================================
@@ -357,9 +350,6 @@ void test_get_free_space(void) {
         unsigned long freeSpace = storage->getFreeSpace();
         TEST_ASSERT_EQUAL(0, freeSpace);
     }
-    
-    // Test completes successfully
-    TEST_ASSERT_TRUE(true);
 }
 
 //==============================================================================
@@ -424,7 +414,8 @@ void test_delete_old_files(void) {
     if (initResult) {
         bool resultAfter = storage->deleteOldFiles(7);
         // Note: Current implementation is a placeholder that returns true
-        TEST_ASSERT_TRUE(resultAfter == true || resultAfter == false);
+        // We mainly test that it doesn't crash
+        TEST_ASSERT_TRUE(resultAfter);  // Current implementation returns true
     }
 }
 
