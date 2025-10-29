@@ -320,43 +320,200 @@ void StorageManager::printStorageInfo() {
 std::vector<String> StorageManager::getImageFiles() {
     std::vector<String> imageFiles;
     
+    // 1. Check initialization status (pointer/state validation)
     if (!initialized) {
-        Serial.println("Storage not initialized");
+        Serial.println("ERROR: Storage not initialized - cannot retrieve image files");
+        Serial.println("RECOVERY: Call init() before attempting to list files");
+        return imageFiles;  // Return empty vector for safe degradation
+    }
+    
+    // 2. Validate basePath is not empty
+    if (basePath.length() == 0) {
+        Serial.println("ERROR: Base path is empty - invalid configuration");
+        Serial.println("RECOVERY: Re-initialize storage manager with valid configuration");
         return imageFiles;
     }
     
-    // Helper function to recursively scan directories
-    std::function<void(const String&)> scanDirectory = [&](const String& path) {
-        File dir = SD_MMC.open(path);
-        if (!dir || !dir.isDirectory()) {
+    // 3. Check if SD card is still mounted and accessible
+    uint8_t cardType = SD_MMC.cardType();
+    if (cardType == CARD_NONE) {
+        Serial.println("ERROR: SD Card not detected - card may have been removed");
+        Serial.println("RECOVERY: Re-insert SD card and call init() again");
+        Serial.println("TROUBLESHOOTING:");
+        Serial.println("  - Verify SD card is properly inserted");
+        Serial.println("  - Check for loose connections");
+        Serial.println("  - Try reinitializing the storage manager");
+        return imageFiles;
+    }
+    
+    // Track directory scanning errors for reporting
+    int failedDirOpens = 0;
+    int successfulScans = 0;
+    int totalFilesFound = 0;
+    
+    // Recursion depth limit to prevent stack overflow
+    const int MAX_RECURSION_DEPTH = 10;
+    
+    // Helper function to recursively scan directories with comprehensive error handling
+    std::function<void(const String&, int)> scanDirectory = [&](const String& path, int depth) {
+        // 4. Check recursion depth to prevent stack overflow
+        if (depth > MAX_RECURSION_DEPTH) {
+            Serial.printf("WARNING: Maximum recursion depth (%d) exceeded for path: %s\n", 
+                         MAX_RECURSION_DEPTH, path.c_str());
+            Serial.println("RECOVERY: Skipping deeper subdirectories to prevent stack overflow");
             return;
         }
         
+        // 5. Validate path parameter
+        if (path.length() == 0) {
+            Serial.println("ERROR: Empty path provided to scanDirectory");
+            failedDirOpens++;
+            return;
+        }
+        
+        // 6. Validate path length is reasonable (prevent buffer overflows)
+        if (path.length() > 255) {
+            Serial.printf("ERROR: Path too long (%d chars): %s\n", path.length(), path.c_str());
+            Serial.println("RECOVERY: Skipping this directory to prevent buffer overflow");
+            failedDirOpens++;
+            return;
+        }
+        
+        // 7. Open directory with error checking
+        File dir = SD_MMC.open(path);
+        if (!dir) {
+            Serial.printf("ERROR: Failed to open directory: %s\n", path.c_str());
+            Serial.println("TROUBLESHOOTING:");
+            Serial.println("  - Directory may not exist");
+            Serial.println("  - SD card may be corrupted");
+            Serial.println("  - Check file system integrity");
+            failedDirOpens++;
+            return;
+        }
+        
+        // 8. Verify it's actually a directory
+        if (!dir.isDirectory()) {
+            Serial.printf("ERROR: Path is not a directory: %s\n", path.c_str());
+            Serial.println("RECOVERY: Skipping this path");
+            dir.close();
+            failedDirOpens++;
+            return;
+        }
+        
+        successfulScans++;
+        
+        // 9. Iterate through directory entries with error handling
         File file = dir.openNextFile();
+        int fileCount = 0;
+        const int MAX_FILES_PER_DIR = 10000;  // Sanity check to prevent infinite loops
+        
         while (file) {
-            String fileName = String(file.name());
+            // 10. Sanity check for infinite loops
+            fileCount++;
+            if (fileCount > MAX_FILES_PER_DIR) {
+                Serial.printf("WARNING: Directory contains more than %d files: %s\n", 
+                             MAX_FILES_PER_DIR, path.c_str());
+                Serial.println("RECOVERY: Stopping scan of this directory to prevent excessive processing");
+                break;
+            }
             
+            // 11. Validate file name
+            const char* rawName = file.name();
+            if (rawName == nullptr) {
+                Serial.println("WARNING: Encountered file with null name - skipping");
+                file = dir.openNextFile();
+                continue;
+            }
+            
+            String fileName = String(rawName);
+            
+            // 12. Validate filename is not empty
+            if (fileName.length() == 0) {
+                Serial.println("WARNING: Encountered file with empty name - skipping");
+                file = dir.openNextFile();
+                continue;
+            }
+            
+            // 13. Process subdirectories recursively
             if (file.isDirectory()) {
-                // Recursively scan subdirectories
-                scanDirectory(fileName);
+                // Recursively scan subdirectories with incremented depth
+                scanDirectory(fileName, depth + 1);
             } else {
-                // Check if file has .jpg or .jpeg extension
+                // 14. Check if file has valid image extension
                 if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
                     fileName.endsWith(".JPG") || fileName.endsWith(".JPEG")) {
-                    imageFiles.push_back(fileName);
+                    
+                    // 15. Additional validation - check file size is reasonable
+                    size_t fileSize = file.size();
+                    const size_t MAX_IMAGE_SIZE = 10 * 1024 * 1024;  // 10MB max
+                    const size_t MIN_IMAGE_SIZE = 100;  // 100 bytes min
+                    
+                    if (fileSize > MAX_IMAGE_SIZE) {
+                        Serial.printf("WARNING: Image file too large (%d bytes): %s\n", 
+                                    fileSize, fileName.c_str());
+                        Serial.println("RECOVERY: Skipping this file - may be corrupted");
+                    } else if (fileSize < MIN_IMAGE_SIZE) {
+                        Serial.printf("WARNING: Image file too small (%d bytes): %s\n", 
+                                    fileSize, fileName.c_str());
+                        Serial.println("RECOVERY: Skipping this file - may be corrupted or empty");
+                    } else {
+                        // File appears valid - add to list
+                        imageFiles.push_back(fileName);
+                        totalFilesFound++;
+                    }
                 }
             }
             
-            file = dir.openNextFile();
+            // 16. Get next file with error handling
+            File nextFile = dir.openNextFile();
+            if (!nextFile && fileCount < MAX_FILES_PER_DIR) {
+                // This is normal - end of directory
+            }
+            file = nextFile;
         }
+        
+        // 17. Close directory handle to free resources
         dir.close();
     };
     
-    // Start scanning from base path
-    scanDirectory(basePath);
+    Serial.printf("Starting image file scan from: %s\n", basePath.c_str());
     
-    // Sort files in reverse order (newest first by filename)
-    std::sort(imageFiles.begin(), imageFiles.end(), std::greater<String>());
+    // 18. Start scanning from base path with initial depth of 0
+    try {
+        scanDirectory(basePath, 0);
+    } catch (...) {
+        // 19. Catch any unexpected exceptions to prevent crashes
+        Serial.println("ERROR: Unexpected exception during directory scan");
+        Serial.println("RECOVERY: Returning partial results collected before exception");
+        Serial.printf("Collected %d files before exception\n", totalFilesFound);
+    }
+    
+    // 20. Report scanning results
+    Serial.printf("Image file scan complete: Found %d images\n", totalFilesFound);
+    if (failedDirOpens > 0) {
+        Serial.printf("WARNING: Failed to open %d directories during scan\n", failedDirOpens);
+        Serial.println("RECOVERY: Partial results returned - some images may be missing");
+    }
+    Serial.printf("Successfully scanned %d directories\n", successfulScans);
+    
+    // 21. Validate results before sorting
+    if (imageFiles.empty()) {
+        Serial.println("INFO: No image files found");
+        return imageFiles;
+    }
+    
+    // 22. Sort files in reverse order (newest first by filename) with error handling
+    try {
+        std::sort(imageFiles.begin(), imageFiles.end(), std::greater<String>());
+        Serial.printf("Successfully sorted %d image files\n", imageFiles.size());
+    } catch (const std::exception& e) {
+        Serial.println("ERROR: Failed to sort image files");
+        Serial.printf("Exception: %s\n", e.what());
+        Serial.println("RECOVERY: Returning unsorted results");
+    } catch (...) {
+        Serial.println("ERROR: Unknown exception during sort operation");
+        Serial.println("RECOVERY: Returning unsorted results");
+    }
     
     return imageFiles;
 }
