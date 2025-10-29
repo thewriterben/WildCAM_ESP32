@@ -1,0 +1,31 @@
+{
+  "category": "bird",
+  "labels": [
+    "wild_turkey",
+    "crow",
+    "eagle",
+    "hawk",
+    "owl",
+    "woodpecker",
+    "unknown"
+  ],
+  "num_classes": 7,
+  "label_to_index": {
+    "wild_turkey": 0,
+    "crow": 1,
+    "eagle": 2,
+    "hawk": 3,
+    "owl": 4,
+    "woodpecker": 5,
+    "unknown": 6
+  },
+  "index_to_label": {
+    "0": "wild_turkey",
+    "1": "crow",
+    "2": "eagle",
+    "3": "hawk",
+    "4": "owl",
+    "5": "woodpecker",
+    "6": "unknown"
+  }
+}

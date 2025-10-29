@@ -1,0 +1,68 @@
+{
+  "metadata_version": "2.0.0",
+  "created_date": "2025-10-29T02:36:06.001641",
+  "model_info": {
+    "name": "bird_classifier.tflite",
+    "version": "2.0.0",
+    "type": "species_classification",
+    "category": "bird",
+    "description": "Classifier for common bird species",
+    "file_size_bytes": 36224,
+    "quantization": "INT8"
+  },
+  "input_specification": {
+    "shape": [
+      1,
+      224,
+      224,
+      3
+    ],
+    "dtype": "uint8",
+    "format": "RGB"
+  },
+  "output_specification": {
+    "shape": [
+      1,
+      7
+    ],
+    "dtype": "uint8",
+    "classes": [
+      "wild_turkey",
+      "crow",
+      "eagle",
+      "hawk",
+      "owl",
+      "woodpecker",
+      "unknown"
+    ]
+  },
+  "target_hardware": {
+    "platform": "ESP32-S3",
+    "min_psram_mb": 8,
+    "min_flash_mb": 4
+  },
+  "performance": {
+    "expected_inference_time_ms": 600,
+    "memory_usage_kb": 512,
+    "target_accuracy": 0.95,
+    "model_is_demo": true
+  },
+  "training_info": {
+    "framework": "TensorFlow Lite",
+    "training_type": "synthetic_data",
+    "note": "Demo model trained on synthetic data. Train on real wildlife datasets for production use.",
+    "final_loss": 1.9511791467666626,
+    "final_accuracy": 0.1666666716337204,
+    "final_val_loss": 1.9596563577651978,
+    "final_val_accuracy": 0.10000000149011612
+  },
+  "supported_species": [
+    "wild_turkey",
+    "crow",
+    "eagle",
+    "hawk",
+    "owl",
+    "woodpecker",
+    "unknown"
+  ]
+}

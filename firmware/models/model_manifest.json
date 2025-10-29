@@ -1,7 +1,7 @@
 {
   "manifest_version": "2.0.0",
   "created_date": "2024-01-15T00:00:00Z",
-  "updated_date": "2024-01-15T00:00:00Z",
+  "updated_date": "2025-10-29T02:36:00Z",
   "description": "Model manifest for ESP32 Wildlife Camera ML models",
   
   "available_models": [
@@ -14,28 +14,31 @@
       "description": "Primary wildlife species classifier with environmental adaptation",
       
       "files": {
-        "model_file": "wildlife_classifier_v2.tflite",
-        "metadata_file": "model_metadata.json",
-        "labels_file": "class_labels.json"
+        "model_file": "production/wildlife_classifier_v2_quantized.tflite",
+        "metadata_file": "production/wildlife_classifier_v2_metadata.json",
+        "labels_file": "production/wildlife_classifier_v2_labels.json",
+        "readme_file": "production/README.md"
       },
       
       "model_specs": {
         "input_shape": [1, 224, 224, 3],
         "input_type": "uint8",
         "input_range": [0, 255],
-        "output_shape": [1, 50],
+        "output_shape": [1, 36],
         "output_type": "uint8",
         "quantization": "INT8",
-        "compression": "pruned"
+        "compression": "none"
       },
       
       "performance": {
-        "model_size_mb": 1.5,
+        "model_size_mb": 0.18,
+        "model_size_kb": 185.6,
         "inference_time_ms": 850,
         "memory_usage_mb": 1.5,
         "power_consumption_ma": 165,
-        "accuracy": 0.957,
-        "top5_accuracy": 0.992
+        "target_accuracy": 0.95,
+        "target_top5_accuracy": 0.99,
+        "note": "Demo model - train on real data for production"
       },
       
       "hardware_requirements": {
@@ -233,6 +236,202 @@
         "priority": 999,
         "test_mode": true,
         "usage": "Integration testing only - train production model for field deployment"
+      }
+    },
+    
+    {
+      "model_id": "deer_classifier",
+      "model_name": "deer_classifier.tflite",
+      "version": "2.0.0",
+      "status": "available",
+      "type": "species_classification",
+      "description": "Specialized classifier for deer and cervid species",
+      
+      "files": {
+        "model_file": "species_detection/deer/deer_classifier.tflite",
+        "metadata_file": "species_detection/deer/deer_metadata.json",
+        "labels_file": "species_detection/deer/deer_labels.json",
+        "readme_file": "species_detection/deer/README.md"
+      },
+      
+      "model_specs": {
+        "input_shape": [1, 224, 224, 3],
+        "input_type": "uint8",
+        "output_shape": [1, 6],
+        "output_type": "uint8",
+        "quantization": "INT8"
+      },
+      
+      "performance": {
+        "model_size_kb": 29.2,
+        "inference_time_ms": 600,
+        "memory_usage_kb": 512,
+        "target_accuracy": 0.95,
+        "model_is_demo": true
+      },
+      
+      "supported_species": [
+        "white_tailed_deer", "mule_deer", "elk", "moose", "caribou", "unknown"
+      ],
+      
+      "hardware_requirements": {
+        "platform": "ESP32-S3",
+        "min_psram_mb": 8,
+        "min_flash_mb": 4
+      },
+      
+      "deployment_info": {
+        "load_path": "/models/species_detection/deer/deer_classifier.tflite",
+        "auto_load": false,
+        "priority": 5,
+        "use_case": "Specialized cervid detection"
+      }
+    },
+    
+    {
+      "model_id": "bird_classifier",
+      "model_name": "bird_classifier.tflite",
+      "version": "2.0.0",
+      "status": "available",
+      "type": "species_classification",
+      "description": "Classifier for common bird species",
+      
+      "files": {
+        "model_file": "species_detection/bird/bird_classifier.tflite",
+        "metadata_file": "species_detection/bird/bird_metadata.json",
+        "labels_file": "species_detection/bird/bird_labels.json",
+        "readme_file": "species_detection/bird/README.md"
+      },
+      
+      "model_specs": {
+        "input_shape": [1, 224, 224, 3],
+        "input_type": "uint8",
+        "output_shape": [1, 7],
+        "output_type": "uint8",
+        "quantization": "INT8"
+      },
+      
+      "performance": {
+        "model_size_kb": 35.4,
+        "inference_time_ms": 600,
+        "memory_usage_kb": 512,
+        "target_accuracy": 0.95,
+        "model_is_demo": true
+      },
+      
+      "supported_species": [
+        "wild_turkey", "crow", "eagle", "hawk", "owl", "woodpecker", "unknown"
+      ],
+      
+      "hardware_requirements": {
+        "platform": "ESP32-S3",
+        "min_psram_mb": 8,
+        "min_flash_mb": 4
+      },
+      
+      "deployment_info": {
+        "load_path": "/models/species_detection/bird/bird_classifier.tflite",
+        "auto_load": false,
+        "priority": 6,
+        "use_case": "Specialized bird detection"
+      }
+    },
+    
+    {
+      "model_id": "mammal_classifier",
+      "model_name": "mammal_classifier.tflite",
+      "version": "2.0.0",
+      "status": "available",
+      "type": "species_classification",
+      "description": "Small to medium mammal classifier",
+      
+      "files": {
+        "model_file": "species_detection/mammal/mammal_classifier.tflite",
+        "metadata_file": "species_detection/mammal/mammal_metadata.json",
+        "labels_file": "species_detection/mammal/mammal_labels.json",
+        "readme_file": "species_detection/mammal/README.md"
+      },
+      
+      "model_specs": {
+        "input_shape": [1, 224, 224, 3],
+        "input_type": "uint8",
+        "output_shape": [1, 7],
+        "output_type": "uint8",
+        "quantization": "INT8"
+      },
+      
+      "performance": {
+        "model_size_kb": 35.4,
+        "inference_time_ms": 600,
+        "memory_usage_kb": 512,
+        "target_accuracy": 0.95,
+        "model_is_demo": true
+      },
+      
+      "supported_species": [
+        "raccoon", "squirrel", "rabbit", "opossum", "skunk", "beaver", "unknown"
+      ],
+      
+      "hardware_requirements": {
+        "platform": "ESP32-S3",
+        "min_psram_mb": 8,
+        "min_flash_mb": 4
+      },
+      
+      "deployment_info": {
+        "load_path": "/models/species_detection/mammal/mammal_classifier.tflite",
+        "auto_load": false,
+        "priority": 7,
+        "use_case": "Specialized small-medium mammal detection"
+      }
+    },
+    
+    {
+      "model_id": "predator_classifier",
+      "model_name": "predator_classifier.tflite",
+      "version": "2.0.0",
+      "status": "available",
+      "type": "species_classification",
+      "description": "Large carnivore and predator detection",
+      
+      "files": {
+        "model_file": "species_detection/predator/predator_classifier.tflite",
+        "metadata_file": "species_detection/predator/predator_metadata.json",
+        "labels_file": "species_detection/predator/predator_labels.json",
+        "readme_file": "species_detection/predator/README.md"
+      },
+      
+      "model_specs": {
+        "input_shape": [1, 224, 224, 3],
+        "input_type": "uint8",
+        "output_shape": [1, 7],
+        "output_type": "uint8",
+        "quantization": "INT8"
+      },
+      
+      "performance": {
+        "model_size_kb": 35.5,
+        "inference_time_ms": 600,
+        "memory_usage_kb": 512,
+        "target_accuracy": 0.95,
+        "model_is_demo": true
+      },
+      
+      "supported_species": [
+        "black_bear", "mountain_lion", "gray_wolf", "coyote", "bobcat", "lynx", "unknown"
+      ],
+      
+      "hardware_requirements": {
+        "platform": "ESP32-S3",
+        "min_psram_mb": 8,
+        "min_flash_mb": 4
+      },
+      
+      "deployment_info": {
+        "load_path": "/models/species_detection/predator/predator_classifier.tflite",
+        "auto_load": false,
+        "priority": 4,
+        "use_case": "Specialized predator detection and safety alerts"
       }
     }
   ],

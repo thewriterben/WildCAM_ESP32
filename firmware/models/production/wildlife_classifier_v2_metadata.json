@@ -1,0 +1,183 @@
+{
+  "metadata_version": "2.0.0",
+  "created_date": "2025-10-29T02:42:47.092996",
+  "model_info": {
+    "name": "wildlife_classifier_v2.tflite",
+    "version": "2.0.0",
+    "type": "species_classification",
+    "description": "Production wildlife species classifier with comprehensive species coverage",
+    "file_size_bytes": 190088,
+    "quantization": "INT8"
+  },
+  "input_specification": {
+    "shape": [
+      1,
+      224,
+      224,
+      3
+    ],
+    "dtype": "uint8",
+    "format": "RGB",
+    "normalization": "0-255"
+  },
+  "output_specification": {
+    "shape": [
+      1,
+      36
+    ],
+    "dtype": "uint8",
+    "classes": [
+      "white_tailed_deer",
+      "mule_deer",
+      "elk",
+      "moose",
+      "caribou",
+      "black_bear",
+      "grizzly_bear",
+      "mountain_lion",
+      "gray_wolf",
+      "coyote",
+      "bobcat",
+      "lynx",
+      "red_fox",
+      "gray_fox",
+      "raccoon",
+      "opossum",
+      "skunk",
+      "porcupine",
+      "beaver",
+      "rabbit",
+      "squirrel",
+      "chipmunk",
+      "groundhog",
+      "wild_turkey",
+      "grouse",
+      "pheasant",
+      "crow",
+      "raven",
+      "eagle",
+      "hawk",
+      "owl",
+      "domestic_dog",
+      "domestic_cat",
+      "livestock",
+      "human",
+      "unknown"
+    ],
+    "format": "quantized_softmax"
+  },
+  "target_hardware": {
+    "platform": "ESP32-S3",
+    "min_psram_mb": 8,
+    "min_flash_mb": 4,
+    "min_cpu_freq_mhz": 160
+  },
+  "performance": {
+    "expected_inference_time_ms": 850,
+    "memory_usage_mb": 1.5,
+    "power_consumption_ma": 165,
+    "target_accuracy": 0.95,
+    "target_top5_accuracy": 0.99,
+    "model_is_demo": true
+  },
+  "training_info": {
+    "framework": "TensorFlow Lite",
+    "training_type": "synthetic_data",
+    "note": "Demo model for integration. Train on real wildlife datasets for production deployment.",
+    "final_loss": 3.5582661628723145,
+    "final_accuracy": 0.05000000074505806,
+    "final_val_loss": 3.7535390853881836,
+    "final_val_accuracy": 0.03999999910593033,
+    "epochs_trained": 5
+  },
+  "supported_species": [
+    "white_tailed_deer",
+    "mule_deer",
+    "elk",
+    "moose",
+    "caribou",
+    "black_bear",
+    "grizzly_bear",
+    "mountain_lion",
+    "gray_wolf",
+    "coyote",
+    "bobcat",
+    "lynx",
+    "red_fox",
+    "gray_fox",
+    "raccoon",
+    "opossum",
+    "skunk",
+    "porcupine",
+    "beaver",
+    "rabbit",
+    "squirrel",
+    "chipmunk",
+    "groundhog",
+    "wild_turkey",
+    "grouse",
+    "pheasant",
+    "crow",
+    "raven",
+    "eagle",
+    "hawk",
+    "owl",
+    "domestic_dog",
+    "domestic_cat",
+    "livestock",
+    "human",
+    "unknown"
+  ],
+  "species_categories": {
+    "cervids": [
+      "white_tailed_deer",
+      "mule_deer",
+      "elk",
+      "moose",
+      "caribou"
+    ],
+    "large_predators": [
+      "black_bear",
+      "grizzly_bear",
+      "mountain_lion",
+      "gray_wolf",
+      "coyote"
+    ],
+    "medium_predators": [
+      "bobcat",
+      "lynx",
+      "red_fox",
+      "gray_fox"
+    ],
+    "medium_mammals": [
+      "raccoon",
+      "opossum",
+      "skunk",
+      "porcupine",
+      "beaver"
+    ],
+    "small_mammals": [
+      "rabbit",
+      "squirrel",
+      "chipmunk",
+      "groundhog"
+    ],
+    "birds": [
+      "wild_turkey",
+      "grouse",
+      "pheasant",
+      "crow",
+      "raven",
+      "eagle",
+      "hawk",
+      "owl"
+    ],
+    "other": [
+      "domestic_dog",
+      "domestic_cat",
+      "livestock",
+      "human",
+      "unknown"
+    ]
+  }
+}
