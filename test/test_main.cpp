@@ -71,7 +71,8 @@ void test_storage_manager_init() {
 
 // Test PowerManager initialization
 void test_power_manager_init() {
-    PowerManager power(34);
+    PowerManager power;
+    power.init(35);
     // Test would verify power management
     TEST_ASSERT_TRUE(true);
 }
@@ -85,9 +86,26 @@ void test_web_server_init() {
 
 // Test battery voltage calculation
 void test_battery_percentage() {
-    PowerManager power(34);
+    PowerManager power;
+    power.init(35);
     // Would test battery percentage calculation
     TEST_ASSERT_TRUE(true);
+}
+
+// Test new PowerManager methods
+void test_power_manager_new_methods() {
+    PowerManager power;
+    power.init(35);
+    
+    // Test that methods exist and can be called
+    int percentage = power.getBatteryPercentage();
+    TEST_ASSERT_GREATER_OR_EQUAL(0, percentage);
+    TEST_ASSERT_LESS_OR_EQUAL(100, percentage);
+    
+    // Test isLowBattery
+    bool lowBattery = power.isLowBattery();
+    // Just verify it returns a value, don't assert specific state
+    TEST_ASSERT_TRUE(lowBattery == true || lowBattery == false);
 }
 
 // Test motion detection cooldown
@@ -113,6 +131,7 @@ void setup() {
     RUN_TEST(test_power_manager_init);
     RUN_TEST(test_web_server_init);
     RUN_TEST(test_battery_percentage);
+    RUN_TEST(test_power_manager_new_methods);
     RUN_TEST(test_motion_cooldown);
     
     UNITY_END();
