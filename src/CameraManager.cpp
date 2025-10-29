@@ -2,7 +2,8 @@
 #include "config.h"
 
 CameraManager::CameraManager() 
-    : initialized(false), 
+    : config(),              // Default-initialize config struct
+      initialized(false), 
       jpegQuality(10), 
       frameSize(FRAMESIZE_UXGA),
       flashPin(FLASH_LED_PIN) {

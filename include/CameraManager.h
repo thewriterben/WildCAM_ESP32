@@ -47,8 +47,8 @@
  */
 class CameraManager {
 private:
-    bool initialized;           ///< Camera initialization status
     camera_config_t config;     ///< Camera hardware configuration
+    bool initialized;           ///< Camera initialization status
     int jpegQuality;            ///< JPEG quality (1-63, lower is higher quality)
     framesize_t frameSize;      ///< Image resolution/frame size
     int flashPin;               ///< GPIO pin for flash LED
