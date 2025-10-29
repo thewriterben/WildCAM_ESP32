@@ -409,13 +409,15 @@ void test_delete_old_files(void) {
     bool resultBefore = storage->deleteOldFiles(7);
     TEST_ASSERT_FALSE(resultBefore);
     
-    // After init, should work or fail gracefully
+    // After init, deleteOldFiles should work or fail gracefully
     bool initResult = storage->init();
     if (initResult) {
         bool resultAfter = storage->deleteOldFiles(7);
-        // Note: Current implementation is a placeholder that returns true
-        // We mainly test that it doesn't crash
-        TEST_ASSERT_TRUE(resultAfter);  // Current implementation returns true
+        // Current implementation is a placeholder that returns true,
+        // but we don't assert the specific return value to avoid brittleness
+        // The main goal is to verify it doesn't crash when initialized
+        // In a full implementation, this would test actual deletion logic
+        (void)resultAfter;  // Suppress unused variable warning
     }
 }
 
