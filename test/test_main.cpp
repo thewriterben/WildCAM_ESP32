@@ -20,7 +20,7 @@ void test_motion_detector_init() {
 // Test CameraManager initialization
 void test_camera_manager_init() {
     CameraManager camera;
-    // Test would verify camera configuration
+    // Test would verify camera configuration and init method
     TEST_ASSERT_TRUE(true);
 }
 

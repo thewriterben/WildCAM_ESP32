@@ -53,7 +53,7 @@ void setup() {
     
     // Initialize Camera
     Serial.println("\n2. Initializing Camera...");
-    if (camera.begin()) {
+    if (camera.init()) {
         Serial.println("   ✓ Camera initialized");
     } else {
         Serial.println("   ✗ Camera initialization failed!");

@@ -1,8 +1,16 @@
 #include "CameraManager.h"
 #include "config.h"
 
-CameraManager::CameraManager() : initialized(false), flashPin(FLASH_LED_PIN) {
+CameraManager::CameraManager() 
+    : initialized(false), 
+      jpegQuality(10), 
+      frameSize(FRAMESIZE_UXGA),
+      flashPin(FLASH_LED_PIN) {
     setupConfig();
+}
+
+CameraManager::~CameraManager() {
+    deinit();
 }
 
 void CameraManager::setupConfig() {
@@ -27,13 +35,27 @@ void CameraManager::setupConfig() {
     config.xclk_freq_hz = 20000000;
     config.pixel_format = PIXFORMAT_JPEG;
     
-    // High quality settings
-    config.frame_size = FRAME_SIZE;
-    config.jpeg_quality = JPEG_QUALITY;
+    // Default settings (will be overridden by init() parameters)
+    config.frame_size = frameSize;
+    config.jpeg_quality = jpegQuality;
     config.fb_count = 2;
 }
 
-bool CameraManager::begin() {
+bool CameraManager::init(int quality, framesize_t size) {
+    // Validate parameters
+    if (quality < 1 || quality > 63) {
+        Serial.printf("Invalid quality: %d (must be 1-63)\n", quality);
+        return false;
+    }
+    
+    // Store parameters
+    jpegQuality = quality;
+    frameSize = size;
+    
+    // Update config with parameters
+    config.frame_size = frameSize;
+    config.jpeg_quality = jpegQuality;
+    
     // Initialize flash LED
     pinMode(flashPin, OUTPUT);
     digitalWrite(flashPin, LOW);
@@ -81,9 +103,11 @@ void CameraManager::releaseFrameBuffer(camera_fb_t* fb) {
 }
 
 bool CameraManager::setQuality(int quality) {
-    if (quality < 10 || quality > 63) {
+    if (quality < 1 || quality > 63) {
         return false;
     }
+    
+    jpegQuality = quality;
     
     sensor_t* s = esp_camera_sensor_get();
     if (s != NULL) {
@@ -94,6 +118,8 @@ bool CameraManager::setQuality(int quality) {
 }
 
 bool CameraManager::setFrameSize(framesize_t size) {
+    frameSize = size;
+    
     sensor_t* s = esp_camera_sensor_get();
     if (s != NULL) {
         s->set_framesize(s, size);
@@ -108,6 +134,31 @@ void CameraManager::setFlash(bool enable) {
 
 bool CameraManager::isInitialized() {
     return initialized;
+}
+
+void CameraManager::printStatus() {
+    Serial.println("=== Camera Manager Status ===");
+    Serial.printf("Initialized: %s\n", initialized ? "Yes" : "No");
+    Serial.printf("JPEG Quality: %d (1-63, lower is higher quality)\n", jpegQuality);
+    Serial.printf("Frame Size: %d\n", frameSize);
+    Serial.printf("Flash Pin: %d\n", flashPin);
+    
+    if (initialized) {
+        sensor_t* s = esp_camera_sensor_get();
+        if (s != NULL) {
+            Serial.println("Camera Sensor Info:");
+            Serial.printf("  Vertical Flip: %s\n", s->status.vflip ? "Yes" : "No");
+            Serial.printf("  Horizontal Mirror: %s\n", s->status.hmirror ? "Yes" : "No");
+        }
+    }
+    
+    Serial.println("Camera Configuration:");
+    Serial.printf("  XCLK Freq: %d Hz\n", config.xclk_freq_hz);
+    Serial.printf("  Pixel Format: JPEG\n");
+    Serial.printf("  Frame Buffers: %d\n", config.fb_count);
+    Serial.printf("  PWDN Pin: %d\n", config.pin_pwdn);
+    Serial.printf("  RESET Pin: %d\n", config.pin_reset);
+    Serial.println("=============================");
 }
 
 void CameraManager::deinit() {
