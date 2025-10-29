@@ -21,7 +21,7 @@ private:
     static const int MAX_FILES_PER_DIR = 10000;       // Maximum files to scan per directory
     static const int MAX_PATH_LENGTH = 255;           // Maximum path length in characters
     static const size_t MIN_IMAGE_SIZE = 100;         // Minimum valid image file size (bytes)
-    static const size_t MAX_IMAGE_SIZE = 10485760;    // Maximum valid image file size (10MB)
+    static const size_t MAX_IMAGE_SIZE = 10 * 1024 * 1024;  // Maximum valid image file size (10MB)
     
     // Returns /YYYYMMDD
     String getCurrentDatePath();
