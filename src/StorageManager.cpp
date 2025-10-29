@@ -151,7 +151,7 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     while (SD_MMC.exists(fullPath) && attempt < 1000) {
         // Modify filename to ensure uniqueness
         int dotIndex = originalPath.lastIndexOf('.');
-        if (dotIndex > 0) {
+        if (dotIndex >= 0) {
             String baseName = originalPath.substring(0, dotIndex);
             String extension = originalPath.substring(dotIndex);
             fullPath = baseName + "_" + String(attempt) + extension;
@@ -204,7 +204,7 @@ bool StorageManager::saveMetadata(const String& imagePath, JsonDocument& metadat
     // Create JSON file path (same name, .json extension)
     String jsonPath = imagePath;
     int dotIndex = jsonPath.lastIndexOf('.');
-    if (dotIndex > 0) {
+    if (dotIndex >= 0) {
         jsonPath = jsonPath.substring(0, dotIndex) + ".json";
     } else {
         jsonPath += ".json";
