@@ -60,11 +60,10 @@ void setup() {
     
     // Initialize Storage
     Serial.println("\n3. Initializing Storage...");
-    if (storage.begin()) {
+    if (storage.init()) {
         Serial.println("   ✓ Storage initialized");
-        Serial.printf("   Storage: %llu MB free / %llu MB total\n", 
-                      storage.getAvailableSpace(), storage.getTotalSpace());
-        Serial.printf("   Images stored: %d\n", storage.getImageCount());
+        Serial.printf("   Storage: %lu bytes free / %lu bytes used\n", 
+                      storage.getFreeSpace(), storage.getUsedSpace());
     } else {
         Serial.println("   ✗ Storage initialization failed!");
     }
@@ -112,10 +111,9 @@ void loop() {
             currentState = PROCESSING;
             
             // Save to SD card
-            String filepath;
-            if (storage.saveImage(fb, filepath)) {
+            String filepath = storage.saveImage(fb);
+            if (filepath.length() > 0) {
                 Serial.printf("Image saved successfully: %s\n", filepath.c_str());
-                Serial.printf("Total images: %d\n", storage.getImageCount());
             } else {
                 Serial.println("Failed to save image");
             }

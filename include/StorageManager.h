@@ -6,12 +6,14 @@
 #include <FS.h>
 #include <ArduinoJson.h>
 #include <esp_camera.h>
+#include <Preferences.h>
 
 class StorageManager {
 private:
     bool initialized;
     String basePath;
     unsigned long imageCounter;
+    Preferences preferences;
     
     // Returns /YYYYMMDD
     String getCurrentDatePath();
