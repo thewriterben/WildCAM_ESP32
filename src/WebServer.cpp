@@ -8,9 +8,30 @@
 #include <WiFi.h>
 #include <SD_MMC.h>
 
+// Store constant strings in PROGMEM to save RAM
+static const char TAG_ERROR_INIT[] PROGMEM = "ERROR: WebServer init failed - null reference(s) provided";
+static const char TAG_SUCCESS_INIT[] PROGMEM = "WebServer initialized successfully";
+static const char TAG_SERVER_HEADER[] PROGMEM = "==============================";
+static const char TAG_SERVER_START[] PROGMEM = "Web Server Started";
+static const char TAG_SERVER_URL[] PROGMEM = "Server URL: http://";
+static const char JSON_ERROR_NOT_FOUND[] PROGMEM = "{\"error\":\"Not found\"}";
+static const char JSON_ERROR_STORAGE[] PROGMEM = "{\"error\":\"Storage not available\"}";
+static const char JSON_ERROR_NO_IMAGES[] PROGMEM = "{\"error\":\"No images found\"}";
+static const char JSON_ERROR_CAMERA[] PROGMEM = "{\"error\":\"Camera not initialized\"}";
+static const char JSON_ERROR_CAPTURE[] PROGMEM = "{\"error\":\"Capture failed\"}";
+static const char JSON_ERROR_SAVE[] PROGMEM = "{\"error\":\"Failed to save image\"}";
+static const char JSON_REBOOT[] PROGMEM = "{\"message\":\"Rebooting...\"}";
+
 WebServer::WebServer(int serverPort)
     : port(serverPort), storage(nullptr), camera(nullptr), power(nullptr) {
     server = new AsyncWebServer(port);
+}
+
+WebServer::~WebServer() {
+    if (server) {
+        delete server;
+        server = nullptr;
+    }
 }
 
 bool WebServer::init(StorageManager* storageRef, CameraManager* cameraRef, PowerManager* powerRef) {
@@ -20,11 +41,11 @@ bool WebServer::init(StorageManager* storageRef, CameraManager* cameraRef, Power
     
     // Validate all references are not null
     if (!storage || !camera || !power) {
-        Serial.println("ERROR: WebServer init failed - null reference(s) provided");
+        Serial.println(FPSTR(TAG_ERROR_INIT));
         return false;
     }
     
-    Serial.println("WebServer initialized successfully");
+    Serial.println(FPSTR(TAG_SUCCESS_INIT));
     return true;
 }
 
@@ -62,23 +83,24 @@ void WebServer::begin() {
     
     // Handle 404
     server->onNotFound([](AsyncWebServerRequest* request) {
-        request->send(404, "application/json", "{\"error\":\"Not found\"}");
+        request->send(404, "application/json", FPSTR(JSON_ERROR_NOT_FOUND));
     });
     
     server->begin();
     
     // Print server URL
-    Serial.println("==============================");
-    Serial.println("Web Server Started");
-    Serial.print("Server URL: http://");
+    Serial.println(FPSTR(TAG_SERVER_HEADER));
+    Serial.println(FPSTR(TAG_SERVER_START));
+    Serial.print(FPSTR(TAG_SERVER_URL));
     Serial.print(WiFi.localIP().toString());
     Serial.print(":");
     Serial.println(port);
-    Serial.println("==============================");
+    Serial.println(FPSTR(TAG_SERVER_HEADER));
 }
 
 void WebServer::handleStatus(AsyncWebServerRequest* request) {
-    DynamicJsonDocument doc(1024);
+    // Use StaticJsonDocument with known size instead of DynamicJsonDocument
+    StaticJsonDocument<256> doc;
     
     // System status
     doc["uptime"] = millis();
@@ -112,7 +134,7 @@ void WebServer::handleStatus(AsyncWebServerRequest* request) {
 
 void WebServer::handleLatestImage(AsyncWebServerRequest* request) {
     if (!storage) {
-        request->send(503, "application/json", "{\"error\":\"Storage not available\"}");
+        request->send(503, "application/json", FPSTR(JSON_ERROR_STORAGE));
         return;
     }
     
@@ -121,7 +143,7 @@ void WebServer::handleLatestImage(AsyncWebServerRequest* request) {
     
     // Check if any images exist
     if (imageFiles.empty()) {
-        request->send(404, "application/json", "{\"error\":\"No images found\"}");
+        request->send(404, "application/json", FPSTR(JSON_ERROR_NO_IMAGES));
         return;
     }
     
@@ -134,14 +156,14 @@ void WebServer::handleLatestImage(AsyncWebServerRequest* request) {
 
 void WebServer::handleCapture(AsyncWebServerRequest* request) {
     if (!camera || !camera->isInitialized()) {
-        request->send(503, "application/json", "{\"error\":\"Camera not initialized\"}");
+        request->send(503, "application/json", FPSTR(JSON_ERROR_CAMERA));
         return;
     }
     
     // Trigger immediate image capture
     camera_fb_t* fb = camera->captureImage();
     if (!fb) {
-        request->send(500, "application/json", "{\"error\":\"Capture failed\"}");
+        request->send(500, "application/json", FPSTR(JSON_ERROR_CAPTURE));
         return;
     }
     
@@ -153,15 +175,15 @@ void WebServer::handleCapture(AsyncWebServerRequest* request) {
         imagePath = storage->saveImage(fb);
         if (imagePath.length() == 0) {
             camera->releaseFrameBuffer(fb);
-            request->send(500, "application/json", "{\"error\":\"Failed to save image\"}");
+            request->send(500, "application/json", FPSTR(JSON_ERROR_SAVE));
             return;
         }
     }
     
     camera->releaseFrameBuffer(fb);
     
-    // Return JSON with image path and size
-    DynamicJsonDocument doc(256);
+    // Return JSON with image path and size - use StaticJsonDocument
+    StaticJsonDocument<128> doc;
     doc["success"] = true;
     doc["path"] = imagePath;
     doc["size"] = imageSize;
@@ -174,7 +196,7 @@ void WebServer::handleCapture(AsyncWebServerRequest* request) {
 
 void WebServer::handleReboot(AsyncWebServerRequest* request) {
     // Send confirmation response
-    request->send(200, "application/json", "{\"message\":\"Rebooting...\"}");
+    request->send(200, "application/json", FPSTR(JSON_REBOOT));
     
     // Delay 1 second
     delay(1000);
