@@ -150,12 +150,14 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     String originalPath = fullPath;
     while (SD_MMC.exists(fullPath) && attempt < 1000) {
         // Modify filename to ensure uniqueness
+        // Find the last dot, but not if it's at the beginning (hidden file)
         int dotIndex = originalPath.lastIndexOf('.');
-        if (dotIndex >= 0) {
+        if (dotIndex > 0) {  // Dot is not at the beginning
             String baseName = originalPath.substring(0, dotIndex);
             String extension = originalPath.substring(dotIndex);
             fullPath = baseName + "_" + String(attempt) + extension;
         } else {
+            // No extension or dot file - append attempt number
             fullPath = originalPath + "_" + String(attempt);
         }
         attempt++;
@@ -203,10 +205,12 @@ bool StorageManager::saveMetadata(const String& imagePath, JsonDocument& metadat
     // Extract directory and filename from image path
     // Create JSON file path (same name, .json extension)
     String jsonPath = imagePath;
+    // Find the last dot, but not if it's at the beginning (hidden file)
     int dotIndex = jsonPath.lastIndexOf('.');
-    if (dotIndex >= 0) {
+    if (dotIndex > 0) {  // Dot is not at the beginning
         jsonPath = jsonPath.substring(0, dotIndex) + ".json";
     } else {
+        // No extension or dot file - append .json
         jsonPath += ".json";
     }
     
