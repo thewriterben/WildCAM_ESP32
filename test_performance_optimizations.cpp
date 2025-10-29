@@ -158,9 +158,18 @@ void test_snprintf_vs_string_constructor() {
     Serial.printf("String constructor method: %d bytes used\n", method1_used);
     Serial.printf("snprintf method: %d bytes used\n", method2_used);
     
-    // snprintf method should use less or equal heap than String constructor
-    // Allow 200 byte tolerance for heap fragmentation
-    TEST_ASSERT_GREATER_OR_EQUAL(method2_used - 200, method1_used);
+    // Verify snprintf method uses less or equal heap than String constructor
+    // Expected: method2_used <= method1_used (snprintf should use less)
+    // Allow tolerance for heap fragmentation - snprintf can use up to 200 bytes MORE
+    // in worst case due to fragmentation, but should generally be better
+    TEST_ASSERT_MESSAGE(method2_used <= method1_used + 200,
+                        "snprintf method should not use significantly more heap than String constructor");
+    
+    // Log performance ratio for visibility
+    if (method1_used > 0) {
+        float ratio = (float)method2_used / method1_used * 100.0f;
+        Serial.printf("snprintf uses %.1f%% of String constructor heap\n", ratio);
+    }
 }
 
 // ============================================================================
