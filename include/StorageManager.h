@@ -7,6 +7,7 @@
 #include <ArduinoJson.h>
 #include <esp_camera.h>
 #include <Preferences.h>
+#include <vector>
 
 class StorageManager {
 private:
@@ -44,6 +45,12 @@ public:
     
     // Print storage information to Serial
     void printStorageInfo();
+    
+    // Get list of image files (sorted by name, newest first)
+    std::vector<String> getImageFiles();
+    
+    // Get total image count
+    unsigned long getImageCount();
 };
 
 #endif // STORAGE_MANAGER_H
