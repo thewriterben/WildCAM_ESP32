@@ -114,6 +114,6 @@ void WebServer::handleCapture(AsyncWebServerRequest* request) {
 
 void WebServer::handleReboot(AsyncWebServerRequest* request) {
     request->send(200, "application/json", "{\"message\":\"Rebooting...\"}");
-    delay(1000);
+    delay(100);
     ESP.restart();
 }
