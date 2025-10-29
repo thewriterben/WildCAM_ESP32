@@ -3,46 +3,45 @@
 
 #include <Arduino.h>
 #include <SD_MMC.h>
+#include <FS.h>
+#include <ArduinoJson.h>
 #include <esp_camera.h>
 
 class StorageManager {
 private:
-    bool sdInitialized;
-    String baseDirectory;
+    bool initialized;
+    String basePath;
     unsigned long imageCounter;
     
-    // Generate unique filename
+    // Returns /YYYYMMDD
+    String getCurrentDatePath();
+    
+    // Returns IMG_HHMMSS_XXX.jpg
     String generateFilename();
 
 public:
     StorageManager();
     
     // Initialize SD card
-    bool begin();
+    bool init();
     
     // Save image to SD card
-    bool saveImage(camera_fb_t* fb, String& filepath);
+    String saveImage(camera_fb_t* fb, const String& customPath = "");
     
-    // Save image with custom filename
-    bool saveImage(camera_fb_t* fb, const String& filename, String& filepath);
+    // Save metadata as JSON
+    bool saveMetadata(const String& imagePath, JsonDocument& metadata);
     
-    // Get available space in MB
-    uint64_t getAvailableSpace();
+    // Delete old files (days to keep)
+    bool deleteOldFiles(int daysToKeep = 7);
     
-    // Get total space in MB
-    uint64_t getTotalSpace();
+    // Get free space in bytes
+    unsigned long getFreeSpace();
     
-    // Get number of stored images
-    int getImageCount();
+    // Get used space in bytes
+    unsigned long getUsedSpace();
     
-    // Delete old images if storage is low
-    bool cleanupOldImages(int keepCount);
-    
-    // Check if SD card is ready
-    bool isReady();
-    
-    // List files in directory
-    void listFiles(const String& dirname);
+    // Print storage information to Serial
+    void printStorageInfo();
 };
 
 #endif // STORAGE_MANAGER_H
