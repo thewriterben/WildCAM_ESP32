@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <WiFi.h>
 
 // Include all modular components
 #include "config.h"
@@ -13,7 +14,7 @@ MotionDetector motionDetector;
 CameraManager camera;
 StorageManager storage;
 PowerManager power;
-WebServer webServer(WIFI_SSID, WIFI_PASSWORD, WEB_SERVER_PORT);
+WebServer webServer(WEB_SERVER_PORT);
 
 // System state
 enum SystemState {
@@ -79,11 +80,31 @@ void setup() {
     // Initialize Web Server (if enabled)
     if (enableWebServer) {
         Serial.println("\n5. Initializing Web Server...");
-        if (webServer.begin()) {
-            Serial.println("   ✓ Web server started");
-            Serial.printf("   Access at: http://%s\n", webServer.getIPAddress().c_str());
+        
+        // Connect to WiFi
+        Serial.print("   Connecting to WiFi");
+        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+        int attempts = 0;
+        while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+            delay(500);
+            Serial.print(".");
+            attempts++;
+        }
+        
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println(" connected!");
+            Serial.printf("   IP Address: %s\n", WiFi.localIP().toString().c_str());
+            
+            // Initialize web server with manager references
+            if (webServer.init(&storage, &camera, &power)) {
+                webServer.begin();
+                Serial.println("   ✓ Web server started");
+            } else {
+                Serial.println("   ✗ Web server initialization failed");
+            }
         } else {
-            Serial.println("   ✗ Web server failed (continuing without WiFi)");
+            Serial.println(" failed!");
+            Serial.println("   ✗ WiFi connection failed");
         }
     } else {
         Serial.println("\n5. Web Server disabled (low power mode)");
