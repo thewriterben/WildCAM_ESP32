@@ -1,1236 +1,953 @@
-# 🦌 ESP32 WildCAM v2.0 - Advanced AI-Powered Wildlife Monitoring Platform
+# WildCAM_ESP32 - Motion-Activated Wildlife Camera
 
-**Professional-Grade Conservation Technology with Edge AI, Advanced Power Management, and Ecosystem Integration**
-
-[![Version](https://img.shields.io/badge/version-3.0.0-green.svg)](https://github.com/thewriterben/WildCAM_ESP32)
+[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](https://github.com/thewriterben/WildCAM_ESP32)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-ESP32-orange.svg)](https://www.espressif.com/en/products/socs/esp32)
-[![AI](https://img.shields.io/badge/AI-YOLO--tiny-red.svg)](https://github.com/ultralytics/yolov5)
-[![Security](https://img.shields.io/badge/security-Quantum--Safe-brightgreen.svg)](QUANTUM_SAFE_SECURITY.md)
+[![Platform](https://img.shields.io/badge/platform-ESP32--CAM-orange.svg)](https://www.espressif.com/en/products/socs/esp32)
+[![PlatformIO](https://img.shields.io/badge/PlatformIO-compatible-blue.svg)](https://platformio.org/)
 
-## 🚧 Project Status Overview
+> 📘 **Documentation Version:** This README covers the MVP v0.1.0 release with core functionality.  
+> For advanced enterprise features (v3.0+), see [README_ADVANCED.md](README_ADVANCED.md).
 
-### ✅ Working Now: Core Wildlife Camera System
-**Location**: `ESP32WildlifeCAM-main/`  
-**Status**: Production-ready core (68% complete)  
-**What Works**: Motion detection, camera capture, power management, SD storage, multi-board support  
-**Get Started**: See [ESP32WildlifeCAM-main/QUICK_START.md](ESP32WildlifeCAM-main/QUICK_START.md)
+## Project Status
 
-### 🔄 In Development: Enterprise Platform
-**Location**: Root-level `/firmware/`, `/backend/`, `/frontend/`  
-**Status**: Architectural framework (12-18 months to completion)  
-**What's Ready**: Code frameworks, system architecture, development roadmap  
-**Timeline**: See [ESP32WildlifeCAM-main/ROADMAP.md](ESP32WildlifeCAM-main/ROADMAP.md) for phased development plan
+**MVP v0.1.0 - Functional but in Early Development**
 
-**Quick Decision Guide**:
-- 🎯 **Need a working wildlife camera now?** → Start with `ESP32WildlifeCAM-main/`
-- 🏗️ **Want to contribute to enterprise features?** → See root platform development tasks
-- 📚 **Exploring architecture and vision?** → Review root-level documentation
+This is a minimal viable product (MVP) release of WildCAM_ESP32, a motion-activated wildlife camera built on the ESP32-CAM platform. The core functionality is working and ready for testing, but this is an early-stage project under active development.
 
-**Detailed Status**: See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for complete feature-by-feature breakdown
+### What Works ✅
 
----
+- **Motion-triggered image capture** - PIR sensor detects wildlife and triggers camera
+- **High-quality images** - UXGA resolution (1600x1200) with adjustable JPEG quality
+- **SD card storage** - Automatic file organization with timestamps
+- **JSON metadata** - Each image includes timestamp, battery level, and file info
+- **Battery monitoring** - Real-time voltage and percentage tracking
+- **Web interface** - Simple HTTP server for status and image viewing
+- **Deep sleep mode** - Power-efficient sleep between captures
+- **Watchdog timer** - Automatic recovery from crashes
 
-> **🎯 NEW TO WILDCAM?** Choose your path:
-> - **👤 Simple DIY Setup**: [Start with ESP32WildlifeCAM](ESP32WildlifeCAM-main/QUICK_START.md) - Basic monitoring in 30 minutes
-> - **🏢 Enterprise Platform**: Continue below for full platform with AI, cloud, and advanced features
-> - **🔄 Migrating?**: See [Consolidation Migration Guide](CONSOLIDATION_MIGRATION_GUIDE.md)
-> - **✅ Existing User?**: Check [Backward Compatibility Guide](BACKWARD_COMPATIBILITY.md) - Your setup works as-is!
+### What Doesn't Work Yet ⚠️
 
-## 🌟 Revolutionary Wildlife Monitoring Platform
+- **Advanced AI features** - Species detection and classification (planned for future)
+- **LoRa mesh networking** - Long-range communication (hardware dependent)
+- **Cloud integration** - Remote data sync and cloud storage
+- **Mobile app** - Dedicated mobile application
+- **MPPT solar charging** - Advanced battery management (basic monitoring only)
+- **Advanced analytics** - Data visualization and reporting
 
-Transform wildlife research and conservation with cutting-edge technology that combines:
-- **🤖 Edge AI Detection** - YOLO-tiny neural networks (🔄 Framework stage, models in development)
-- **🔋 Smart Power Management** - MPPT solar charging (🔄 Calibration in progress) with 30+ day battery life (✅ Validated in core system)
-- **🔐 Quantum-Safe Security** - Hybrid classical-quantum resistant encryption (🔄 Framework implementation ongoing)
-- **🌐 Real-Time Analytics** - React dashboard (🔄 UI components exist, backend integration in progress)
-- **📱 Mobile Integration** - React Native companion app (🔄 Framework stage)
-- **🛰️ Global Connectivity** - Mesh networking (🔄 Framework) with satellite communication support (📋 Interface design)
+This MVP provides a solid foundation for wildlife monitoring. We're actively working on additional features and welcome community contributions!
 
-## 🏗️ Advanced Modular Architecture
+## Features
 
-> 📖 **Developer Guide**: See [Related Code Content Guide](RELATED_CODE_CONTENT.md) for detailed component relationships and code navigation
+### Core Capabilities
+
+- 🎯 **Motion-triggered Image Capture** - PIR sensor detects motion and automatically captures images
+- 💾 **SD Card Storage with Metadata** - Images saved with JSON metadata including timestamps, battery level, and capture count
+- 🔋 **Battery Monitoring** - Real-time voltage monitoring and percentage calculation
+- 🌐 **Simple Web Interface** - Access camera status, view images, and check system health via web browser
+- ⚡ **Deep Sleep Power Management** - Efficient power usage with configurable sleep intervals
+- 🔁 **Automatic Recovery** - Watchdog timer prevents system hangs
+- 📊 **Status Logging** - Serial output for debugging and monitoring
+
+## Hardware Requirements
+
+### Required Components
+
+| Component | Specification | Estimated Cost | Notes |
+|-----------|---------------|----------------|-------|
+| **ESP32-CAM Board** | AI-Thinker ESP32-CAM with OV2640 camera | $10-15 | Main controller with integrated camera |
+| **MicroSD Card** | Class 10, 16GB-32GB, FAT32 formatted | $5-10 | For image storage |
+| **PIR Motion Sensor** | HC-SR501 or similar | $2-5 | Motion detection |
+| **USB-to-Serial Adapter** | FTDI, CP2102, or CH340 | $3-8 | For programming (not needed for ESP32-S3) |
+| **Power Supply** | 5V 2A USB adapter or 3.7V LiPo battery | $5-15 | Development or field deployment |
+| **MicroUSB Cable** | Data + power capable | $2-5 | For power and programming |
+| **Jumper Wires** | Female-to-female, 10cm | $2-5 | For PIR sensor connection |
+
+### Optional Components
+
+| Component | Specification | Estimated Cost | Purpose |
+|-----------|---------------|----------------|---------|
+| **LiPo Battery** | 3.7V 3000mAh+ with protection circuit | $8-15 | Portable power |
+| **Solar Panel** | 5V 5W with charge controller | $15-25 | Solar charging |
+| **Weatherproof Enclosure** | IP65 rated, clear window | $10-20 | Outdoor protection |
+| **Battery Monitor** | Voltage divider circuit or dedicated module | $2-5 | Better voltage accuracy |
+
+**Total Cost Estimate:**
+- **Basic Setup:** $25-50 (ESP32-CAM, SD card, PIR sensor, programmer, cables)
+- **Field Deployment:** $60-100 (includes battery, solar panel, enclosure)
+
+## Wiring Diagram
+
+### Pin Assignments Table
+
+| Component | ESP32-CAM Pin | Notes |
+|-----------|---------------|-------|
+| **PIR Sensor** | GPIO 13 | Motion detection input |
+| **Battery Monitor** | GPIO 33 (ADC) | Voltage divider recommended (2:1 ratio) |
+| **Flash LED** | GPIO 4 | Built-in flash control |
+| **SD Card** | Built-in SD_MMC | Uses pins 2, 4, 12, 13, 14, 15 (1-bit mode) |
+| **Camera** | Built-in | Uses dedicated camera pins |
+
+### Connection Diagram (ASCII)
 
 ```
-WildCAM_ESP32_v2.0/
-├── firmware/                 # ESP32 Firmware (C++)
-│   ├── hal/                 # Hardware Abstraction Layer
-│   ├── drivers/             # Sensor & Peripheral Drivers
-│   ├── ml_models/           # TinyML Models (YOLO-tiny, TensorFlow Lite)
-│   ├── networking/          # WiFi/LoRa/Mesh Protocols
-│   ├── power/               # MPPT Controller & Battery Management
-│   └── security/            # AES-256 Encryption & Hardware Security
-├── backend/                 # Python API Server
-│   ├── api/                 # RESTful/GraphQL APIs
-│   ├── processing/          # Image/Data Processing Pipeline
-│   ├── storage/             # Database Interfaces (InfluxDB/SQLite)
-│   └── ml_training/         # Model Training Pipeline
-├── frontend/                # Web & Mobile Interfaces
-│   ├── dashboard/           # React Monitoring Dashboard
-│   ├── mobile/              # React Native Companion App
-│   └── analytics/           # D3.js Data Visualizations
-└── edge_computing/          # Distributed Processing
-    ├── distributed/         # Multi-Node Coordination
-    └── consensus/           # Data Validation Algorithms
+┌─────────────────────────────────────────────┐
+│           ESP32-CAM (AI-Thinker)            │
+│                                             │
+│  ┌──────┐                                   │
+│  │Camera│                                   │
+│  │OV2640│                                   │
+│  └──────┘                                   │
+│                                             │
+│  [GPIO 13] ──────────────┐                  │
+│                          │                  │
+│  [GPIO 33] ──────────────┼──────────────┐   │
+│                          │              │   │
+│  [GPIO 4]  ──> Flash LED │              │   │
+│                          │              │   │
+│  [5V]  ────────────────┐ │              │   │
+│  [GND] ────────────────┼─┼──────────────┼───┤
+│                        │ │              │   │
+│  [MicroSD Slot]        │ │              │   │
+│    └─ SD Card          │ │              │   │
+│                        │ │              │   │
+└────────────────────────┼─┼──────────────┼───┘
+                         │ │              │
+                         │ │              │
+    ┌────────────────────┘ │              │
+    │  ┌───────────────────┘              │
+    │  │                                  │
+    │  │  ┌───────────────────────────────┘
+    │  │  │
+    ▼  ▼  ▼
+  ┌──────────┐         ┌──────────────┐
+  │   PIR    │         │   Battery    │
+  │  Sensor  │         │   Monitor    │
+  │ HC-SR501 │         │  (optional)  │
+  ├──────────┤         ├──────────────┤
+  │ VCC  5V  │◄────────┤ 3.7V Battery │
+  │ OUT  D13 │         │   Voltage    │
+  │ GND  GND │         │   Divider    │
+  └──────────┘         └──────────────┘
 ```
 
-## 🚀 Key Features & Performance
+### Wiring Instructions
 
-**Status Legend**: 
-- ✅ **Working** - Fully functional and tested in production
-- 🔄 **Framework** - Code structure exists, partial implementation, not production-ready
-- 📋 **Planned** - Design stage only, no implementation yet
+1. **PIR Sensor Connection:**
+   - VCC → ESP32-CAM 5V pin
+   - OUT → ESP32-CAM GPIO 13
+   - GND → ESP32-CAM GND
 
-### 🤖 Edge AI & Computer Vision
-- 🔄 **YOLO-tiny Detection**: Framework implementation exists, no trained model integrated (Est. 12-18 months)
-- 🔄 **Species Classification**: Code structure present, models not integrated (Est. 12-18 months)
-- 🔄 **Inference Speed**: Framework ready, optimization incomplete (Est. 12-18 months)
-- 📋 **Multi-Modal Fusion**: Design documentation only, not implemented
-- 📋 **Behavioral Patterns**: API defined, logic not implemented
-- 📋 **Federated Learning**: Planned feature for distributed model training (Est. 18-24 months)
+2. **Battery Monitor (Optional):**
+   - Create voltage divider: Battery+ → 10kΩ → GPIO 33 → 10kΩ → GND
+   - This allows monitoring up to 6.6V battery voltage
 
-### 🔋 Advanced Power Management
-- 🔄 **MPPT Solar Charging**: Framework exists, needs calibration (Est. 9-12 months)
-- 📋 **Weather Adaptation**: Planned feature, not implemented
-- ✅ **Battery Life**: 30+ days validated in core system (ESP32WildlifeCAM-main)
-- 🔄 **Energy Harvesting**: Basic tracking works, advanced analytics in progress
-- ✅ **Low Power Modes**: Deep sleep with sub-microamp consumption fully functional
+3. **Power Supply:**
+   - **USB Power:** Connect 5V 2A USB adapter to MicroUSB port
+   - **Battery Power:** Connect 3.7V LiPo to 5V and GND pins (use appropriate regulator)
 
-### 🔐 Quantum-Safe Security
-- 🔄 **Hybrid Encryption**: Framework code structure exists, integration incomplete (Est. 12-15 months)
-- 🔄 **Hash-Based Signatures**: Code framework present, testing incomplete (Est. 12-15 months)
-- 📋 **50+ Year Protection**: Conceptual design, implementation needed
-- 🔄 **Automatic Key Rotation**: Framework exists, automation not fully implemented
-- 🔄 **4 Security Levels**: Data structures defined, enforcement incomplete
-- 🔄 **Hardware Security**: ATECC608A driver exists, integration in progress (Est. 12-15 months)
-- **[Quick Start](QUANTUM_SAFE_QUICKSTART.md)** | **[Full Documentation](QUANTUM_SAFE_SECURITY.md)** | **[Implementation Summary](QUANTUM_SAFE_IMPLEMENTATION_SUMMARY.md)**
+4. **SD Card:**
+   - Insert FAT32-formatted MicroSD card (32GB max recommended)
+   - No wiring needed - uses built-in SD_MMC interface
 
-### 🌐 Networking & Communication
-- 🔄 **ESP-MESH**: Framework implementation exists, multi-hop untested (Est. 9-12 months)
-- 🔄 **LoRa Long Range**: Hardware drivers exist, protocol incomplete (Est. 9-12 months)
-- 📋 **🛰️ Satellite Communication**: Interface design only, hardware integration incomplete (Est. 12-15 months)
-  - API framework supports Swarm M138, RockBLOCK, Iridium 9603N
-  - Hardware interface partially working, protocol refinement needed
-  - Cost optimization and compression not yet implemented
-  - **Requires satellite subscriptions and extensive field testing**
-  - **[Quick Start Guide](ESP32WildlifeCAM-main/docs/SATELLITE_QUICK_START.md)** | **[Hardware BOM](ESP32WildlifeCAM-main/docs/SATELLITE_HARDWARE_BOM.md)** | **[Module Comparison](ESP32WildlifeCAM-main/docs/SATELLITE_MODULE_COMPARISON.md)**
-- 📋 **🌍 Global Conservation Network**: Architectural framework only (Est. 18-24 months)
-  - API framework defined, backend infrastructure not built
-  - Data structures exist, no implementation
-  - Requires multi-organization partnerships and legal compliance work
-  - **[Quick Start](ESP32WildlifeCAM-main/docs/GLOBAL_NETWORK_QUICKSTART.md)** | **[Full Documentation](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_NETWORK.md)** | **[API Reference](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_API.md)** | **[Deployment Guide](ESP32WildlifeCAM-main/docs/deployment/GLOBAL_NETWORK_DEPLOYMENT.md)**
-- 📋 **Load Balancing**: Design documentation only, not implemented
-- 🔄 **OTA Updates**: Basic framework exists, secure updates not fully implemented
+⚠️ **Important Notes:**
+- Never connect more than 3.3V directly to GPIO pins
+- Use voltage divider for battery monitoring (GPIO 33 is analog input)
+- PIR sensor requires 5V but output is 3.3V compatible
+- Ensure common ground connection for all components
 
-### 📊 Real-Time Analytics
-- 🔄 **Live Dashboard**: React components exist, backend integration incomplete (Est. 12-15 months)
-- 🔄 **Species Tracking**: UI mockups exist, data pipeline not implemented
-- 📋 **Activity Patterns**: Planning stage, no implementation
-- 📋 **Environmental Data**: Design stage, integration not started
-- 📋 **Conservation Metrics**: Design documentation only
-- 🔄 **Cloud Integration**: Docker/K8s configuration exists, production backend not deployed (Est. 9-12 months)
+## Software Requirements
 
-## 🛠️ Hardware Requirements
+### Required Software
 
-### Core Components
-| Component | Specification | Purpose |
-|-----------|---------------|---------|
-| **ESP32-CAM** | AI-Thinker/ESP32-S3 with 8MB PSRAM | Main processing unit |
-| **Camera Module** | OV2640/OV5640 with IR-cut filter | Wildlife imaging |
-| **PIR Sensor** | HC-SR501 motion detection | Trigger events |
-| **Environmental Sensors** | BME280 (temp/humidity/pressure) | Weather monitoring |
-| **Audio Module** | I2S microphone array | Bioacoustic detection |
-| **LoRa Module** | SX1276/SX1278 | Long-range communication |
-| **Solar Panel** | 5W mono-crystalline | Power generation |
-| **Battery** | 18650 Li-ion 3000mAh+ | Energy storage |
-| **Security Chip** | ATECC608A | Hardware encryption |
+1. **PlatformIO** (Recommended)
+   - Install via Visual Studio Code extension, or
+   - Install via command line: `pip install platformio`
+   - Download: https://platformio.org/install
 
-> ⚠️ **IMPORTANT - Hardware Selection Guide:**
-> 
-> **AI-Thinker ESP32-CAM** (Basic Configuration):
-> - ✅ Best for: Camera + Motion Detection + Environmental Sensors + SD Card
-> - ❌ Limited GPIO pins - Cannot support Camera + LoRa + Servos simultaneously
-> - 💰 Budget-friendly option for basic wildlife monitoring ($15-20)
-> 
-> **ESP32-S3-CAM** (⭐ Recommended for Full Features):
-> - ✅ Supports: Camera + LoRa + Servos + All Sensors + SD Card (no conflicts!)
-> - ✅ More RAM (8MB PSRAM), faster processing, USB OTG
-> - ✅ Additional GPIO pins (20+) for peripheral expansion
-> - 🌟 **Required for production deployments with LoRa mesh networking**
-> 
-> 📚 **Detailed Guides:**
-> - [Hardware Selection Guide](docs/HARDWARE_SELECTION_GUIDE.md) - Board comparison, cost analysis, use cases
-> - [GPIO Pin Conflicts](docs/GPIO_PIN_CONFLICTS.md) - Complete pin matrix and conflict resolution
-> - [Hardware Requirements](HARDWARE_REQUIREMENTS.md) - Component specifications
-> - [ESP32WildlifeCAM-main/README.md](ESP32WildlifeCAM-main/README.md) - Detailed pin assignments
+2. **Git** (For cloning repository)
+   - Download: https://git-scm.com/downloads
 
-### Optional Enhancements
-- **Thermal Camera**: FLIR Lepton for heat detection
-- **Servo Motors**: Pan/tilt camera control (**requires ESP32-S3-CAM**)
-- **GPS Module**: Precise location tracking
-- **🛰️ Satellite Modem**: Global connectivity (Swarm M138, RockBLOCK 9603, Iridium 9603N)
-- **SD Card**: Local data storage (32GB+)
+3. **USB Drivers** (If using USB-to-Serial adapter)
+   - CP2102: https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers
+   - CH340: http://www.wch.cn/downloads/CH341SER_ZIP.html
+   - FTDI: Usually pre-installed on most systems
 
-## ⚠️ Known Limitations
+### Required Libraries (Auto-installed by PlatformIO)
 
-### GPIO Pin Conflicts (AI-Thinker ESP32-CAM)
-The AI-Thinker ESP32-CAM has **limited available GPIO pins** (5-8 usable), preventing some feature combinations:
+The following libraries are automatically installed when you build the project:
 
-**❌ Cannot Use Together:**
-- Camera + LoRa Module (SPI pin conflicts on GPIO 18, 19, 23)
-- Camera + LoRa + Servo Motors (insufficient available pins)
-- Camera + Audio I2S (conflicts on GPIO 22, 25, 26)
-- Voltage monitoring on GPIO 34 with camera (used for camera Y8 data)
+- `espressif/esp32-camera@^2.0.4` - ESP32 camera driver
+- `bblanchon/ArduinoJson@^6.21.3` - JSON serialization for metadata
+- `me-no-dev/ESP Async WebServer@^1.2.3` - Asynchronous web server
+- `me-no-dev/AsyncTCP@^1.1.1` - Async TCP library for web server
 
-**✅ Supported Combinations:**
-- Camera + SD Card + Motion Detection (PIR) + Environmental Sensors (BME280)
-- Camera + SD Card + Power Management + Basic sensors + WiFi
-- Camera + WiFi + I2C sensors (shared I2C bus with camera)
+These dependencies are defined in `platformio.ini` and will be automatically downloaded during the first build.
 
-**🌟 Solution**: Use **ESP32-S3-CAM** for full feature support without pin conflicts.
+## Installation
 
-**📚 For Complete Details:**
-- **[GPIO Pin Conflicts Matrix](docs/GPIO_PIN_CONFLICTS.md)** - Complete pin-by-pin conflict analysis
-- **[Hardware Selection Guide](docs/HARDWARE_SELECTION_GUIDE.md)** - Board comparison and recommendations
+Follow these step-by-step instructions to get your WildCAM_ESP32 up and running:
 
-### Hardware-Specific Limitations
+### Step 1: Clone the Repository
 
-**AI-Thinker ESP32-CAM:**
-- LoRa mesh networking **disabled by default** (pin conflicts - compile error if enabled with camera)
-- Pan/tilt servo control **disabled by default** (insufficient GPIO - warning if multiple features)
-- Voltage monitoring **disabled by default** (conflicts with camera GPIO 34)
-- Limited to 4MB PSRAM (vs 8MB on S3)
-- No USB OTG support
-- **⚠️ Compile-time checks prevent invalid configurations** - see `firmware/config.h`
-
-**All ESP32-CAM Boards:**
-- Camera power consumption: ~200-300mA during capture
-- PSRAM required for high-resolution image processing
-- Flash memory conflicts on GPIO 6-11 (never use these pins)
-- GPIO 12 affects boot behavior if pulled HIGH
-
-### Features Requiring External Hardware
-
-**Not Included in Basic Setup:**
-- 📡 **LoRa Mesh**: Requires SX1276/SX1278 module + ESP32-S3-CAM board
-- 🛰️ **Satellite Communication**: Requires satellite modem + active subscription ($5-60/month)
-- 🌡️ **Environmental Monitoring**: Requires BME280 or similar I2C sensors
-- 📍 **GPS Tracking**: Requires GPS module (NEO-6M, NEO-M8N, etc.)
-- 🔋 **Battery Monitoring**: Requires voltage divider circuit + ADC pin
-- 🔐 **Hardware Security**: Requires ATECC608A secure element chip
-- 🎥 **Pan/Tilt Control**: Requires servo motors + ESP32-S3-CAM
-- 🔊 **Audio Detection**: Requires I2S or analog microphone module
-
-### Software/Framework Limitations
-
-**Enterprise Platform Features (Root Level):**
-- 🤖 **Edge AI**: Framework code exists - models not integrated, inference not operational
-- 🔐 **Quantum-Safe Security**: Framework code structure exists but integration incomplete
-- 🌐 **Global Conservation Network**: Architectural framework only, no backend infrastructure
-- 📊 **Real-Time Analytics**: Basic UI components exist, backend integration incomplete
-- ☁️ **Cloud Integration**: Docker/K8s configuration exists but production backend not deployed
-- 📋 **Federated Learning**: Planned feature for distributed model training, no implementation
-
-**See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for detailed feature-by-feature status.**
-
-### Board-Specific Notes
-
-**ESP32-S3-CAM (Recommended):**
-- ✅ More GPIO pins available
-- ✅ 8MB PSRAM for advanced processing
-- ✅ USB OTG support
-- ⚠️ Higher power consumption than regular ESP32
-
-**ESP-EYE:**
-- ✅ Built-in microphone for audio detection
-- ⚠️ Different pin configuration requires code modifications
-
-**TTGO T-Camera:**
-- ✅ Integrated display for debugging
-- ⚠️ Display uses pins that may conflict with other peripherals
-
-### Field Deployment Considerations
-
-- 🔋 **Battery Life**: Highly dependent on capture frequency and temperature
-- 📡 **LoRa Range**: Theoretical 10km requires line-of-sight; expect 1-3km in forests
-- ☀️ **Solar Charging**: Requires 5W+ panel; may not sustain operation in low-light seasons
-- 🌡️ **Temperature Range**: Standard components rated -20°C to 60°C; extreme climates require specialized parts
-- 💧 **Weatherproofing**: Custom enclosure required for outdoor deployment (see hardware/stl_files/)
-- 📶 **WiFi Range**: Limited to ~50-100m outdoors; not suitable for remote areas without mesh/LoRa
-
-## 🛰️ Satellite Communication (Interface Design Stage)
-
-**Vision**: Deploy wildlife monitoring in areas with no cellular or WiFi coverage.
-
-⚠️ **Current Status**: Interface design and partial framework (Est. 12-15 months to field-ready)
-- Hardware drivers partially implemented
-- Protocol development in early stages
-- **Requires satellite subscription and extensive field testing**
-- Not yet ready for production deployment
-
-### Planned Satellite Module Support
-
-| Module | Cost/Message | Target Use | Development Status |
-|--------|--------------|------------|-------------------|
-| **Swarm M138** | $0.05 | Budget deployments | 📋 Interface design stage |
-| **RockBLOCK 9603** | $0.04-0.14 | Professional reliability | 📋 Interface design stage |
-| **Iridium 9603N** | $0.50-1.00 | Mission-critical | 📋 Interface design stage |
-
-### Example Framework Code (Not Production-Ready)
-```cpp
-#include "satellite_integration.h"
-
-void setup() {
-    // Framework code example - not fully functional
-    if (SATELLITE_INIT()) {
-        satelliteIntegration.configureForEnvironment(true);
-    }
-}
-
-void loop() {
-    // Planned features - implementation incomplete
-    SATELLITE_WILDLIFE_ALERT("DEER", 0.85, imageData, imageSize);
-    
-    if (batteryLevel < 20) {
-        SATELLITE_EMERGENCY("LOW_BATTERY:" + String(batteryLevel) + "%");
-    }
-}
-```
-
-### Planned Features (In Development)
-- 🔄 **Global Coverage**: Hardware framework ready
-- 📋 **Cost Optimization**: Algorithm design stage
-- 📋 **Power Efficient**: Timing logic not implemented
-- 📋 **Emergency Alerts**: Framework exists, testing needed
-- 📋 **Two-Way Communication**: Basic protocol defined
-- 📋 **Message Compression**: Not yet implemented
-
-### Documentation (Design Stage)
-1. **[Quick Start Guide](ESP32WildlifeCAM-main/docs/SATELLITE_QUICK_START.md)** - Design documentation
-2. **[Hardware BOM](ESP32WildlifeCAM-main/docs/SATELLITE_HARDWARE_BOM.md)** - Component specifications
-3. **[Module Comparison](ESP32WildlifeCAM-main/docs/SATELLITE_MODULE_COMPARISON.md)** - Selection guide
-4. **[Full Documentation](ESP32WildlifeCAM-main/docs/SATELLITE_COMMUNICATION.md)** - Technical specifications
-
-**Note**: This feature requires active satellite service subscriptions ($5-60/month) and extensive field testing before production use.
-
-### Deployment Scenarios
-
-**Core System (ESP32WildlifeCAM-main)** has been tested in controlled environments and is suitable for:
-
-**✅ Validated Environments**:
-- 🏞️ **Temperate Forest** - Standard temperature range (-10°C to 40°C)
-- 🏡 **Garden/Backyard** - Ideal for learning and testing
-- 🏫 **Educational Projects** - Controlled indoor/outdoor use
-
-**🔄 Testing in Progress**:
-- 🌴 **Tropical Rainforest** - High humidity testing needed
-- 🏜️ **Arid Savanna** - Extended high-temperature validation required
-- ❄️ **Arctic/Alpine** - Sub-zero operation needs field testing
-
-**⚠️ Deployment Considerations**:
-- Standard components rated -20°C to 60°C
-- Weatherproof enclosure required (see hardware/stl_files/)
-- Battery life varies significantly with temperature and usage
-- Community field reports welcome to improve reliability data
-
-**Contribute Your Deployment**: If you deploy this system, please share your results via [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues) to help build real-world validation data.
-
-## 🗺️ Development Roadmap
-
-This section provides a realistic timeline for enterprise platform features currently in development.
-
-### Phase 1: Core System Stabilization (✅ Complete)
-**Timeline**: Completed  
-**Status**: Production-ready wildlife camera system available in `ESP32WildlifeCAM-main/`
-
-- ✅ Motion detection with PIR sensors
-- ✅ Camera capture and SD card storage
-- ✅ Basic power management and deep sleep
-- ✅ Multi-board support (AI-Thinker, ESP32-S3)
-- ✅ Documentation and quick start guides
-
-### Phase 2: Advanced Power & Sensors (🔄 In Progress - 6-9 months)
-**Target**: Q2-Q3 2026  
-**Focus**: Extended deployment capabilities
-
-- 🔄 MPPT solar charging calibration
-- 🔄 Advanced battery monitoring and analytics
-- 🔄 Additional sensor integration (GPS, environmental)
-- 🔄 Improved weatherproofing and enclosure designs
-- 🔄 Field testing in diverse environments
-
-### Phase 3: Networking Infrastructure (🔄 Early Stage - 9-12 months)
-**Target**: Q3-Q4 2026  
-**Focus**: Multi-node communication
-
-- 🔄 ESP-MESH multi-hop implementation and testing
-- 🔄 LoRa protocol completion for ESP32-S3
-- 🔄 OTA update system with security
-- 📋 Basic mesh network management
-- 📋 Network health monitoring
-
-### Phase 4: Edge AI Integration (🔄 Framework - 12-18 months)
-**Target**: Q2-Q3 2027  
-**Focus**: On-device intelligence
-
-- 🔄 YOLO-tiny model integration
-- 🔄 Species classification models
-- 🔄 Inference optimization for ESP32
-- 📋 Behavioral pattern detection
-- 📋 Multi-modal sensor fusion
-
-### Phase 5: Cloud & Analytics Platform (🔄 Partial - 12-15 months)
-**Target**: Q2-Q4 2027  
-**Focus**: Data processing and visualization
-
-- 🔄 Backend API production deployment
-- 🔄 Real-time dashboard with live feeds
-- 🔄 Cloud integration (AWS/Azure/GCP)
-- 📋 Species tracking and analytics
-- 📋 Conservation metrics reporting
-
-### Phase 6: Advanced Security (🔄 Framework - 12-15 months)
-**Target**: Q3-Q4 2027  
-**Focus**: Quantum-safe encryption
-
-- 🔄 Hybrid encryption integration
-- 🔄 Hardware security module integration (ATECC608A)
-- 🔄 Automatic key rotation implementation
-- 📋 Multi-level security enforcement
-- 📋 Audit and compliance features
-
-### Phase 7: Global Connectivity (📋 Planned - 12-24 months)
-**Target**: 2027-2028  
-**Focus**: Remote area deployment
-
-- 📋 Satellite communication production implementation
-- 📋 Cost optimization algorithms
-- 📋 Message compression and prioritization
-- 📋 Emergency alert system
-- 📋 Field testing in remote locations
-
-### Phase 8: International Collaboration (📋 Planned - 18-24 months)
-**Target**: 2028+  
-**Focus**: Worldwide conservation network
-
-- 📋 Global Conservation Network backend infrastructure
-- 📋 Multi-organization data sharing platform
-- 📋 Treaty compliance automation
-- 📋 Blockchain verification system
-- 📋 Multi-language support (20+ languages)
-- 📋 Federated learning for distributed model training
-
-### Contributing to the Roadmap
-
-We welcome community contributions to accelerate development:
-
-- 💻 **Code Contributions**: Help implement framework features
-- 🧪 **Testing**: Field test features in diverse environments
-- 📝 **Documentation**: Improve guides and tutorials
-- 💡 **Feature Requests**: Suggest improvements via GitHub Issues
-- 🤝 **Partnerships**: Organizations interested in collaboration
-
-**Note**: Timelines are estimates based on current development velocity and may adjust based on community contributions, funding, and field testing results.
-
-For detailed technical specifications, see [ESP32WildlifeCAM-main/ROADMAP.md](ESP32WildlifeCAM-main/ROADMAP.md).
-
-## 🌍 Global Conservation Network Platform (Architectural Framework)
-
-**Vision**: Connect WildCAM nodes to a worldwide conservation network for international collaboration.
-
-⚠️ **Current Status**: Architectural framework only (Est. 18-24 months to production)
-- API framework defined
-- Data structures exist, no implementation
-- **Requires backend infrastructure, partnerships, and legal compliance work**
-- Not yet functional
-
-### Planned Key Features
-
-- **🌐 International Collaboration**
-  - Real-time threat intelligence sharing across borders
-  - Multi-organization data sharing (UN agencies, NGOs, governments, research institutions, indigenous communities)
-  - Cross-border migratory species tracking with automated handoff
-  - 24/7 global conservation coordination across 7 regions (Africa, Asia, Europe, North America, South America, Oceania, Antarctica)
-
-- **📜 Treaty Compliance**
-  - Built-in support for 6 major international treaties
-  - CITES (Convention on International Trade in Endangered Species)
-  - CBD (Convention on Biological Diversity)
-  - CMS (Convention on Migratory Species)
-  - Ramsar (Wetlands Convention)
-  - WHC (World Heritage Convention)
-  - Automated compliance reporting and verification
-
-- **🔗 Blockchain Verification**
-  - Tamper-proof conservation outcome records
-  - Transparent impact verification for donors and stakeholders
-  - Automated audit trail generation
-  - Conservation funding optimization through verified results
-
-- **🚨 Global Emergency Response**
-  - Declare and coordinate conservation emergencies across borders
-  - Request international assistance for threats
-  - Multi-node emergency response coordination
-  - Priority alert propagation to affected regions
-
-- **🔬 Research Collaboration**
-  - Initiate international research projects
-  - Share findings with global research community
-  - Coordinate multi-organization studies
-  - Respect indigenous knowledge and cultural protocols
-
-### Example Framework Code (Not Functional)
-
-```cpp
-#include "production/enterprise/cloud/global_conservation_network.h"
-
-void setup() {
-    // Framework code - not yet implemented
-    if (initializeGlobalConservationNetwork("SERENGETI_001", REGION_AFRICA)) {
-        Serial.println("✓ Connected to global conservation network");
-    }
-    
-    // API designed but not implemented
-    g_globalConservationNetwork->enableTreatyCompliance(TREATY_CITES);
-    
-    // Data structures defined, logic incomplete
-    CrossBorderSpecies elephant;
-    elephant.speciesId = "ELEPHANT_COLLAR_A123";
-    elephant.scientificName = "Loxodonta africana";
-    elephant.migratoryStatus = MIGRATORY_INTERNATIONAL;
-    elephant.conservationStatus = "EN"; // Endangered
-    elephant.applicableTreaties = {TREATY_CITES, TREATY_CMS};
-    g_globalConservationNetwork->registerMigratorySpecies(elephant);
-}
-
-void loop() {
-    // Planned features - not yet functional
-    if (poachingDetected) {
-        shareGlobalThreatAlert(THREAT_POACHING, "Loxodonta africana", 0.9f);
-    }
-    
-    if (gpsUpdated) {
-        trackMigratorySpecies("ELEPHANT_COLLAR_A123", latitude, longitude);
-    }
-    
-    GlobalNetworkStats stats = getGlobalNetworkStats();
-    if (stats.networkHealth < 0.5f) {
-        Serial.println("⚠️ Network health degraded");
-    }
-}
-```
-
-### Supported Organization Types
-
-- **UN Agencies**: UNEP, UNESCO, UNDP
-- **NGOs**: WWF, IUCN, Conservation International, Wildlife Conservation Society
-- **Governments**: National parks, wildlife services, environmental agencies
-- **Research Institutions**: Universities, field stations, research centers
-- **Indigenous Organizations**: Traditional land management groups
-- **Community Organizations**: Local conservation groups
-
-### Multi-Language Support
-
-Built-in support for international collaboration in 20+ languages:
-- English, Spanish, French, German, Portuguese
-- Italian, Chinese, Japanese, Arabic, Russian
-- Swahili, Hindi, and more through extensible i18n system
-
-### Documentation & Resources
-
-1. **[Quick Start Guide](ESP32WildlifeCAM-main/docs/GLOBAL_NETWORK_QUICKSTART.md)** - Framework design documentation
-2. **[Full Documentation](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_NETWORK.md)** - Comprehensive platform guide (23KB)
-3. **[API Reference](ESP32WildlifeCAM-main/docs/GLOBAL_CONSERVATION_API.md)** - Complete API documentation (20KB)
-4. **[Deployment Guide](ESP32WildlifeCAM-main/docs/deployment/GLOBAL_NETWORK_DEPLOYMENT.md)** - Multi-continent deployment planning
-5. **[Example Code](ESP32WildlifeCAM-main/examples/global_conservation_network_example.cpp)** - Framework demonstration code
-
-### Planned Use Cases (Design Stage)
-
-The Global Conservation Network framework is envisioned for:
-- 🐘 Cross-border elephant tracking (📋 design specifications documented)
-- 🦁 International anti-poaching coordination (📋 framework architecture only)
-- 🐯 Tiger conservation collaboration (📋 API defined, not implemented)
-- 🦅 Migratory bird monitoring (📋 planning stage)
-- 🌊 Marine species protection (📋 planning stage)
-- 🌳 Rainforest conservation coordination (📋 planning stage)
-
-**Implementation Status**: Architectural framework exists. Requires backend infrastructure, multi-organization partnerships, and legal compliance work (Est. 18-24 months).
-
-### Integration with Existing Systems
-
-Seamlessly integrates with:
-- **ResearchCollaborationPlatform**: Research data sharing
-- **BlockchainManager**: Tamper-proof conservation records
-- **FederatedLearningSystem**: Global ML model coordination
-- **LoRaWildlifeAlerts**: Local alert propagation to global network
-- **Multi-language i18n**: International accessibility
-- **Satellite Communication**: Global connectivity for remote areas
-
-**Join the worldwide conservation network and make a global impact on wildlife protection!** 🌍🦁🐘🐯
-
-## 🎯 Choose Your Path
-
-WildCAM_ESP32 supports both **simple DIY setups** and **enterprise deployments**. Pick the path that matches your needs:
-
-### 👤 Path 1: Simple DIY / Budget Setup (30 minutes)
-
-**Perfect for**: Beginners, hobbyists, educational projects, budget-conscious deployments
-
-**Features**: Basic camera, motion detection, solar power, local storage
-
-**Documentation**: All content in `ESP32WildlifeCAM-main/` directory
-
-```bash
-# Clone repository
-git clone https://github.com/thewriterben/WildCAM_ESP32.git
-cd WildCAM_ESP32/ESP32WildlifeCAM-main/
-
-# Follow the simple setup guide
-cat QUICK_START.md
-
-# Build and deploy
-pio run -e esp32cam -t upload
-```
-
-📚 **Quick Links**:
-- [Simple Quick Start Guide](ESP32WildlifeCAM-main/QUICK_START.md)
-- [Hardware Requirements](ESP32WildlifeCAM-main/docs/HARDWARE_REQUIREMENTS.md)
-- [Assembly Instructions](ESP32WildlifeCAM-main/docs/ASSEMBLY_INSTRUCTIONS.md)
-- [Documentation Index](ESP32WildlifeCAM-main/docs/README.md)
-
----
-
-### 🏢 Path 2: Enterprise Platform (Full Features)
-
-**Perfect for**: Research organizations, conservation projects, professional deployments
-
-**Features**: Edge AI, satellite communication, cloud analytics, global network integration
-
-**Documentation**: Root level docs and platform guides
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-#### Required Hardware
-1. **ESP32-CAM Board** (Choose one):
-   - **AI-Thinker ESP32-CAM** - Budget option ($10-15) - Good for basic camera + sensors
-   - **ESP32-S3-CAM** - Recommended ($15-25) - Full feature support, no pin conflicts
-   - **Freenove ESP32-S3-CAM** - Alternative S3 option
-   - **XIAO ESP32-S3 Sense** - Compact form factor
-
-2. **MicroSD Card**: 
-   - Class 10, 32GB+ recommended
-   - FAT32 formatted
-
-3. **Power Supply**:
-   - USB power (5V 2A) for testing
-   - 3.7V LiPo battery (3000mAh+) for deployment
-   - Optional: 5W+ solar panel with charge controller
-
-4. **Motion Detection**:
-   - HC-SR501 PIR sensor (or similar)
-
-5. **Programming Hardware**:
-   - USB-to-Serial adapter (FTDI, CP2102, or CH340)
-   - OR ESP32-S3 with built-in USB (no adapter needed)
-
-#### Optional Hardware (for advanced features)
-- BME280 sensor for temperature/humidity/pressure
-- GPS module (NEO-6M or NEO-M8N)
-- LoRa module SX1276/SX1278 (**requires ESP32-S3-CAM**)
-- Servo motors for pan/tilt (**requires ESP32-S3-CAM**)
-
-#### Required Software
-- **PlatformIO** (recommended) or Arduino IDE
-- **Git** for version control
-- **Python 3.8+** (for validation scripts)
-- **USB drivers** for your ESP32 board (CP210x, CH340, or FTDI)
-
-### Step-by-Step Setup
-
-#### 1. Clone the Repository
 ```bash
 # Clone the repository
 git clone https://github.com/thewriterben/WildCAM_ESP32.git
-cd WildCAM_ESP32
 
-# Navigate to core system (production-ready)
-cd ESP32WildlifeCAM-main
+# Navigate to the project directory
+cd WildCAM_ESP32
 ```
 
-#### 2. Install PlatformIO
+### Step 2: Install PlatformIO
+
+Choose one of the following methods:
+
+**Method A: PlatformIO IDE (Recommended for beginners)**
+1. Install Visual Studio Code from https://code.visualstudio.com/
+2. Open VS Code
+3. Go to Extensions (Ctrl+Shift+X)
+4. Search for "PlatformIO IDE"
+5. Click Install
+6. Restart VS Code when prompted
+
+**Method B: Command Line**
 ```bash
-# Install PlatformIO using pip
+# Install Python 3 if not already installed
+# Then install PlatformIO
 pip install platformio
 
-# Or install PlatformIO IDE (VSCode extension)
-# Search for "PlatformIO IDE" in VSCode extensions
+# Verify installation
+pio --version
 ```
 
-#### 3. Configure Hardware Settings
+### Step 3: Edit Configuration
 
-**Edit `config.h` for your setup:**
+1. Open the project in VS Code or your preferred editor
+2. Edit `include/config.h` to configure WiFi and settings:
 
 ```cpp
-// Basic configuration
-#define CAMERA_MODEL_AI_THINKER  // or CAMERA_MODEL_ESP32S3_CAM
-#define SD_CARD_ENABLED true
-#define PIR_SENSOR_ENABLED true
+// WiFi Settings (required for web interface)
+#define WIFI_SSID "YourWiFiNetworkName"
+#define WIFI_PASSWORD "YourWiFiPassword"
 
-// WiFi settings (optional - for web interface)
-#define WIFI_SSID "YourNetworkName"
-#define WIFI_PASSWORD "YourPassword"
+// Pin Configuration (use defaults unless you have custom wiring)
+#define PIR_SENSOR_PIN 13
+#define BATTERY_MONITOR_PIN 33
+#define FLASH_LED_PIN 4
 
-// Pin assignments are in include/pins.h
-// Review and modify if using custom wiring
+// Camera Settings
+#define DEFAULT_JPEG_QUALITY 10  // Lower = better quality (1-63)
+#define DEFAULT_FRAME_SIZE FRAMESIZE_UXGA  // 1600x1200
+
+// Power Management
+#define DEEP_SLEEP_DURATION_SEC 300  // Sleep for 5 minutes
+#define BATTERY_LOW_THRESHOLD 3.3    // Low battery voltage
 ```
 
-**Important pin conflict checks:**
-- Review `include/pins.h` for pin assignments
-- If enabling LoRa, ensure you have ESP32-S3-CAM
-- Verify no GPIO conflicts with your sensor choices
+3. Save the file
 
-#### 4. Build and Upload Firmware
-
-**Using PlatformIO CLI:**
-```bash
-# For AI-Thinker ESP32-CAM
-pio run -e esp32cam -t upload
-
-# For ESP32-S3-CAM
-pio run -e esp32s3cam -t upload
-
-# Monitor serial output
-pio device monitor
-```
+### Step 4: Build the Firmware
 
 **Using PlatformIO IDE:**
-1. Open folder in VSCode with PlatformIO extension
-2. Select environment (esp32cam or esp32s3cam) in bottom bar
-3. Click "Upload" button (→)
-4. Open Serial Monitor to see output
+1. Open the project folder in VS Code
+2. Click the PlatformIO icon on the left sidebar
+3. Under "Project Tasks", expand "esp32cam"
+4. Click "Build"
+5. Wait for compilation to complete
 
-#### 5. Verify Firmware Operation
-
-After upload, check serial output for:
-```
-✓ Camera initialized
-✓ SD Card mounted
-✓ PIR sensor ready
-✓ System ready for motion detection
-```
-
-**Common upload issues:**
-- **"Failed to connect"**: Hold BOOT button while uploading, release after "Connecting..."
-- **"No serial port found"**: Install USB drivers for your board
-- **"Brownout detector"**: Use better power supply (2A minimum)
-
-#### 6. Test Basic Functionality
-
-**Test camera:**
-1. Access web interface at `http://esp32cam.local` (if WiFi enabled)
-2. Or trigger motion with PIR sensor
-3. Check SD card for captured images in `/WILDLIFE/IMAGES/`
-
-**Test motion detection:**
-1. Wave hand in front of PIR sensor
-2. LED should blink during capture
-3. Image saved to SD card with timestamp
-
-#### 7. Field Deployment Setup
-
-**For outdoor deployment:**
-1. **Weatherproof enclosure**: Use 3D printed case from `hardware/stl_files/`
-2. **Power**: Connect LiPo battery + solar panel with charge controller
-3. **Mounting**: Secure to tree/post at wildlife height (1-2m for most mammals)
-4. **SD card**: Use 32GB+ card, check weekly initially to tune sensitivity
-5. **Testing**: Run for 24h in test location before final deployment
-
-### Configuration Options
-
-**Motion Detection Tuning** (in `config.h`):
-```cpp
-#define PIR_TRIGGER_DELAY_MS 2000    // Delay before capture
-#define PIR_COOLDOWN_MS 5000          // Cooldown between captures
-#define PIR_SENSITIVITY_HIGH true     // High sensitivity for small animals
-```
-
-**Camera Settings**:
-```cpp
-#define DEFAULT_FRAMESIZE FRAMESIZE_UXGA  // 1600x1200
-#define DEFAULT_JPEG_QUALITY 12           // 10=high quality, 20=lower
-#define CAMERA_FB_COUNT 1                 // Frame buffers
-```
-
-**Power Management**:
-```cpp
-#define DEEP_SLEEP_DURATION_S 300  // 5 minutes between wakeups
-#define BATTERY_MIN_VOLTAGE 3.0    // Shutdown threshold
-```
-
-### Troubleshooting Setup Issues
-
-**Camera not initializing:**
-- Check camera module is properly seated
-- Verify correct CAMERA_MODEL in config.h
-- Try lower framesize (FRAMESIZE_SVGA)
-- Check 3.3V power supply is stable
-
-**SD card mount failed:**
-- Format card as FAT32
-- Use high-quality Class 10 card
-- Check SD_CARD_ENABLED is true
-- Verify SD card pins not conflicting with other peripherals
-
-**PIR sensor not triggering:**
-- Check PIR_SENSOR_PIN in pins.h matches wiring
-- Adjust PIR sensor potentiometers (sensitivity and delay)
-- Verify 5V power to PIR sensor
-- Test PIR with LED to confirm it's working
-
-**Serial connection issues:**
-- Install correct USB driver (CP210x, CH340, or FTDI)
-- Try different USB cable (some are charge-only)
-- Check baud rate is 115200
-- Hold BOOT button during upload
-
-**For more help, see:**
-- [ESP32WildlifeCAM-main/QUICK_START.md](ESP32WildlifeCAM-main/QUICK_START.md) - Detailed setup guide
-- [Troubleshooting](#-troubleshooting) section below
-- [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues)
-
-## ⚡ Enterprise Platform Setup (Advanced)
-
-**Note**: Enterprise features are in active development. The core system above is recommended for production use.
-
-### 1. Firmware Setup
+**Using Command Line:**
 ```bash
-# Clone repository
-git clone https://github.com/thewriterben/WildCAM_ESP32.git
-cd WildCAM_ESP32
-
-# Install PlatformIO
-pip install platformio
-
-# Build firmware (enterprise features)
-cd firmware
-pio run -e esp32cam_advanced
-
-# Upload to device
-pio run -e esp32cam_advanced --target upload
-```
-
-### 2. Backend API Server
-```bash
-# Install Python dependencies
-cd backend
-pip install flask flask-cors flask-socketio influxdb-client
-
-# Start API server
-python api/wildlife_api.py
-```
-
-### 3. React Dashboard
-```bash
-# Install Node.js dependencies
-cd frontend/dashboard
-npm install
-
-# Start development server
-npm start
-```
-
-### 4. Mobile App
-```bash
-# Install React Native dependencies
-cd frontend/mobile
-npm install
-
-# Start mobile app
-npx react-native run-android  # or run-ios
-```
-
-## 📋 Configuration Options
-
-### Firmware Configurations
-- `esp32cam_advanced` - Full featured ESP32-CAM
-- `esp32s3cam_ai` - Enhanced AI processing with ESP32-S3
-- `esp32cam_lowpower` - Power optimized for remote deployment
-- `esp32cam_mesh` - Mesh networking node
-- `esp32cam_satellite` - Satellite communication enabled
-- `esp32cam_production` - Production build with all features
-
-### AI Model Options
-- **Species Detection**: Deer, bears, birds, small mammals
-- **Behavior Analysis**: Feeding, resting, territorial behavior
-- **MobileNet**: Lightweight classification models
-- **YOLO-tiny**: Real-time object detection
-
-## 🌍 Ecosystem Integration
-
-### Conservation Platforms
-- **eBird**: Automated bird observation submissions
-- **iNaturalist**: Biodiversity database contributions
-- **GBIF**: Global biodiversity data sharing
-- **IUCN Red List**: Conservation status integration
-
-### Research Applications
-- **Population Monitoring**: Species abundance tracking
-- **Migration Studies**: Movement pattern analysis
-- **Behavioral Research**: Activity and interaction studies
-- **Climate Impact**: Environmental correlation analysis
-
-## 📈 Performance Metrics
-
-**Note**: Metrics below reflect the **core system** (ESP32WildlifeCAM-main) which is production-ready. Enterprise platform features are still under development.
-
-| Metric | Core System Status | Enterprise Platform Status |
-|--------|-------------------|---------------------------|
-| **Motion Detection Accuracy** | ✅ 98% (PIR + Vision) | N/A |
-| **Battery Life** | ✅ 30+ days validated | MPPT in progress (Est. 6+ months with optimization) |
-| **AI Inference Time** | 📋 Not implemented | 📋 Framework only (target <200ms) |
-| **Network Uptime** | 📋 Not applicable | 📋 Multi-node testing needed |
-| **Data Compression** | 📋 Not implemented | 📋 Planned feature |
-| **False Positive Rate** | ✅ <2% (Two-factor detection) | N/A |
-
-## 🔧 Troubleshooting
-
-### Compilation/Build Errors
-
-#### Error: "esp32-camera.h: No such file or directory"
-**Symptom**: Build fails with missing camera header file  
-**Solution**:
-```bash
-# Update PlatformIO libraries
-pio lib update
-
-# Or manually install
-pio lib install "espressif/esp32-camera@^2.0.4"
-```
-
-#### Error: "region `dram0_0_seg' overflowed"
-**Symptom**: Code too large for memory  
-**Solution**:
-1. Disable unused features in `config.h`:
-```cpp
-#define HAS_LORA false
-#define SATELLITE_ENABLED false
-#define WEB_SERVER_ENABLED false  // If not needed
-```
-2. Use custom partition table with more app space
-3. Enable compiler optimizations in platformio.ini
-
-#### Error: "GPIO pin conflicts detected"
-**Symptom**: Compile-time warning about pin conflicts  
-**Solution**:
-- Review `include/pins.h` for conflicting pin assignments
-- On AI-Thinker: Disable LoRa if using camera (pin conflict)
-- Consider upgrading to ESP32-S3-CAM for more GPIO pins
-
-#### Error: "Multiple libraries found for WiFi.h"
-**Symptom**: Ambiguous library references  
-**Solution**:
-```bash
-# Clean build environment
-pio run --target clean
-
-# Rebuild
+# Build the firmware
 pio run -e esp32cam
+
+# This will compile the code and download required libraries
 ```
 
-### Upload/Flashing Errors
+### Step 5: Upload to ESP32-CAM
 
-#### Error: "Failed to connect to ESP32"
-**Symptom**: Upload fails with connection timeout  
-**Solution**:
-1. Hold **BOOT** button on ESP32-CAM
-2. Click Upload
-3. Release BOOT when "Connecting..." appears
-4. Reset board after upload completes
+**Hardware Setup for Upload:**
+1. Connect your USB-to-Serial adapter to the ESP32-CAM:
+   - Adapter TX → ESP32-CAM RX (GPIO 3)
+   - Adapter RX → ESP32-CAM TX (GPIO 1)
+   - Adapter GND → ESP32-CAM GND
+   - Adapter 5V → ESP32-CAM 5V
+2. Connect GPIO 0 to GND on ESP32-CAM (enables programming mode)
+3. Connect USB adapter to computer
 
-#### Error: "A fatal error occurred: Timed out waiting for packet header"
-**Symptom**: Upload starts but fails mid-transfer  
-**Solution**:
-- Use higher quality USB cable (data + power)
-- Connect directly to computer (avoid USB hubs)
-- Lower upload speed in platformio.ini:
-```ini
-upload_speed = 115200  ; Instead of 460800
+**Upload Firmware:**
+
+Using PlatformIO IDE:
+1. Click "Upload" in PlatformIO toolbar
+2. Press the RESET button on ESP32-CAM when prompted
+3. Wait for upload to complete
+4. Disconnect GPIO 0 from GND
+5. Press RESET button to start firmware
+
+Using Command Line:
+```bash
+# Upload to ESP32-CAM
+pio run -e esp32cam -t upload
+
+# If upload fails, try:
+# 1. Press and hold BOOT/GPIO0 button
+# 2. Press RESET button
+# 3. Release RESET button
+# 4. Run upload command
+# 5. Release BOOT button when "Connecting..." appears
 ```
 
-#### Error: "No serial port detected"
-**Symptom**: PlatformIO can't find device  
-**Solution**:
-1. Install USB drivers:
-   - **CP210x**: [Download from Silicon Labs](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers)
-   - **CH340**: [Download from manufacturer](http://www.wch.cn/downloads/CH341SER_ZIP.html)
-   - **FTDI**: Usually built into OS
-2. Check Device Manager (Windows) or `ls /dev/tty*` (Linux/Mac)
-3. Try different USB port
+**Troubleshooting Upload Issues:**
+- **"Failed to connect"**: Make sure GPIO 0 is connected to GND
+- **"No serial port found"**: Install USB drivers for your adapter
+- **"Hash of data verified"**: Upload successful! Disconnect GPIO 0 and reset
 
-### Runtime Errors
+### Step 6: Verify Installation
 
-#### Error: "Camera initialization failed"
-**Symptom**: Camera doesn't start, error code -1  
-**Solution**:
-1. Check camera module connection (reseat ribbon cable)
-2. Verify correct camera model in config.h:
-```cpp
-#define CAMERA_MODEL_AI_THINKER  // or appropriate model
-```
-3. Try lower frame size:
-```cpp
-#define DEFAULT_FRAMESIZE FRAMESIZE_SVGA  // Instead of UXGA
-```
-4. Check power supply provides 2A+ current
-5. Verify no GPIO conflicts with camera pins
+After upload, open the serial monitor to verify operation:
 
-#### Error: "SD Card mount failed"
-**Symptom**: Cannot access SD card, mount error  
-**Solution**:
-1. Format SD card as FAT32 (not exFAT or NTFS)
-2. Use reputable brand (SanDisk, Samsung)
-3. Class 10, 32GB or less recommended
-4. Check SD card pins in `include/pins.h`
-5. Test card in computer first
-6. Try different SD card
+**Using PlatformIO IDE:**
+- Click "Serial Monitor" in PlatformIO toolbar
+- Select baud rate: 115200
 
-#### Error: "Brownout detector triggered"
-**Symptom**: Random resets, "Brownout detector was triggered"  
-**Solution**:
-1. Use 5V 2A+ power supply (phone chargers often insufficient)
-2. Add decoupling capacitor (100µF) near ESP32 power pins
-3. Reduce LED brightness or disable status LEDs
-4. Disable WiFi if not needed:
-```cpp
-WiFi.mode(WIFI_OFF);
+**Using Command Line:**
+```bash
+pio device monitor -b 115200
 ```
 
-#### Error: "Guru Meditation Error: Core 0 panic'ed"
-**Symptom**: System crashes with panic message  
-**Solution**:
-1. Enable exception decoder in serial monitor
-2. Check for:
-   - Memory leaks (heap fragmentation)
-   - Stack overflow (increase stack size in config.h)
-   - Null pointer dereference
-3. Add watchdog timer resets in long loops
-4. Review recent code changes
-
-#### Error: "PIR sensor constantly triggering"
-**Symptom**: False positives, continuous captures  
-**Solution**:
-1. Adjust PIR sensitivity (trim potentiometer on sensor)
-2. Increase PIR_COOLDOWN_MS in config.h:
-```cpp
-#define PIR_COOLDOWN_MS 10000  // 10 seconds
+**Expected Output:**
 ```
-3. Check PIR sensor placement (avoid direct sunlight, heaters)
-4. Enable two-factor detection to reduce false positives
-5. Add delay after motion before capture
+======================================
+   WildCAM ESP32 Wildlife Camera
+   Firmware Version: 1.0.0
+======================================
 
-#### Error: "WiFi connection failed"
-**Symptom**: Cannot connect to network  
-**Solution**:
-1. Verify credentials in config.h (case-sensitive)
-2. Check WiFi is 2.4GHz (ESP32 doesn't support 5GHz)
-3. Move closer to router
-4. Try static IP instead of DHCP
-5. Check router allows new device connections
+[INIT] Initializing Power Manager...
+Power Manager initialized
+Battery ADC: 2048, Voltage: 3.80V
+Battery Level: 65%
 
-### Hardware Debugging
+[INIT] Initializing Camera...
+Camera initialized successfully
 
-#### Checking Pin Assignments
-**Issue**: Uncertain if pins are correctly configured  
-**Steps**:
-1. Review `include/pins.h` for your board model
-2. Use multimeter to verify pin connections
-3. Test pins individually:
-```cpp
-void testPin(int pin) {
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, HIGH);
-  delay(1000);
-  digitalWrite(pin, LOW);
+[INIT] Initializing Storage...
+SD Card mounted successfully
+Storage Manager initialized
+
+[INIT] Initializing Motion Detector...
+Motion Detector initialized
+
+[INIT] Initializing Web Server...
+Connecting to WiFi: YourWiFiNetworkName
+Connected to WiFi
+IP Address: 192.168.1.XXX
+WebServer initialized successfully
+Web server started on port 80
+
+[READY] System initialization complete!
+```
+
+If you see this output, your WildCAM_ESP32 is successfully installed! 🎉
+
+## Usage
+
+### Powering On
+
+1. **Remove GPIO 0 from GND** (if still connected from programming)
+2. **Power the device:**
+   - Via USB: Connect 5V 2A USB adapter
+   - Via Battery: Connect charged 3.7V LiPo battery
+3. **Press RESET button** (if needed)
+4. **Wait for initialization** (about 5-10 seconds)
+5. **Check status LED** - Should blink during startup
+
+### Accessing the Web Interface
+
+The WildCAM_ESP32 provides a simple web interface for monitoring and configuration.
+
+#### Step 1: Find the IP Address
+
+Check the serial monitor for the IP address:
+```
+Connected to WiFi
+IP Address: 192.168.1.123
+```
+
+#### Step 2: Open Web Browser
+
+1. Connect your computer/phone to the same WiFi network
+2. Open a web browser
+3. Navigate to the IP address: `http://192.168.1.123`
+
+#### Step 3: Available Web Endpoints
+
+- **`/`** - Home page with basic info and navigation
+- **`/status`** - System status (JSON format):
+  ```json
+  {
+    "camera": "ok",
+    "storage": "ok", 
+    "motion": "ready",
+    "battery": 78,
+    "uptime": 1234,
+    "imageCount": 42
+  }
+  ```
+- **`/latest`** - View the most recently captured image
+- **`/capture`** - Manually trigger a photo capture
+- **`/images`** - List of all captured images
+
+### Retrieving Images from SD Card
+
+There are two ways to access your captured wildlife images:
+
+#### Method 1: Remove SD Card (Recommended)
+
+1. **Power off the ESP32-CAM** (disconnect power)
+2. **Remove the MicroSD card** from the slot
+3. **Insert SD card** into computer's card reader
+4. **Navigate to the images folder:**
+   - Images: `/WILDLIFE/IMAGES/`
+   - Metadata: `/WILDLIFE/METADATA/`
+5. **Copy images** to your computer
+6. **Safely eject** the SD card
+7. **Reinsert** into ESP32-CAM and power on
+
+#### Method 2: Web Interface
+
+1. Open web browser to device IP
+2. Navigate to `/images` endpoint
+3. Click on image links to view/download
+4. Right-click and "Save As" to download
+
+### Image File Organization
+
+Images are automatically organized on the SD card:
+
+```
+/WILDLIFE/
+├── IMAGES/
+│   ├── IMG_20241029_143022.jpg
+│   ├── IMG_20241029_143145.jpg
+│   └── IMG_20241029_150301.jpg
+└── METADATA/
+    ├── IMG_20241029_143022.json
+    ├── IMG_20241029_143145.json
+    └── IMG_20241029_150301.json
+```
+
+**Image Filename Format:** `IMG_YYYYMMDD_HHMMSS.jpg`
+- Example: `IMG_20241029_143022.jpg` = Image taken on Oct 29, 2024 at 14:30:22
+
+**Metadata JSON Format:**
+```json
+{
+  "timestamp": "2024-10-29T14:30:22",
+  "battery_voltage": 3.85,
+  "battery_percent": 75,
+  "image_size": 98234,
+  "image_count": 42
 }
 ```
 
-#### Verifying SD Card Integrity
-**Issue**: Corrupted files or mounting issues  
-**Steps**:
-```bash
-# Format SD card (Linux/Mac)
-sudo mkfs.vfat -F 32 /dev/sdX1
+### Normal Operation
 
-# Windows: Use SD Card Formatter tool
-# Check for bad sectors
-```
+Once powered on and initialized:
 
-#### Testing PIR Sensor
-**Issue**: Motion detection not working  
-**Steps**:
-1. Connect PIR output to LED + resistor to 3.3V
-2. Verify LED triggers on motion
-3. Adjust sensitivity and time delay potentiometers
-4. Test with serial output:
+1. **Standby Mode:**
+   - System waits for motion detection
+   - Low power consumption
+   - PIR sensor actively monitoring
+
+2. **Motion Detected:**
+   - LED blinks to indicate motion
+   - Short delay for stabilization (500ms)
+   - Image captured at UXGA resolution
+   - Image saved to SD card with timestamp
+   - Metadata JSON file created
+   - System returns to standby
+
+3. **Deep Sleep Mode:**
+   - Activates after no motion for configured duration
+   - Ultra-low power consumption
+   - Wakes up on motion or timer
+   - Preserves battery life
+
+### LED Status Indicators
+
+- **Rapid blinking** - Camera initialization
+- **Single blink** - Motion detected, capturing image
+- **Solid on** - Image being saved
+- **Off** - Standby or deep sleep mode
+
+## Configuration
+
+You can customize the behavior of your WildCAM_ESP32 by editing `include/config.h`. Here are the key configuration options:
+
+### WiFi Configuration
+
 ```cpp
-Serial.println(digitalRead(PIR_PIN));
+// WiFi network credentials
+#define WIFI_SSID "YourNetworkName"      // Your WiFi SSID
+#define WIFI_PASSWORD "YourPassword"     // Your WiFi password
+
+// Web server settings
+#define WEB_SERVER_PORT 80               // HTTP server port (default: 80)
+#define WEB_SOCKET_PORT 81              // WebSocket port (default: 81)
 ```
 
-#### Checking Battery/Solar System
-**Issue**: Battery not charging or draining quickly  
-**Steps**:
-1. Measure battery voltage with multimeter (should be 3.7-4.2V)
-2. Check solar panel output in sunlight (should be 5V+)
-3. Verify charge controller LED indicators
-4. Monitor battery percentage in serial output
-5. Calculate power consumption:
-```
-Active: ~300mA (camera on)
-Sleep: ~10µA (deep sleep)
-Average: depends on capture frequency
+### Camera Settings
+
+```cpp
+// Image quality settings
+#define DEFAULT_JPEG_QUALITY 10          // JPEG quality: 1-63 (lower = better)
+#define DEFAULT_FRAME_SIZE FRAMESIZE_UXGA // Camera resolution
+
+// Available frame sizes:
+// - FRAMESIZE_UXGA (1600x1200) - Highest quality, larger files
+// - FRAMESIZE_SXGA (1280x1024) - High quality, medium files  
+// - FRAMESIZE_XGA (1024x768)   - Good quality, smaller files
+// - FRAMESIZE_SVGA (800x600)   - Standard quality, small files
+// - FRAMESIZE_VGA (640x480)    - Lower quality, smallest files
 ```
 
-#### Verifying Camera Module
-**Issue**: Black images or no image capture  
-**Steps**:
-1. Check ribbon cable orientation (blue side typically faces PCB)
-2. Clean camera lens
-3. Test in good lighting first
-4. Verify camera model matches code
-5. Try basic ESP32-CAM example code first
+**Quality vs. File Size Trade-off:**
+- Quality 10 + UXGA: ~100KB per image, best quality
+- Quality 15 + SXGA: ~60KB per image, good quality
+- Quality 20 + XGA: ~40KB per image, acceptable quality
+
+### Motion Detection Settings
+
+```cpp
+// Motion sensor configuration
+#define PIR_SENSOR_PIN 13                // GPIO pin for PIR sensor
+#define MOTION_DEBOUNCE_MS 2000          // Ignore motion for 2s after trigger
+#define MOTION_COOLDOWN_MS 5000          // Wait 5s between captures
+#define IMAGE_CAPTURE_DELAY_MS 500       // Delay before capture (stabilization)
+
+// Motion sensitivity
+#define MOTION_SENSITIVITY 50            // 0-100 (higher = more sensitive)
+```
+
+**Tuning Tips:**
+- **High false positives?** Increase `MOTION_COOLDOWN_MS` to 10000 (10 seconds)
+- **Missing fast animals?** Decrease `IMAGE_CAPTURE_DELAY_MS` to 200
+- **Too many triggers?** Increase `MOTION_DEBOUNCE_MS` to 3000
+
+### Power Management
+
+```cpp
+// Battery monitoring
+#define BATTERY_MONITOR_PIN 33           // ADC pin for voltage reading
+#define BATTERY_LOW_THRESHOLD 3.3        // Low battery warning (volts)
+#define BATTERY_CRITICAL_THRESHOLD 3.0   // Critical battery shutdown (volts)
+#define BATTERY_VOLTAGE_MIN 3.3          // Minimum voltage (empty)
+#define BATTERY_VOLTAGE_MAX 4.2          // Maximum voltage (full)
+
+// Deep sleep settings
+#define DEEP_SLEEP_DURATION_SEC 300      // Sleep duration (seconds)
+                                         // 300 = 5 minutes
+                                         // 600 = 10 minutes
+                                         // 1800 = 30 minutes
+```
+
+**Battery Life Optimization:**
+- Increase `DEEP_SLEEP_DURATION_SEC` for longer battery life
+- Lower `DEFAULT_JPEG_QUALITY` number increases file size and processing time
+- Reduce `DEFAULT_FRAME_SIZE` to save processing power
+- Disable WiFi if not needed (comment out `#define WIFI_ENABLED`)
+
+### Storage Settings
+
+```cpp
+// SD card storage limits
+#define MAX_IMAGES_PER_DAY 1000          // Maximum images per day
+#define MAX_IMAGE_SIZE 100000            // Max file size in bytes (~100KB)
+#define AUTO_DELETE_DAYS 7               // Auto-delete images older than 7 days
+```
+
+**Storage Capacity:**
+- 16GB SD card: ~10,000-15,000 images (at default quality)
+- 32GB SD card: ~20,000-30,000 images (at default quality)
+
+### Pin Configuration
+
+```cpp
+// Hardware pin assignments
+#define PIR_SENSOR_PIN 13                // Motion sensor
+#define BATTERY_MONITOR_PIN 33           // Battery voltage (ADC)
+#define FLASH_LED_PIN 4                  // Flash LED
+#define SD_CS_PIN 5                      // SD card chip select (not used in SD_MMC mode)
+```
+
+⚠️ **Warning:** Only change pin assignments if you have custom hardware. Incorrect pin configuration can prevent the camera from working.
+
+### Applying Configuration Changes
+
+After editing `config.h`:
+
+1. **Save the file**
+2. **Rebuild the firmware:**
+   ```bash
+   pio run -e esp32cam
+   ```
+3. **Upload to ESP32-CAM:**
+   ```bash
+   pio run -e esp32cam -t upload
+   ```
+4. **Reset the device** and verify changes via serial monitor
+
+### Configuration Examples
+
+**Example 1: Long-term Wildlife Monitoring**
+```cpp
+#define DEFAULT_JPEG_QUALITY 15           // Medium quality
+#define DEFAULT_FRAME_SIZE FRAMESIZE_SXGA // 1280x1024
+#define DEEP_SLEEP_DURATION_SEC 600       // 10 minute sleep
+#define MOTION_COOLDOWN_MS 10000          // 10 second cooldown
+#define AUTO_DELETE_DAYS 14               // Keep 2 weeks
+```
+
+**Example 2: High-Quality Research**
+```cpp
+#define DEFAULT_JPEG_QUALITY 8            // Best quality
+#define DEFAULT_FRAME_SIZE FRAMESIZE_UXGA // 1600x1200
+#define DEEP_SLEEP_DURATION_SEC 300       // 5 minute sleep
+#define MOTION_COOLDOWN_MS 3000           // 3 second cooldown
+#define AUTO_DELETE_DAYS 0                // Never auto-delete
+```
+
+**Example 3: Maximum Battery Life**
+```cpp
+#define DEFAULT_JPEG_QUALITY 20           // Lower quality
+#define DEFAULT_FRAME_SIZE FRAMESIZE_SVGA // 800x600
+#define DEEP_SLEEP_DURATION_SEC 1800      // 30 minute sleep
+#define MOTION_COOLDOWN_MS 15000          // 15 second cooldown
+```
+
+## Known Issues
+
+This is an early MVP release. Here are the current known limitations and issues:
+
+### Hardware Limitations
+
+- **SD Card Compatibility:** Some SD cards (especially >32GB or non-Class 10) may not mount properly
+  - **Workaround:** Use 16GB or 32GB Class 10 cards, formatted as FAT32
+  
+- **PIR Sensor False Positives:** HC-SR501 sensors can trigger on temperature changes, sunlight, or plants
+  - **Workaround:** Adjust sensor sensitivity pot, increase `MOTION_COOLDOWN_MS`, enable two-factor detection in future versions
+
+- **Battery Voltage Reading Inaccuracy:** Simple voltage divider has ±10% accuracy
+  - **Workaround:** Calibrate voltage divider resistors, or use dedicated battery monitor IC
+
+- **Camera Power Consumption:** Camera draws 200-300mA during image capture
+  - **Impact:** Limits battery-only operation to a few days without solar
+  - **Workaround:** Use larger battery (5000mAh+) or add solar panel
+
+### Software Issues
+
+- **WiFi Connection Delays:** First WiFi connection can take 10-30 seconds
+  - **Status:** Normal behavior, no fix planned
+  
+- **Time/Date Not Persistent:** ESP32 lacks RTC, timestamps reset on power cycle
+  - **Planned Fix:** Add NTP sync over WiFi or external RTC module support
+
+- **Web Interface Basic:** Current web UI is minimal HTML, not mobile-optimized
+  - **Planned Fix:** Improved responsive web interface in v0.2.0
+
+- **No Image Thumbnails:** Full images loaded in web interface can be slow
+  - **Planned Fix:** Thumbnail generation in future version
+
+- **Limited Error Recovery:** Some SD card errors require manual reset
+  - **Planned Fix:** Better error handling and automatic retry logic
 
 ### Performance Issues
 
-#### Slow Capture Speed
-**Symptom**: Long delay between motion and capture  
-**Solution**:
-1. Reduce JPEG quality (increase quality number)
-2. Lower frame size
-3. Disable unnecessary processing
-4. Use PSRAM efficiently
+- **Slow SD Card Writes:** Image saving can take 1-3 seconds with slow SD cards
+  - **Workaround:** Use Class 10 or UHS-I rated cards
 
-#### High Power Consumption
-**Symptom**: Battery drains faster than expected  
-**Solution**:
-1. Increase deep sleep duration
-2. Disable WiFi when not needed
-3. Lower LED brightness
-4. Reduce capture frequency
-5. Check for busy-wait loops in code
+- **Memory Fragmentation:** After hundreds of captures, system may become unstable
+  - **Workaround:** Periodic resets (deep sleep helps)
+  - **Planned Fix:** Better memory management in v0.2.0
 
-#### Memory Errors
-**Symptom**: "Out of memory" or heap allocation failures  
-**Solution**:
-1. Free camera frame buffer after use:
-```cpp
-esp_camera_fb_return(fb);
+- **Serial Monitor Spam:** Verbose logging can slow down operation
+  - **Workaround:** Reduce debug level in `config.h` (set `CORE_DEBUG_LEVEL=1`)
+
+### Field Deployment Considerations
+
+- **Temperature Range:** Components rated for -20°C to 60°C only
+  - **Limitation:** Not suitable for extreme climates without specialized hardware
+
+- **Weatherproofing:** No official enclosure design provided yet
+  - **Workaround:** Use generic IP65 enclosure with clear window for camera
+
+- **Solar Charging:** Basic battery monitoring only, no MPPT charge controller
+  - **Limitation:** Inefficient solar charging
+  - **Planned Fix:** MPPT support in Phase 2
+
+### Reporting Issues
+
+Found a bug not listed here? Please help us improve!
+
+**Before reporting:**
+1. Check if the issue is already listed above
+2. Search [existing GitHub issues](https://github.com/thewriterben/WildCAM_ESP32/issues)
+3. Try basic troubleshooting (reboot, re-upload firmware, check connections)
+
+**To report a new issue:**
+1. Go to [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues/new)
+2. Provide:
+   - WildCAM version (v0.1.0)
+   - Hardware used (ESP32-CAM model, SD card brand/size, etc.)
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - Serial monitor output (if applicable)
+   - Photos of setup (if hardware related)
+
+We appreciate detailed bug reports - they help us fix issues faster! 🐛
+
+## Roadmap
+
+WildCAM_ESP32 is under active development. Here's what we're planning:
+
+### Phase 2: Enhanced Features (Q1 2025)
+
+- **Improved Power Management**
+  - MPPT solar charge controller support
+  - Advanced battery analytics
+  - Adaptive sleep schedules based on motion patterns
+  
+- **Better Time Keeping**
+  - NTP time sync over WiFi
+  - External RTC module support (DS3231)
+  - Persistent timestamps across power cycles
+
+- **Enhanced Web Interface**
+  - Mobile-responsive design
+  - Image gallery with thumbnails
+  - Real-time statistics dashboard
+  - Configuration page (no code editing needed)
+
+- **Additional Sensors**
+  - BME280 temperature/humidity/pressure
+  - GPS location tagging (optional)
+  - Light sensor for day/night detection
+
+### Phase 3: Intelligence (Q2-Q3 2025)
+
+- **Basic AI Features**
+  - On-device motion detection (reduce false positives)
+  - Simple animal vs. non-animal classification
+  - Size estimation
+
+- **Data Analytics**
+  - Activity pattern graphs
+  - Species frequency counts
+  - Time-of-day activity charts
+
+- **Improved Storage**
+  - Automatic image compression
+  - Duplicate detection
+  - Smart deletion (keep best images)
+
+### Phase 4: Connectivity (Q4 2025)
+
+- **LoRa Mesh Networking** (ESP32-S3 only)
+  - Multi-camera coordination
+  - Extended range communication
+  - Shared detection alerts
+
+- **Cloud Integration**
+  - Automatic image upload (WiFi)
+  - Remote monitoring dashboard
+  - Email/SMS alerts
+
+- **Mobile App**
+  - iOS and Android companion app
+  - Real-time notifications
+  - Remote configuration
+
+### Long-Term Vision (2026+)
+
+- **Advanced AI**
+  - Species-specific detection (deer, bear, fox, etc.)
+  - Behavioral analysis (feeding, running, resting)
+  - Individual animal recognition
+
+- **Conservation Platform**
+  - Multi-site wildlife tracking
+  - Researcher collaboration tools
+  - Citizen science integration (iNaturalist, eBird)
+
+- **Professional Features**
+  - Video recording support
+  - Thermal camera integration
+  - Advanced weatherproofing designs
+
+### Community Requests
+
+We're listening to the community! Vote on features or suggest new ones:
+- [Feature Requests](https://github.com/thewriterben/WildCAM_ESP32/discussions/categories/feature-requests)
+- [Discussion Forum](https://github.com/thewriterben/WildCAM_ESP32/discussions)
+
+**Want to contribute?** See the [Contributing](#contributing) section below! 🚀
+
+## Contributing
+
+We welcome contributions from the community! Whether you're a developer, wildlife enthusiast, or conservation researcher, there are many ways to help improve WildCAM_ESP32.
+
+### Ways to Contribute
+
+- 💻 **Code Contributions** - Bug fixes, new features, optimizations
+- 📝 **Documentation** - Improve guides, add tutorials, fix typos
+- 🧪 **Testing** - Field testing, bug reports, hardware compatibility
+- 🎨 **Design** - Web interface, enclosure designs, diagrams
+- 📊 **Data** - Share field deployment results and wildlife captures
+- 💡 **Ideas** - Feature suggestions and use case discussions
+
+### Getting Started
+
+1. **Read the Contributing Guide:** [CONTRIBUTING.md](CONTRIBUTING.md)
+2. **Check Open Issues:** [Good First Issues](https://github.com/thewriterben/WildCAM_ESP32/labels/good%20first%20issue)
+3. **Join Discussions:** [GitHub Discussions](https://github.com/thewriterben/WildCAM_ESP32/discussions)
+
+### Development Setup
+
+```bash
+# Fork the repository on GitHub
+
+# Clone your fork
+git clone https://github.com/YOUR_USERNAME/WildCAM_ESP32.git
+cd WildCAM_ESP32
+
+# Create a new branch
+git checkout -b feature/your-feature-name
+
+# Make your changes and test thoroughly
+
+# Commit with clear message
+git commit -m "Add feature: brief description"
+
+# Push to your fork
+git push origin feature/your-feature-name
+
+# Open a Pull Request on GitHub
 ```
-2. Monitor heap usage:
-```cpp
-Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
-```
-3. Use PSRAM for large allocations
-4. Reduce image buffer size
 
-### Getting More Help
+### Code Style Guidelines
 
-**Before asking for help, gather this information:**
-1. Board model and version
-2. PlatformIO version (`pio --version`)
-3. Full error message from serial monitor
-4. Hardware configuration (sensors, SD card, etc.)
-5. Modifications made to default code
+- Follow existing code formatting and style
+- Add comments for complex logic
+- Update documentation for new features
+- Test on real hardware before submitting
+- Include example usage in comments
 
-**Support Resources:**
-- 📖 [Detailed Documentation](ESP32WildlifeCAM-main/docs/README.md)
-- 🐛 [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues) - Report bugs
-- 💬 [Discussions](https://github.com/thewriterben/WildCAM_ESP32/discussions) - Ask questions
-- 📧 Email: wildlife-tech@example.com
-- 🔍 [Search existing issues](https://github.com/thewriterben/WildCAM_ESP32/issues?q=is%3Aissue) first
+### Pull Request Process
 
-**Include in bug reports:**
-```cpp
-// System info
-Serial.printf("ESP32 Chip: %s\n", ESP.getChipModel());
-Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
-Serial.printf("PSRAM: %d\n", ESP.getPsramSize());
-```
+1. **Ensure your PR:**
+   - Has a clear description of changes
+   - Links to related issues (if applicable)
+   - Includes updated documentation
+   - Has been tested on ESP32-CAM hardware
 
-## 🔄 Repository Consolidation Notice
+2. **PR Review:**
+   - Maintainers will review within 1-2 weeks
+   - Address any requested changes
+   - Once approved, PR will be merged
 
-**ESP32WildlifeCAM** has been consolidated into **WildCAM_ESP32** to provide a unified, actively maintained platform.
+3. **After Merge:**
+   - You'll be credited in release notes
+   - Your changes will be in the next version
+
+### Community Guidelines
+
+- Be respectful and constructive
+- Help newcomers get started
+- Share your field deployment experiences
+- Report bugs with detailed information
+- Suggest features with clear use cases
+
+### Recognition
+
+Contributors will be acknowledged in:
+- Release notes
+- CONTRIBUTORS.md file
+- Project documentation
+
+**Thank you for helping make WildCAM_ESP32 better!** 🙏
+
+For detailed contributing guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ### What This Means
 
-✅ **All ESP32WildlifeCAM content preserved** in `ESP32WildlifeCAM-main/` directory  
-✅ **Backward compatible** - Existing setups work without changes  
-✅ **Enhanced features** - Access to enterprise platform capabilities when needed  
-✅ **Single repository** - Easier maintenance and updates  
-✅ **Clear documentation** - Separate guides for simple and advanced users
+✅ **You can:**
+- Use this project for commercial purposes
+- Modify and distribute your changes
+- Use in private projects
+- Sublicense the code
 
-### For Users
+❌ **You must:**
+- Include the original copyright notice
+- Include a copy of the license
 
-- **Simple DIY users**: Continue using `ESP32WildlifeCAM-main/` - no changes needed
-- **Enterprise users**: Access full platform features in root directories
-- **Migrating users**: See [Consolidation Migration Guide](CONSOLIDATION_MIGRATION_GUIDE.md)
-- **Existing setups**: See [Backward Compatibility Guide](BACKWARD_COMPATIBILITY.md) - Everything works as-is!
+⚠️ **No Warranty:**
+- Software provided "as is" without warranty
+- Authors not liable for any damages
 
-### Legacy Repository
+### Third-Party Licenses
 
-If you were using the standalone ESP32WildlifeCAM repository:
-- All features and documentation are preserved here
-- Update your git remotes to point to WildCAM_ESP32
-- Follow the [migration guide](CONSOLIDATION_MIGRATION_GUIDE.md) for smooth transition
-- Check [backward compatibility](BACKWARD_COMPATIBILITY.md) for testing your existing setup
+This project uses the following open-source libraries:
+
+- **ESP32 Arduino Core** - LGPL 2.1
+- **ESP32 Camera Driver** - Apache 2.0
+- **ArduinoJson** - MIT License
+- **ESPAsyncWebServer** - LGPL 3.0
+- **AsyncTCP** - LGPL 3.0
+
+Full license texts for dependencies can be found in their respective repositories.
 
 ---
 
-## 🤝 Contributing
+## Support & Community
 
-We welcome contributions from the conservation technology community!
+### Getting Help
 
-### Development Areas
-- **AI Models**: New species detection models
-- **Hardware Drivers**: Additional sensor support
-- **Network Protocols**: Enhanced communication methods
-- **Mobile Features**: Field deployment tools
-- **Analytics**: Advanced data visualization
+- 📖 **Documentation:** You're reading it!
+- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues)
+- 💬 **Discussions:** [GitHub Discussions](https://github.com/thewriterben/WildCAM_ESP32/discussions)
+- 📧 **Email:** wildlife-tech@example.com
 
-### Getting Started
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests and documentation
-5. Submit a pull request
+### Stay Updated
 
-## 📜 License
+- ⭐ **Star this repo** to get updates
+- 👀 **Watch** for new releases
+- 🔔 **Subscribe** to discussions for community posts
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Show Your Support
 
-## 🙏 Acknowledgments
+If you find WildCAM_ESP32 useful for wildlife conservation or research:
 
-- **TensorFlow Lite** team for microcontroller ML support
-- **ESP32** community for embedded development resources
-- **Conservation organizations** for field testing and feedback
-- **Open source contributors** making wildlife technology accessible
+- ⭐ Star this repository
+- 🐦 Share on social media
+- 📸 Share your wildlife photos captured with WildCAM!
+- 💝 Sponsor the project (GitHub Sponsors - coming soon)
 
-## 📞 Support & Community
+### Photo Gallery
 
-- **Documentation**: [Wiki](https://github.com/thewriterben/WildCAM_ESP32/wiki)
-- **Code Navigation**: [Related Code Content Guide](RELATED_CODE_CONTENT.md) - Cross-reference guide for finding related components
-- **Issues**: [GitHub Issues](https://github.com/thewriterben/WildCAM_ESP32/issues)  
-- **Discussions**: [GitHub Discussions](https://github.com/thewriterben/WildCAM_ESP32/discussions)
-- **Email**: wildlife-tech@example.com
+We'd love to see what you capture with WildCAM_ESP32! Share your best wildlife photos:
+- Post in [Show and Tell](https://github.com/thewriterben/WildCAM_ESP32/discussions/categories/show-and-tell)
+- Tag us on social media with #WildCAM_ESP32
+- Contribute to citizen science platforms (iNaturalist, eBird)
 
 ---
 
 <div align="center">
 
-**🦌 Help us protect wildlife through technology! 🦌**
+**🦌 Help us protect wildlife through accessible technology! 🦌**
 
-*Star this repository if you find it useful for conservation efforts*
+Made with ❤️ for wildlife conservation
 
 [![GitHub stars](https://img.shields.io/github/stars/thewriterben/WildCAM_ESP32.svg?style=social&label=Star)](https://github.com/thewriterben/WildCAM_ESP32)
 [![GitHub forks](https://img.shields.io/github/forks/thewriterben/WildCAM_ESP32.svg?style=social&label=Fork)](https://github.com/thewriterben/WildCAM_ESP32/fork)
