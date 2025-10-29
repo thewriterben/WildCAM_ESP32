@@ -12,7 +12,7 @@
 MotionDetector motionDetector;
 CameraManager camera;
 StorageManager storage;
-PowerManager power(BATTERY_ADC_PIN);
+PowerManager power;
 WebServer webServer(WIFI_SSID, WIFI_PASSWORD, WEB_SERVER_PORT);
 
 // System state
@@ -37,18 +37,17 @@ void setup() {
     
     // Initialize Power Manager first
     Serial.println("1. Initializing Power Manager...");
-    if (power.begin()) {
-        Serial.println("   ✓ Power Manager initialized");
-        
-        // Check battery status
-        float batteryVoltage = power.getBatteryVoltage();
-        int batteryPercent = power.getBatteryPercentage();
-        Serial.printf("   Battery: %.2fV (%d%%)\n", batteryVoltage, batteryPercent);
-        
-        if (power.isBatteryLow()) {
-            Serial.println("   ⚠ WARNING: Battery low!");
-            enableWebServer = false;  // Disable web server to save power
-        }
+    power.init(BATTERY_ADC_PIN);
+    Serial.println("   ✓ Power Manager initialized");
+    
+    // Check battery status
+    float batteryVoltage = power.getBatteryVoltage();
+    int batteryPercent = power.getBatteryPercentage();
+    Serial.printf("   Battery: %.2fV (%d%%)\n", batteryVoltage, batteryPercent);
+    
+    if (power.isLowBattery()) {
+        Serial.println("   ⚠ WARNING: Battery low!");
+        enableWebServer = false;  // Disable web server to save power
     }
     
     // Initialize Camera
@@ -139,9 +138,9 @@ void loop() {
         Serial.printf("Battery check: %.2fV (%d%%)\n", voltage, percent);
         
         // Enter deep sleep if battery is critically low, regardless of web server status
-        if (power.isBatteryLow()) {
+        if (power.isLowBattery()) {
             Serial.println("Battery critically low - entering deep sleep");
-            power.configureWakeup(PIR_SENSOR_PIN);
+            power.configureWakeOnMotion(PIR_SENSOR_PIN);
             power.enterDeepSleep(DEEP_SLEEP_DURATION);
         }
         
