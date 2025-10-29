@@ -1,0 +1,28 @@
+{
+  "category": "deer",
+  "labels": [
+    "white_tailed_deer",
+    "mule_deer",
+    "elk",
+    "moose",
+    "caribou",
+    "unknown"
+  ],
+  "num_classes": 6,
+  "label_to_index": {
+    "white_tailed_deer": 0,
+    "mule_deer": 1,
+    "elk": 2,
+    "moose": 3,
+    "caribou": 4,
+    "unknown": 5
+  },
+  "index_to_label": {
+    "0": "white_tailed_deer",
+    "1": "mule_deer",
+    "2": "elk",
+    "3": "moose",
+    "4": "caribou",
+    "5": "unknown"
+  }
+}

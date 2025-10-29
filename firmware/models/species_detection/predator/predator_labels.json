@@ -1,0 +1,31 @@
+{
+  "category": "predator",
+  "labels": [
+    "black_bear",
+    "mountain_lion",
+    "gray_wolf",
+    "coyote",
+    "bobcat",
+    "lynx",
+    "unknown"
+  ],
+  "num_classes": 7,
+  "label_to_index": {
+    "black_bear": 0,
+    "mountain_lion": 1,
+    "gray_wolf": 2,
+    "coyote": 3,
+    "bobcat": 4,
+    "lynx": 5,
+    "unknown": 6
+  },
+  "index_to_label": {
+    "0": "black_bear",
+    "1": "mountain_lion",
+    "2": "gray_wolf",
+    "3": "coyote",
+    "4": "bobcat",
+    "5": "lynx",
+    "6": "unknown"
+  }
+}

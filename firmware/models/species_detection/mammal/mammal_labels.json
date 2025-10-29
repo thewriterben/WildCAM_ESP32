@@ -1,0 +1,31 @@
+{
+  "category": "mammal",
+  "labels": [
+    "raccoon",
+    "squirrel",
+    "rabbit",
+    "opossum",
+    "skunk",
+    "beaver",
+    "unknown"
+  ],
+  "num_classes": 7,
+  "label_to_index": {
+    "raccoon": 0,
+    "squirrel": 1,
+    "rabbit": 2,
+    "opossum": 3,
+    "skunk": 4,
+    "beaver": 5,
+    "unknown": 6
+  },
+  "index_to_label": {
+    "0": "raccoon",
+    "1": "squirrel",
+    "2": "rabbit",
+    "3": "opossum",
+    "4": "skunk",
+    "5": "beaver",
+    "6": "unknown"
+  }
+}
