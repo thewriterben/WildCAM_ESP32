@@ -1,5 +1,69 @@
+/**
+ * @file main.cpp
+ * @brief WildCAM ESP32 Wildlife Camera Main Application
+ * @version 1.0.0
+ * 
+ * This is the main application that integrates all modules into a functional
+ * wildlife camera system.
+ * 
+ * FEATURES IMPLEMENTED:
+ * 
+ * 1. Global Objects:
+ *    - All manager class instances created (PowerManager, StorageManager, 
+ *      CameraManager, MotionDetector, WebServer)
+ *    - State variables for tracking system operation (lastMotionTime, imageCount)
+ * 
+ * 2. setup() function:
+ *    - Serial communication initialized at 115200 baud
+ *    - Welcome banner with firmware version displayed
+ *    - All managers initialized in proper order:
+ *      a. PowerManager
+ *      b. CameraManager  
+ *      c. StorageManager
+ *      d. MotionDetector
+ *      e. WebServer (if WiFi enabled and battery sufficient)
+ *    - Battery level checked; deep sleep entered if critical
+ *    - Wake-up sources configured (motion sensor and timer)
+ *    - Error handling: system halts on initialization failure
+ *    - Watchdog timer initialized for crash recovery
+ * 
+ * 3. loop() function:
+ *    - Watchdog timer fed to prevent resets
+ *    - Motion detection monitoring
+ *    - When motion detected:
+ *      a. Motion detection message printed
+ *      b. Stabilization delay applied (IMAGE_CAPTURE_DELAY_MS)
+ *      c. Image captured using CameraManager
+ *      d. If capture successful:
+ *         i. Image saved using StorageManager
+ *         ii. Metadata JSON created (timestamp, battery, image size, count)
+ *         iii. Metadata saved to SD card
+ *         iv. Frame buffer released
+ *         v. Image counter incremented
+ *      e. If capture failed, error logged to SD card
+ *    - Battery level checked periodically (every 60 seconds)
+ *    - Deep sleep entered if no motion for DEEP_SLEEP_DURATION
+ *    - CPU spin prevention with 100ms delay
+ * 
+ * 4. Error Handling:
+ *    - Initialization failures halt the system with error message
+ *    - Watchdog timer implemented for crash recovery (30 second timeout)
+ *    - All errors logged to /error.log on SD card
+ * 
+ * 5. State Management:
+ *    - System states: IDLE, MOTION_DETECTED, CAPTURING, SAVING, SLEEPING
+ *    - State machine tracks current operation mode
+ *    - State transitions logged to Serial
+ * 
+ * @author WildCAM Project
+ * @date 2024
+ */
+
 #include <Arduino.h>
 #include <WiFi.h>
+#include <esp_task_wdt.h>
+#include <ArduinoJson.h>
+#include <SD_MMC.h>
 
 // Include all modular components
 #include "config.h"
@@ -21,12 +85,20 @@ enum SystemState {
     IDLE,
     MOTION_DETECTED,
     CAPTURING,
-    PROCESSING,
+    SAVING,
     SLEEPING
 };
 
 SystemState currentState = IDLE;
 bool enableWebServer = true;  // Set to false for low-power operation
+
+// State tracking variables
+unsigned long lastMotionTime = 0;
+unsigned long imageCount = 0;
+unsigned long lastBatteryCheck = 0;
+
+// Watchdog timeout (30 seconds)
+#define WDT_TIMEOUT 30
 
 void setup() {
     Serial.begin(115200);
@@ -34,17 +106,39 @@ void setup() {
     
     Serial.println("\n=================================");
     Serial.println("  WildCAM ESP32 Starting Up");
+    Serial.print("  Firmware Version: ");
+    Serial.println(FIRMWARE_VERSION);
     Serial.println("=================================\n");
+    
+    // Initialize watchdog timer for crash recovery
+    Serial.println("Initializing watchdog timer...");
+    esp_task_wdt_init(WDT_TIMEOUT, true);
+    esp_task_wdt_add(NULL);
+    Serial.println("   ✓ Watchdog timer initialized\n");
     
     // Initialize Power Manager first
     Serial.println("1. Initializing Power Manager...");
-    power.init(BATTERY_ADC_PIN);
+    if (!power.init(BATTERY_ADC_PIN)) {
+        Serial.println("   ✗ Power Manager initialization failed!");
+        Serial.println("\nSystem halted due to initialization failure.");
+        while (true) {
+            delay(1000);
+        }
+    }
     Serial.println("   ✓ Power Manager initialized");
     
     // Check battery status
     float batteryVoltage = power.getBatteryVoltage();
     int batteryPercent = power.getBatteryPercentage();
     Serial.printf("   Battery: %.2fV (%d%%)\n", batteryVoltage, batteryPercent);
+    
+    // Check for critical battery - enter deep sleep immediately
+    if (batteryVoltage < BATTERY_CRITICAL_THRESHOLD) {
+        Serial.println("   ⚠ CRITICAL: Battery critically low!");
+        Serial.println("   Entering deep sleep to protect battery...");
+        power.configureWakeOnMotion(PIR_SENSOR_PIN);
+        power.enterDeepSleep(DEEP_SLEEP_DURATION);
+    }
     
     if (power.isLowBattery()) {
         Serial.println("   ⚠ WARNING: Battery low!");
@@ -53,29 +147,38 @@ void setup() {
     
     // Initialize Camera
     Serial.println("\n2. Initializing Camera...");
-    if (camera.init()) {
-        Serial.println("   ✓ Camera initialized");
-    } else {
+    if (!camera.init()) {
         Serial.println("   ✗ Camera initialization failed!");
+        Serial.println("\nSystem halted due to initialization failure.");
+        while (true) {
+            delay(1000);
+        }
     }
+    Serial.println("   ✓ Camera initialized");
     
     // Initialize Storage
     Serial.println("\n3. Initializing Storage...");
-    if (storage.init()) {
-        Serial.println("   ✓ Storage initialized");
-        Serial.printf("   Storage: %lu bytes free / %lu bytes used\n", 
-                      storage.getFreeSpace(), storage.getUsedSpace());
-    } else {
+    if (!storage.init()) {
         Serial.println("   ✗ Storage initialization failed!");
+        Serial.println("\nSystem halted due to initialization failure.");
+        while (true) {
+            delay(1000);
+        }
     }
+    Serial.println("   ✓ Storage initialized");
+    Serial.printf("   Storage: %lu bytes free / %lu bytes used\n", 
+                  storage.getFreeSpace(), storage.getUsedSpace());
     
     // Initialize Motion Detector
     Serial.println("\n4. Initializing Motion Detector...");
-    if (motionDetector.init(PIR_SENSOR_PIN, MOTION_COOLDOWN_MS)) {
-        Serial.println("   ✓ Motion detector ready");
-    } else {
+    if (!motionDetector.init(PIR_SENSOR_PIN, MOTION_COOLDOWN_MS)) {
         Serial.println("   ✗ Motion detector initialization failed!");
+        Serial.println("\nSystem halted due to initialization failure.");
+        while (true) {
+            delay(1000);
+        }
     }
+    Serial.println("   ✓ Motion detector ready");
     
     // Initialize Web Server (if enabled)
     if (enableWebServer) {
@@ -110,18 +213,38 @@ void setup() {
         Serial.println("\n5. Web Server disabled (low power mode)");
     }
     
+    // Configure wake-up sources for deep sleep
+    Serial.println("\nConfiguring wake-up sources...");
+    power.configureWakeOnMotion(PIR_SENSOR_PIN);
+    power.configureWakeOnTimer(DEEP_SLEEP_DURATION);
+    Serial.println("   ✓ Wake-up sources configured");
+    
     Serial.println("\n=================================");
     Serial.println("  System Ready!");
     Serial.println("=================================\n");
+    
+    // Initialize last motion time
+    lastMotionTime = millis();
+    lastBatteryCheck = millis();
     
     currentState = IDLE;
 }
 
 void loop() {
+    // Feed watchdog timer
+    esp_task_wdt_reset();
+    
     // Check for motion
     if (motionDetector.isMotionDetected()) {
         currentState = MOTION_DETECTED;
         Serial.println("\n*** MOTION DETECTED ***");
+        
+        // Update last motion time
+        lastMotionTime = millis();
+        
+        // Stabilization delay to reduce motion blur
+        Serial.println("Stabilizing camera...");
+        delay(IMAGE_CAPTURE_DELAY_MS);
         
         // Capture image
         currentState = CAPTURING;
@@ -129,20 +252,52 @@ void loop() {
         
         camera_fb_t* fb = camera.captureImage();
         if (fb != nullptr) {
-            currentState = PROCESSING;
+            currentState = SAVING;
             
-            // Save to SD card
+            // Save image to SD card
             String filepath = storage.saveImage(fb);
             if (filepath.length() > 0) {
                 Serial.printf("Image saved successfully: %s\n", filepath.c_str());
+                
+                // Create and save metadata JSON
+                StaticJsonDocument<256> metadata;
+                metadata["timestamp"] = millis();
+                metadata["image_path"] = filepath;
+                metadata["battery_voltage"] = power.getBatteryVoltage();
+                metadata["battery_percent"] = power.getBatteryPercentage();
+                metadata["image_size"] = fb->len;
+                metadata["image_count"] = imageCount + 1;
+                
+                // Save metadata
+                if (storage.saveMetadata(filepath, metadata)) {
+                    Serial.println("Metadata saved successfully");
+                } else {
+                    Serial.println("Warning: Failed to save metadata");
+                }
+                
+                // Increment image counter
+                imageCount++;
+                Serial.printf("Total images captured: %lu\n", imageCount);
             } else {
-                Serial.println("Failed to save image");
+                Serial.println("ERROR: Failed to save image to SD card");
+                // Log error to SD card
+                File errorLog = SD_MMC.open("/error.log", FILE_APPEND);
+                if (errorLog) {
+                    errorLog.printf("[%lu] Failed to save image\n", millis());
+                    errorLog.close();
+                }
             }
             
             // Release frame buffer
             camera.releaseFrameBuffer(fb);
         } else {
-            Serial.println("Failed to capture image");
+            Serial.println("ERROR: Failed to capture image from camera");
+            // Log error to SD card
+            File errorLog = SD_MMC.open("/error.log", FILE_APPEND);
+            if (errorLog) {
+                errorLog.printf("[%lu] Failed to capture image\n", millis());
+                errorLog.close();
+            }
         }
         
         currentState = IDLE;
@@ -150,15 +305,15 @@ void loop() {
     }
     
     // Check battery status periodically
-    static unsigned long lastBatteryCheck = 0;
     if (millis() - lastBatteryCheck > 60000) {  // Every 60 seconds
         float voltage = power.getBatteryVoltage();
         int percent = power.getBatteryPercentage();
         Serial.printf("Battery check: %.2fV (%d%%)\n", voltage, percent);
         
-        // Enter deep sleep if battery is critically low, regardless of web server status
-        if (power.isLowBattery()) {
+        // Enter deep sleep if battery is critically low
+        if (voltage < BATTERY_CRITICAL_THRESHOLD) {
             Serial.println("Battery critically low - entering deep sleep");
+            currentState = SLEEPING;
             power.configureWakeOnMotion(PIR_SENSOR_PIN);
             power.enterDeepSleep(DEEP_SLEEP_DURATION);
         }
@@ -166,6 +321,17 @@ void loop() {
         lastBatteryCheck = millis();
     }
     
-    // Small delay to prevent tight loop
+    // Check for inactivity - enter deep sleep if no motion for DEEP_SLEEP_DURATION
+    if (millis() - lastMotionTime > (DEEP_SLEEP_DURATION * 1000)) {
+        Serial.println("\nNo motion detected for extended period");
+        Serial.println("Entering deep sleep mode...");
+        Serial.printf("Will wake on motion or after %d seconds\n", DEEP_SLEEP_DURATION);
+        
+        currentState = SLEEPING;
+        power.configureWakeOnMotion(PIR_SENSOR_PIN);
+        power.enterDeepSleep(DEEP_SLEEP_DURATION);
+    }
+    
+    // Small delay to prevent CPU spinning
     delay(100);
 }

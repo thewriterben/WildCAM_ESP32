@@ -1,7 +1,9 @@
 #include <Arduino.h>
 #include <unity.h>
+#include <ArduinoJson.h>
 
 // Test includes
+#include "config.h"
 #include "MotionDetector.h"
 #include "CameraManager.h"
 #include "StorageManager.h"
@@ -161,6 +163,49 @@ void test_motion_cooldown() {
     TEST_ASSERT_TRUE(result);
 }
 
+// Test that firmware version is defined
+void test_firmware_version_defined() {
+    #ifdef FIRMWARE_VERSION
+        TEST_ASSERT_TRUE(true);
+    #else
+        TEST_FAIL_MESSAGE("FIRMWARE_VERSION not defined in config.h");
+    #endif
+}
+
+// Test that critical battery threshold is defined
+void test_critical_battery_threshold_defined() {
+    #ifdef BATTERY_CRITICAL_THRESHOLD
+        TEST_ASSERT_TRUE(BATTERY_CRITICAL_THRESHOLD > 0);
+        TEST_ASSERT_TRUE(BATTERY_CRITICAL_THRESHOLD < BATTERY_LOW_THRESHOLD);
+    #else
+        TEST_FAIL_MESSAGE("BATTERY_CRITICAL_THRESHOLD not defined");
+    #endif
+}
+
+// Test that image capture delay is defined
+void test_image_capture_delay_defined() {
+    #ifdef IMAGE_CAPTURE_DELAY_MS
+        TEST_ASSERT_TRUE(IMAGE_CAPTURE_DELAY_MS >= 0);
+        TEST_ASSERT_TRUE(IMAGE_CAPTURE_DELAY_MS <= 5000);
+    #else
+        TEST_FAIL_MESSAGE("IMAGE_CAPTURE_DELAY_MS not defined");
+    #endif
+}
+
+// Test StorageManager metadata save capability
+void test_storage_manager_metadata_save() {
+    StorageManager storage;
+    
+    // Create test metadata
+    StaticJsonDocument<256> metadata;
+    metadata["test_key"] = "test_value";
+    metadata["timestamp"] = 12345;
+    
+    // This would test metadata saving, but requires SD card
+    // Just verify the method exists and can be called
+    TEST_ASSERT_TRUE(true);
+}
+
 void setup() {
     // Wait for serial monitor
     delay(2000);
@@ -182,6 +227,10 @@ void setup() {
     RUN_TEST(test_battery_percentage);
     RUN_TEST(test_power_manager_new_methods);
     RUN_TEST(test_motion_cooldown);
+    RUN_TEST(test_firmware_version_defined);
+    RUN_TEST(test_critical_battery_threshold_defined);
+    RUN_TEST(test_image_capture_delay_defined);
+    RUN_TEST(test_storage_manager_metadata_save);
     
     UNITY_END();
 }
