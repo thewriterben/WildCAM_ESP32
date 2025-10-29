@@ -795,6 +795,6 @@ You've successfully built your WildCAM ESP32 wildlife camera! You now have a pow
 
 ---
 
-**Navigation**: [Main README](README.md) | [Hardware Guide](HARDWARE_REQUIREMENTS.md) | [Advanced Features](ESP32WildlifeCAM-main/README.md) | [Troubleshooting](docs/troubleshooting.md)
+**Navigation**: [Main README](README.md) | [Hardware Guide](HARDWARE_REQUIREMENTS.md) | [Advanced Features](ESP32WildlifeCAM-main/README.md)
 
 *This guide is part of the WildCAM ESP32 project - Open source wildlife monitoring for everyone!*
