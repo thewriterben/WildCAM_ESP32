@@ -49,12 +49,13 @@ public:
      * @brief Initialize the motion detector
      * @param pin GPIO pin number connected to the PIR sensor
      * @param debounceMs Debounce time in milliseconds (default: 2000ms)
+     * @return true on successful initialization, false on failure
      * 
      * Configures the GPIO pin, sets up the interrupt handler, and initializes
      * the debouncing mechanism. The PIR sensor should be connected to the
      * specified pin with proper pull-down resistor configuration.
      */
-    void init(int pin, int debounceMs = 2000);
+    bool init(int pin, int debounceMs = 2000);
 
     /**
      * @brief Check if motion has been detected

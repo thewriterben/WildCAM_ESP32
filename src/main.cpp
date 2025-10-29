@@ -72,8 +72,11 @@ void setup() {
     
     // Initialize Motion Detector
     Serial.println("\n4. Initializing Motion Detector...");
-    motionDetector.init(PIR_SENSOR_PIN, MOTION_COOLDOWN_MS);
-    Serial.println("   ✓ Motion detector ready");
+    if (motionDetector.init(PIR_SENSOR_PIN, MOTION_COOLDOWN_MS)) {
+        Serial.println("   ✓ Motion detector ready");
+    } else {
+        Serial.println("   ✗ Motion detector initialization failed!");
+    }
     
     // Initialize Web Server (if enabled)
     if (enableWebServer) {
