@@ -398,6 +398,41 @@ void test_get_image_files(void) {
 }
 
 /**
+ * @brief Test getImageFiles comprehensive error handling
+ * 
+ * Verifies that getImageFiles handles various error conditions gracefully:
+ * - Returns empty vector when not initialized
+ * - Doesn't crash on repeated calls
+ * - Handles edge cases properly
+ */
+void test_get_image_files_error_handling(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Test 1: Multiple calls before initialization should all return empty vector
+    for (int i = 0; i < 3; i++) {
+        std::vector<String> files = storage->getImageFiles();
+        TEST_ASSERT_EQUAL(0, files.size());
+    }
+    
+    // Test 2: After initialization, repeated calls should work without crashes
+    bool initResult = storage->init();
+    if (initResult) {
+        std::vector<String> files1 = storage->getImageFiles();
+        std::vector<String> files2 = storage->getImageFiles();
+        std::vector<String> files3 = storage->getImageFiles();
+        
+        // All calls should succeed (even if no files exist)
+        TEST_ASSERT_GREATER_OR_EQUAL(0, files1.size());
+        TEST_ASSERT_GREATER_OR_EQUAL(0, files2.size());
+        TEST_ASSERT_GREATER_OR_EQUAL(0, files3.size());
+        
+        // Results should be consistent across calls
+        TEST_ASSERT_EQUAL(files1.size(), files2.size());
+        TEST_ASSERT_EQUAL(files2.size(), files3.size());
+    }
+}
+
+/**
  * @brief Test deleteOldFiles functionality
  * 
  * Verifies that old file deletion works gracefully
@@ -446,6 +481,7 @@ void setup() {
     // Additional helper tests
     RUN_TEST(test_get_image_count);
     RUN_TEST(test_get_image_files);
+    RUN_TEST(test_get_image_files_error_handling);
     RUN_TEST(test_delete_old_files);
     
     UNITY_END();
