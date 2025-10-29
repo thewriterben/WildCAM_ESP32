@@ -253,7 +253,7 @@ void setup() {
         LOG_DEBUG("Connecting to WiFi SSID: %s", WIFI_SSID);
         WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
         int attempts = 0;
-        // Wait up to 10 seconds for WiFi connection (20 attempts × 500ms)
+        // Wait for WiFi connection with retry limit
         while (WiFi.status() != WL_CONNECTED && attempts < WIFI_CONNECT_MAX_ATTEMPTS) {
             delay(WIFI_CONNECT_RETRY_DELAY_MS);
             Serial.print(".");

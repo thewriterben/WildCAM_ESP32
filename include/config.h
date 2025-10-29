@@ -17,6 +17,7 @@
 
 // Try to include secrets.h for WiFi credentials
 // If secrets.h doesn't exist, fall back to default values below
+// Note: Requires C++17 compiler support for __has_include directive
 #if __has_include("secrets.h")
     #include "secrets.h"
 #else
