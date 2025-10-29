@@ -13,7 +13,18 @@ MotionDetector::MotionDetector()
     : motionDetected(false), pirPin(-1), lastTriggerTime(0), debounceMs(2000) {
 }
 
-void MotionDetector::init(int pin, int debounceMs) {
+bool MotionDetector::init(int pin, int debounceMs) {
+    // Validate input parameters
+    if (pin < 0 || pin > 39) {
+        Serial.println("ERROR: Invalid GPIO pin number");
+        return false;
+    }
+    
+    if (debounceMs < 100 || debounceMs > 10000) {
+        Serial.println("ERROR: Debounce time must be between 100ms and 10000ms");
+        return false;
+    }
+    
     pirPin = pin;
     this->debounceMs = debounceMs;
     motionDetected = false;
@@ -24,13 +35,14 @@ void MotionDetector::init(int pin, int debounceMs) {
     // due to the static instance pointer
     instance = this;
     
-    // Configure GPIO pin as input
-    pinMode(pirPin, INPUT);
+    // Configure GPIO pin as input with pulldown
+    pinMode(pirPin, INPUT_PULLDOWN);
     
     // Attach interrupt on rising edge (motion detected)
     attachInterrupt(digitalPinToInterrupt(pirPin), motionISR, RISING);
     
     Serial.printf("MotionDetector initialized on pin %d with %dms debounce\n", pirPin, debounceMs);
+    return true;
 }
 
 void IRAM_ATTR MotionDetector::motionISR() {
@@ -61,6 +73,12 @@ bool MotionDetector::isMotionDetected() {
 }
 
 void MotionDetector::setDebounceTime(int ms) {
+    // Validate input (minimum 100ms, maximum 10000ms)
+    if (ms < 100 || ms > 10000) {
+        Serial.printf("ERROR: Invalid debounce time %d ms. Must be between 100-10000ms\n", ms);
+        return;
+    }
+    
     debounceMs = ms;
     Serial.printf("Motion debounce time set to: %d ms\n", debounceMs);
 }

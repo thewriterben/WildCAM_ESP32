@@ -11,9 +11,47 @@
 // Test MotionDetector initialization
 void test_motion_detector_init() {
     MotionDetector detector;
+    bool result = detector.init(13, 2000);
+    TEST_ASSERT_TRUE(result);
+}
+
+// Test MotionDetector initialization with invalid pin
+void test_motion_detector_invalid_pin() {
+    MotionDetector detector;
+    bool result = detector.init(-1, 2000);
+    TEST_ASSERT_FALSE(result);
+    
+    result = detector.init(100, 2000);
+    TEST_ASSERT_FALSE(result);
+}
+
+// Test MotionDetector initialization with invalid debounce time
+void test_motion_detector_invalid_debounce() {
+    MotionDetector detector;
+    bool result = detector.init(13, 50);  // Too low
+    TEST_ASSERT_FALSE(result);
+    
+    result = detector.init(13, 15000);  // Too high
+    TEST_ASSERT_FALSE(result);
+    
+    result = detector.init(13, 100);  // Minimum valid
+    TEST_ASSERT_TRUE(result);
+}
+
+// Test setDebounceTime validation
+void test_set_debounce_time_validation() {
+    MotionDetector detector;
     detector.init(13, 2000);
-    // In a real test, we would verify initialization
-    // For now, this is a placeholder structure
+    
+    // Test valid boundaries
+    detector.setDebounceTime(100);  // Minimum valid
+    detector.setDebounceTime(10000);  // Maximum valid
+    detector.setDebounceTime(5000);  // Mid-range valid
+    
+    // Invalid values should be rejected (no assertion, just testing no crash)
+    detector.setDebounceTime(50);  // Too low
+    detector.setDebounceTime(15000);  // Too high
+    
     TEST_ASSERT_TRUE(true);
 }
 
@@ -55,9 +93,8 @@ void test_battery_percentage() {
 // Test motion detection cooldown
 void test_motion_cooldown() {
     MotionDetector detector;
-    detector.init(13, 5000);
-    // Would test cooldown mechanism
-    TEST_ASSERT_TRUE(true);
+    bool result = detector.init(13, 5000);
+    TEST_ASSERT_TRUE(result);
 }
 
 void setup() {
@@ -68,6 +105,9 @@ void setup() {
     
     // Run tests
     RUN_TEST(test_motion_detector_init);
+    RUN_TEST(test_motion_detector_invalid_pin);
+    RUN_TEST(test_motion_detector_invalid_debounce);
+    RUN_TEST(test_set_debounce_time_validation);
     RUN_TEST(test_camera_manager_init);
     RUN_TEST(test_storage_manager_init);
     RUN_TEST(test_power_manager_init);
