@@ -81,13 +81,27 @@ StorageManager storage;
 PowerManager power;
 WebServer webServer(WEB_SERVER_PORT);
 
-// System state
+/**
+ * @brief System state enumeration
+ * 
+ * Tracks the current operational state of the wildlife camera system.
+ * 
+ * State Transitions:
+ * - IDLE → MOTION_DETECTED (motion sensor triggered)
+ * - MOTION_DETECTED → CAPTURING (after stabilization delay)
+ * - CAPTURING → SAVING (image captured successfully)
+ * - CAPTURING → IDLE (capture failed)
+ * - SAVING → IDLE (image and metadata saved)
+ * - Any state → SLEEPING (inactivity timeout or low battery)
+ * 
+ * @note SLEEPING state is terminal - system enters deep sleep and resets on wake
+ */
 enum SystemState {
-    IDLE,
-    MOTION_DETECTED,
-    CAPTURING,
-    SAVING,
-    SLEEPING
+    IDLE,            ///< Waiting for motion event
+    MOTION_DETECTED, ///< Motion detected, camera stabilizing
+    CAPTURING,       ///< Capturing image from camera
+    SAVING,          ///< Saving image and metadata to SD card
+    SLEEPING         ///< Deep sleep mode (power saving)
 };
 
 SystemState currentState = IDLE;
@@ -101,9 +115,32 @@ unsigned long lastBatteryCheck = 0;
 // Watchdog timeout (30 seconds)
 #define WDT_TIMEOUT 30
 
+/**
+ * @brief Initialize all system components and configure wake-up sources
+ * 
+ * This function initializes the WildCAM system in the following order:
+ * 1. Logging system
+ * 2. Watchdog timer
+ * 3. Power manager
+ * 4. Camera
+ * 5. Storage
+ * 6. Motion detector
+ * 7. Web server (if enabled and battery sufficient)
+ * 8. Wake-up sources configuration
+ * 
+ * If any critical component fails to initialize, the system halts with an
+ * error message and enters an infinite loop. This prevents operation with
+ * missing or malfunctioning components.
+ * 
+ * Battery level is checked at startup. If critically low, the system
+ * immediately enters deep sleep to protect the battery.
+ * 
+ * @note This function is called once at system startup/reset
+ * @note System will halt (infinite loop) if any component fails to initialize
+ */
 void setup() {
     Serial.begin(115200);
-    delay(1000);
+    delay(STARTUP_DELAY_MS);
     
     Serial.println("\n=================================");
     Serial.println("  WildCAM ESP32 Starting Up");
@@ -134,7 +171,7 @@ void setup() {
         Serial.println("   ✗ Power Manager initialization failed!");
         Serial.println("\nSystem halted due to initialization failure.");
         while (true) {
-            delay(1000);
+            delay(ERROR_HALT_DELAY_MS);
         }
     }
     LOG_INFO("Power Manager initialized");
@@ -169,7 +206,7 @@ void setup() {
         Serial.println("   ✗ Camera initialization failed!");
         Serial.println("\nSystem halted due to initialization failure.");
         while (true) {
-            delay(1000);
+            delay(ERROR_HALT_DELAY_MS);
         }
     }
     LOG_INFO("Camera initialized");
@@ -183,7 +220,7 @@ void setup() {
         Serial.println("   ✗ Storage initialization failed!");
         Serial.println("\nSystem halted due to initialization failure.");
         while (true) {
-            delay(1000);
+            delay(ERROR_HALT_DELAY_MS);
         }
     }
     LOG_INFO("Storage initialized - Free: %lu bytes, Used: %lu bytes", 
@@ -200,7 +237,7 @@ void setup() {
         Serial.println("   ✗ Motion detector initialization failed!");
         Serial.println("\nSystem halted due to initialization failure.");
         while (true) {
-            delay(1000);
+            delay(ERROR_HALT_DELAY_MS);
         }
     }
     LOG_INFO("Motion detector ready");
@@ -211,13 +248,14 @@ void setup() {
         LOG_INFO("Initializing Web Server...");
         Serial.println("\n5. Initializing Web Server...");
         
-        // Connect to WiFi
+        // Connect to WiFi with timeout
         Serial.print("   Connecting to WiFi");
         LOG_DEBUG("Connecting to WiFi SSID: %s", WIFI_SSID);
         WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
         int attempts = 0;
-        while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-            delay(500);
+        // Wait up to 10 seconds for WiFi connection (20 attempts × 500ms)
+        while (WiFi.status() != WL_CONNECTED && attempts < WIFI_CONNECT_MAX_ATTEMPTS) {
+            delay(WIFI_CONNECT_RETRY_DELAY_MS);
             Serial.print(".");
             attempts++;
         }
@@ -240,6 +278,7 @@ void setup() {
             LOG_WARN("WiFi connection failed after %d attempts", attempts);
             Serial.println(" failed!");
             Serial.println("   ✗ WiFi connection failed");
+            enableWebServer = false;  // Disable web server if WiFi failed
         }
     } else {
         LOG_INFO("Web Server disabled (low power mode)");
@@ -266,6 +305,30 @@ void setup() {
     currentState = IDLE;
 }
 
+/**
+ * @brief Main system loop - monitor motion, capture images, manage power
+ * 
+ * This function implements the main operational loop of the wildlife camera:
+ * 
+ * 1. Feeds watchdog timer to prevent system reset
+ * 2. Checks for motion detection events
+ * 3. When motion detected:
+ *    - Stabilizes camera
+ *    - Captures image
+ *    - Saves image and metadata to SD card
+ *    - Releases frame buffer
+ * 4. Periodically checks battery level
+ * 5. Enters deep sleep on:
+ *    - Critical low battery
+ *    - Extended inactivity period
+ * 
+ * State transitions:
+ * - IDLE → MOTION_DETECTED → CAPTURING → SAVING → IDLE
+ * - Any state → SLEEPING (on timeout or low battery)
+ * 
+ * @note This function runs continuously in an infinite loop
+ * @note Loop delay of 100ms prevents CPU spinning
+ */
 void loop() {
     // Feed watchdog timer
     esp_task_wdt_reset();
@@ -350,8 +413,8 @@ void loop() {
         Serial.println("Returning to idle state\n");
     }
     
-    // Check battery status periodically
-    if (millis() - lastBatteryCheck > 60000) {  // Every 60 seconds
+    // Check battery status periodically (every 60 seconds)
+    if (millis() - lastBatteryCheck > BATTERY_CHECK_INTERVAL_MS) {
         float voltage = power.getBatteryVoltage();
         int percent = power.getBatteryPercentage();
         LOG_INFO("Battery check: %.2fV (%d%%)", voltage, percent);
@@ -369,7 +432,8 @@ void loop() {
         lastBatteryCheck = millis();
     }
     
-    // Check for inactivity - enter deep sleep if no motion for DEEP_SLEEP_DURATION
+    // Check for inactivity - enter deep sleep if no motion for extended period
+    // Convert DEEP_SLEEP_DURATION from seconds to milliseconds for comparison
     if (millis() - lastMotionTime > (DEEP_SLEEP_DURATION * 1000)) {
         LOG_INFO("No motion detected for %d seconds - entering deep sleep", DEEP_SLEEP_DURATION);
         Serial.println("\nNo motion detected for extended period");
@@ -382,5 +446,5 @@ void loop() {
     }
     
     // Small delay to prevent CPU spinning
-    delay(100);
+    delay(MAIN_LOOP_DELAY_MS);
 }
