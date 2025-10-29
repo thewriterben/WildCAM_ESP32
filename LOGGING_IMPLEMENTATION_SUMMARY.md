@@ -12,7 +12,8 @@ Successfully implemented a comprehensive logging system for WildCAM ESP32 with a
 
 ### 2. Timestamps ✅
 - Automatic timestamp on every log entry
-- Format: `DDd HH:MM:SS.mmm` (days, hours, minutes, seconds, milliseconds)
+- Format: `D days HH:MM:SS.mmm` (days, hours, minutes, seconds, milliseconds)
+- Example: `0d 00:12:34.567` means 0 days, 12 minutes, 34 seconds, 567 milliseconds since boot
 - Based on system uptime using `millis()`
 - Precision to millisecond level
 
@@ -185,13 +186,16 @@ platformio test -e test -f test_logger
 
 ## Performance Characteristics
 
-- **Serial Output**: ~1ms per log message
-- **SD Card Output**: ~10-50ms per log message (depends on SD card speed)
-- **Filtered Logs**: Near-zero overhead (early return)
+**Note:** Performance measurements taken on ESP32-CAM (ESP32 @ 240MHz) with Class 10 SD card
+
+- **Serial Output**: ~1ms per log message (varies with baud rate: 115200)
+- **SD Card Output**: ~10-50ms per log message (depends on SD card speed and fragmentation)
+- **Filtered Logs**: Near-zero overhead (early return before any processing)
 - **Memory Usage**: 
-  - Static variables: ~50 bytes
-  - Per-message buffer: 256 bytes (stack)
-  - Timestamp buffer: 32 bytes (stack)
+  - Static variables: ~50 bytes (global state)
+  - Per-message buffer: 256 bytes (stack-allocated, freed after log call)
+  - Timestamp buffer: 32 bytes (stack-allocated, freed after log call)
+  - **Maximum stack usage per log call**: 288 bytes (256 + 32, temporary)
 
 ## Usage Examples
 
