@@ -163,6 +163,45 @@
 #define BATTERY_VOLTAGE_MAX 4.2
 
 //==============================================================================
+// LOGGING SETTINGS
+//==============================================================================
+
+/**
+ * @brief Enable logging system
+ * @note Set to true to enable comprehensive logging
+ * @default true
+ */
+#define LOGGING_ENABLED true
+
+/**
+ * @brief Default log level
+ * @note 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR
+ * @default LOG_INFO (1)
+ */
+#define DEFAULT_LOG_LEVEL 1
+
+/**
+ * @brief Enable Serial console logging
+ * @note Output logs to Serial monitor
+ * @default true
+ */
+#define LOG_TO_SERIAL true
+
+/**
+ * @brief Enable SD card logging
+ * @note Write logs to SD card file
+ * @default false (disabled by default to save SD card space)
+ */
+#define LOG_TO_SD false
+
+/**
+ * @brief Log file path on SD card
+ * @note Path to the log file
+ * @default "/system.log"
+ */
+#define LOG_FILE_PATH "/system.log"
+
+//==============================================================================
 // STORAGE SETTINGS
 //==============================================================================
 
