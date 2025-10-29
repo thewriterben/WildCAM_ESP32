@@ -107,3 +107,7 @@ gcloud/
 .piolibdeps/
 a.out
 *.out
+
+# Secrets and credentials
+secrets.h
+include/secrets.h

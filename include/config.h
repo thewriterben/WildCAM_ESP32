@@ -15,17 +15,26 @@
 // NETWORK SETTINGS
 //==============================================================================
 
-/**
- * @brief WiFi SSID (network name)
- * @note Replace with your WiFi network name
- */
-#define WIFI_SSID "YourSSID"
+// Try to include secrets.h for WiFi credentials
+// If secrets.h doesn't exist, fall back to default values below
+// Note: Requires C++17 compiler support for __has_include directive
+#if __has_include("secrets.h")
+    #include "secrets.h"
+#else
+    /**
+     * @brief WiFi SSID (network name)
+     * @note For security, create include/secrets.h with your credentials
+     * @note See include/secrets.h.example for template
+     */
+    #define WIFI_SSID "YourSSID"
 
-/**
- * @brief WiFi password
- * @note Replace with your WiFi network password
- */
-#define WIFI_PASSWORD "YourPassword"
+    /**
+     * @brief WiFi password
+     * @note For security, create include/secrets.h with your credentials
+     * @note See include/secrets.h.example for template
+     */
+    #define WIFI_PASSWORD "YourPassword"
+#endif
 
 /**
  * @brief Web server port
@@ -98,6 +107,48 @@
  * @default 5000ms (5 seconds)
  */
 #define MOTION_COOLDOWN_MS 5000
+
+/**
+ * @brief Startup delay in milliseconds
+ * @note Initial delay after Serial.begin() for serial monitor to connect
+ * @default 1000ms (1 second)
+ */
+#define STARTUP_DELAY_MS 1000
+
+/**
+ * @brief Error halt delay in milliseconds
+ * @note Delay in error loop when system halts due to initialization failure
+ * @default 1000ms (1 second)
+ */
+#define ERROR_HALT_DELAY_MS 1000
+
+/**
+ * @brief WiFi connection maximum attempts
+ * @note Maximum number of connection attempts before giving up
+ * @default 20 attempts
+ */
+#define WIFI_CONNECT_MAX_ATTEMPTS 20
+
+/**
+ * @brief WiFi connection retry delay in milliseconds
+ * @note Delay between WiFi connection attempts
+ * @default 500ms
+ */
+#define WIFI_CONNECT_RETRY_DELAY_MS 500
+
+/**
+ * @brief Battery check interval in milliseconds
+ * @note How often to check battery voltage and percentage
+ * @default 60000ms (60 seconds)
+ */
+#define BATTERY_CHECK_INTERVAL_MS 60000
+
+/**
+ * @brief Main loop delay in milliseconds
+ * @note Small delay at end of main loop to prevent CPU spinning
+ * @default 100ms
+ */
+#define MAIN_LOOP_DELAY_MS 100
 
 //==============================================================================
 // CAMERA SETTINGS
