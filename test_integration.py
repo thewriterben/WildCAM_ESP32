@@ -51,6 +51,18 @@ class TestResult:
 class WildCAMIntegrationTester:
     """Main integration tester for WildCAM ESP32 system"""
     
+    # Test timeout constants (in seconds)
+    MOTION_DETECTION_TIMEOUT = 35  # Time to wait for motion detection
+    IMAGE_CAPTURE_TIMEOUT = 20     # Time to wait for image capture
+    METADATA_TIMEOUT = 10          # Time to wait for metadata save
+    HTTP_TIMEOUT = 5               # Timeout for HTTP requests
+    
+    # Validation thresholds
+    MIN_VALID_IMAGE_SIZE_BYTES = 10000  # Minimum valid image size (10KB)
+    MIN_WEB_IMAGE_SIZE_BYTES = 1000     # Minimum size for web server image (1KB)
+    MIN_INIT_MESSAGES_REQUIRED = 5      # Minimum initialization messages to consider success
+    MIN_METADATA_FIELDS_REQUIRED = 4    # Minimum metadata fields to consider success
+    
     def __init__(self, serial_port: str = '/dev/ttyUSB0', baud_rate: int = 115200,
                  esp32_ip: Optional[str] = None, timeout: int = 30):
         """
@@ -249,7 +261,7 @@ class WildCAMIntegrationTester:
                     self.log_warning(f"Missing: '{msg}'")
             
             # Check if all required messages were found
-            if len(found_messages) >= 5:  # Allow some flexibility
+            if len(found_messages) >= self.MIN_INIT_MESSAGES_REQUIRED:
                 return TestResult(
                     "System Initialization",
                     True,
@@ -296,7 +308,7 @@ class WildCAMIntegrationTester:
             
             # Wait for motion detection message
             self.log_info("Waiting for motion detection message...")
-            found, output = self.read_serial_until("MOTION DETECTED", timeout=35)
+            found, output = self.read_serial_until("MOTION DETECTED", timeout=self.MOTION_DETECTION_TIMEOUT)
             
             if found:
                 self.log_success("Motion detection message received")
@@ -358,7 +370,7 @@ class WildCAMIntegrationTester:
             
             # Wait for image save confirmation
             self.log_info("Waiting for image save confirmation...")
-            found, output = self.read_serial_until("Image saved successfully", timeout=20)
+            found, output = self.read_serial_until("Image saved successfully", timeout=self.IMAGE_CAPTURE_TIMEOUT)
             
             if found:
                 self.log_success("Image save message received")
@@ -375,7 +387,7 @@ class WildCAMIntegrationTester:
                     image_size = int(size_match.group(1))
                     self.log_info(f"Image size: {image_size} bytes")
                     
-                    if image_size > 10000:  # > 10KB
+                    if image_size > self.MIN_VALID_IMAGE_SIZE_BYTES:
                         self.log_success(f"Image size ({image_size} bytes) is reasonable")
                         return TestResult(
                             "Image Capture",
@@ -434,7 +446,7 @@ class WildCAMIntegrationTester:
             
             # Wait for metadata save message
             self.log_info("Waiting for metadata save confirmation...")
-            found, output = self.read_serial_until("Metadata saved successfully", timeout=10)
+            found, output = self.read_serial_until("Metadata saved successfully", timeout=self.METADATA_TIMEOUT)
             
             if found:
                 self.log_success("Metadata save message received")
@@ -452,7 +464,7 @@ class WildCAMIntegrationTester:
                     else:
                         self.log_warning(f"Missing metadata field: {field}")
                 
-                if len(found_fields) >= 4:  # Allow some flexibility
+                if len(found_fields) >= self.MIN_METADATA_FIELDS_REQUIRED:
                     return TestResult(
                         "Metadata Validation",
                         True,
@@ -516,7 +528,7 @@ class WildCAMIntegrationTester:
             # Test /status endpoint
             self.log_info(f"Testing /status endpoint at {base_url}/status...")
             try:
-                response = requests.get(f"{base_url}/status", timeout=5)
+                response = requests.get(f"{base_url}/status", timeout=self.HTTP_TIMEOUT)
                 
                 if response.status_code == 200:
                     self.log_success("/status endpoint responded with 200 OK")
@@ -557,7 +569,7 @@ class WildCAMIntegrationTester:
             # Test /latest endpoint
             self.log_info(f"Testing /latest endpoint at {base_url}/latest...")
             try:
-                response = requests.get(f"{base_url}/latest", timeout=5)
+                response = requests.get(f"{base_url}/latest", timeout=self.HTTP_TIMEOUT)
                 
                 if response.status_code == 200:
                     self.log_success("/latest endpoint responded with 200 OK")
@@ -569,7 +581,7 @@ class WildCAMIntegrationTester:
                         image_size = len(response.content)
                         self.log_info(f"Image size: {image_size} bytes")
                         
-                        if image_size > 1000:
+                        if image_size > self.MIN_WEB_IMAGE_SIZE_BYTES:
                             return TestResult(
                                 "Web Server",
                                 True,
