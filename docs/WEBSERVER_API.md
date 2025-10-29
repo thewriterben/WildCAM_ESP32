@@ -124,10 +124,12 @@ Reboots the ESP32 device after 1 second delay.
 
 ## CORS Support
 
-All routes include CORS headers:
+All routes include CORS headers to allow cross-origin requests:
 - `Access-Control-Allow-Origin: *`
 - `Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS`
 - `Access-Control-Allow-Headers: Content-Type`
+
+**Note:** Currently, the API only implements GET and POST methods. PUT, DELETE, and OPTIONS are included in the CORS headers for future extensibility but are not yet implemented.
 
 This allows the API to be accessed from web applications on different domains.
 
