@@ -7,43 +7,22 @@
 class PowerManager {
 private:
     int batteryPin;
-    float batteryVoltageMin;
-    float batteryVoltageMax;
-    float lowBatteryThreshold;
-    unsigned long deepSleepDuration;
-    
-    // Calculate voltage from ADC reading
-    float calculateVoltage(int adcValue);
+    float batteryVoltage;
+    bool lowPowerMode;
+    const float BATTERY_MIN = 3.3;
+    const float BATTERY_MAX = 4.2;
 
 public:
-    PowerManager(int pin = 33);
+    PowerManager();
     
-    // Initialize power management
-    bool begin();
-    
-    // Read battery voltage
+    void init(int batteryMonitorPin = 35);
     float getBatteryVoltage();
-    
-    // Get battery percentage (0-100)
     int getBatteryPercentage();
-    
-    // Check if battery is low
-    bool isBatteryLow();
-    
-    // Enter deep sleep mode
-    void enterDeepSleep(unsigned long seconds = 60);
-    
-    // Configure wakeup sources
-    void configureWakeup(int pirPin);
-    
-    // Set low battery threshold
-    void setLowBatteryThreshold(float voltage);
-    
-    // Get power consumption estimate
-    float getEstimatedPowerConsumption();
-    
-    // Enable/disable peripheral power
-    void setPeripheralPower(bool enable);
+    bool isLowBattery();
+    void enterDeepSleep(uint64_t sleepTimeSeconds);
+    void configureWakeOnMotion(int pirPin);
+    void configureWakeOnTimer(uint64_t seconds);
+    void printPowerStatus();
 };
 
 #endif // POWER_MANAGER_H
