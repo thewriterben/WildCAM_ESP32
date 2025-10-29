@@ -20,6 +20,8 @@ void MotionDetector::init(int pin, int debounceMs) {
     lastTriggerTime = 0;
     
     // Set static instance for ISR access
+    // Note: Only one MotionDetector instance should be used at a time
+    // due to the static instance pointer
     instance = this;
     
     // Configure GPIO pin as input
@@ -36,6 +38,8 @@ void IRAM_ATTR MotionDetector::motionISR() {
         return;
     }
     
+    // Note: millis() is ISR-safe on ESP32 as it uses a hardware timer
+    // that maintains the count independently
     unsigned long currentTime = millis();
     
     // Check debounce period
@@ -46,10 +50,13 @@ void IRAM_ATTR MotionDetector::motionISR() {
 }
 
 bool MotionDetector::isMotionDetected() {
+    // Disable interrupts briefly to ensure atomic read-and-clear
+    noInterrupts();
     bool detected = motionDetected;
     if (detected) {
         motionDetected = false;  // Reset flag after reading
     }
+    interrupts();
     return detected;
 }
 
