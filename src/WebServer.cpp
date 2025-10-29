@@ -99,8 +99,9 @@ void WebServer::begin() {
 }
 
 void WebServer::handleStatus(AsyncWebServerRequest* request) {
-    // Use StaticJsonDocument with known size instead of DynamicJsonDocument
-    StaticJsonDocument<256> doc;
+    // Use StaticJsonDocument with adequate size for status data
+    // Uptime (8 bytes) + freeHeap (4 bytes) + battery (16 bytes) + storage (24 bytes) + overhead
+    StaticJsonDocument<512> doc;
     
     // System status
     doc["uptime"] = millis();
@@ -182,8 +183,9 @@ void WebServer::handleCapture(AsyncWebServerRequest* request) {
     
     camera->releaseFrameBuffer(fb);
     
-    // Return JSON with image path and size - use StaticJsonDocument
-    StaticJsonDocument<128> doc;
+    // Return JSON with image path and size - use StaticJsonDocument with adequate size
+    // Image path can be long (e.g., '/images/2024/01/15/IMG_20240115_143022.jpg')
+    StaticJsonDocument<256> doc;
     doc["success"] = true;
     doc["path"] = imagePath;
     doc["size"] = imageSize;
