@@ -26,10 +26,10 @@ public:
     bool init();
     
     // Save image to SD card
-    String saveImage(camera_fb_t* fb, String customPath = "");
+    String saveImage(camera_fb_t* fb, const String& customPath = "");
     
     // Save metadata as JSON
-    bool saveMetadata(String imagePath, JsonDocument& metadata);
+    bool saveMetadata(const String& imagePath, JsonDocument& metadata);
     
     // Delete old files (days to keep)
     bool deleteOldFiles(int daysToKeep = 7);
