@@ -10,7 +10,8 @@
 
 // Test MotionDetector initialization
 void test_motion_detector_init() {
-    MotionDetector detector(13, 50, 5000);
+    MotionDetector detector;
+    detector.init(13, 2000);
     // In a real test, we would verify initialization
     // For now, this is a placeholder structure
     TEST_ASSERT_TRUE(true);
@@ -53,7 +54,8 @@ void test_battery_percentage() {
 
 // Test motion detection cooldown
 void test_motion_cooldown() {
-    MotionDetector detector(13, 50, 5000);
+    MotionDetector detector;
+    detector.init(13, 5000);
     // Would test cooldown mechanism
     TEST_ASSERT_TRUE(true);
 }

@@ -1,76 +1,66 @@
+/**
+ * @file MotionDetector.cpp
+ * @brief Implementation of ESP32-based PIR motion detection system
+ */
+
 #include "MotionDetector.h"
 #include "config.h"
 
-MotionDetector::MotionDetector(int pin, int sens, unsigned long cooldown)
-    : pirPin(pin), sensitivity(sens), cooldownPeriod(cooldown),
-      lastTriggerTime(0), calibrationComplete(false) {
+// Initialize static instance pointer
+MotionDetector* MotionDetector::instance = nullptr;
+
+MotionDetector::MotionDetector()
+    : motionDetected(false), pirPin(-1), lastTriggerTime(0), debounceMs(2000) {
 }
 
-bool MotionDetector::begin() {
+void MotionDetector::init(int pin, int debounceMs) {
+    pirPin = pin;
+    this->debounceMs = debounceMs;
+    motionDetected = false;
+    lastTriggerTime = 0;
+    
+    // Set static instance for ISR access
+    // Note: Only one MotionDetector instance should be used at a time
+    // due to the static instance pointer
+    instance = this;
+    
+    // Configure GPIO pin as input
     pinMode(pirPin, INPUT);
     
-    // Wait for PIR sensor to stabilize
-    Serial.println("Calibrating PIR sensor...");
-    calibrate();
+    // Attach interrupt on rising edge (motion detected)
+    attachInterrupt(digitalPinToInterrupt(pirPin), motionISR, RISING);
     
-    return true;
+    Serial.printf("MotionDetector initialized on pin %d with %dms debounce\n", pirPin, debounceMs);
 }
 
-bool MotionDetector::detectMotion() {
-    if (!calibrationComplete) {
-        return false;
+void IRAM_ATTR MotionDetector::motionISR() {
+    if (instance == nullptr) {
+        return;
     }
     
-    // Check cooldown period
+    // Note: millis() is ISR-safe on ESP32 as it uses a hardware timer
+    // that maintains the count independently
     unsigned long currentTime = millis();
-    if (currentTime - lastTriggerTime < cooldownPeriod) {
-        return false;
-    }
     
-    // Read PIR sensor
-    int sensorValue = digitalRead(pirPin);
-    
-    if (sensorValue == HIGH) {
-        lastTriggerTime = currentTime;
-        Serial.println("Motion detected!");
-        return true;
-    }
-    
-    return false;
-}
-
-void MotionDetector::calibrate() {
-    Serial.println("Starting PIR calibration (waiting 30 seconds)...");
-    
-    // PIR sensors typically need 30-60 seconds to stabilize
-    unsigned long calibrationTime = 30000;  // 30 seconds
-    unsigned long startTime = millis();
-    
-    while (millis() - startTime < calibrationTime) {
-        delay(1000);
-        Serial.print(".");
-    }
-    
-    Serial.println("\nPIR calibration complete!");
-    calibrationComplete = true;
-}
-
-void MotionDetector::setSensitivity(int level) {
-    if (level >= 0 && level <= 100) {
-        sensitivity = level;
-        Serial.printf("Motion sensitivity set to: %d\n", sensitivity);
+    // Check debounce period
+    if (currentTime - instance->lastTriggerTime >= instance->debounceMs) {
+        instance->motionDetected = true;
+        instance->lastTriggerTime = currentTime;
     }
 }
 
-void MotionDetector::setCooldown(unsigned long ms) {
-    cooldownPeriod = ms;
-    Serial.printf("Motion cooldown set to: %lu ms\n", cooldownPeriod);
+bool MotionDetector::isMotionDetected() {
+    // Disable interrupts briefly to ensure atomic read-and-clear
+    noInterrupts();
+    bool detected = motionDetected;
+    if (detected) {
+        motionDetected = false;  // Reset flag after reading
+    }
+    interrupts();
+    return detected;
 }
 
-unsigned long MotionDetector::getTimeSinceLastTrigger() {
-    return millis() - lastTriggerTime;
-}
-
-bool MotionDetector::isReady() {
-    return calibrationComplete;
+void MotionDetector::setDebounceTime(int ms) {
+    debounceMs = ms;
+    Serial.printf("Motion debounce time set to: %d ms\n", debounceMs);
 }
