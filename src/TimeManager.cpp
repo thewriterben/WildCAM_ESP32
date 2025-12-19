@@ -380,7 +380,7 @@ void TimeManager::printStatus() const {
     
     // Current time
     char timestamp[30];
-    if (getTimestamp(const_cast<char*>(timestamp), sizeof(timestamp))) {
+    if (getTimestamp(timestamp, sizeof(timestamp))) {
         Serial.printf_P(TAG_CURRENT_TIME, timestamp);
     }
     

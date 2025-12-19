@@ -10,6 +10,9 @@
 #include "config.h"
 #include "TimeManager.h"
 
+// Test constants
+static const time_t EPOCH_2024_JAN_01 = 1704067200;  // 2024-01-01 00:00:00 UTC
+
 // Test TimeManager initialization
 void test_time_manager_init() {
     TimeManager tm;
@@ -152,8 +155,7 @@ void test_time_manager_set_time_unix() {
     tm.init(0, 0);
     
     // Set time to a known Unix timestamp (Jan 1, 2024, 00:00:00 UTC)
-    time_t testTime = 1704067200;  // 2024-01-01 00:00:00 UTC
-    bool result = tm.setTime(testTime);
+    bool result = tm.setTime(EPOCH_2024_JAN_01);
     TEST_ASSERT_TRUE(result);
     
     // Verify time is now set
@@ -166,14 +168,13 @@ void test_time_manager_get_unix_time() {
     tm.init(0, 0);
     
     // Set a known time
-    time_t setTime = 1704067200;  // 2024-01-01 00:00:00 UTC
-    tm.setTime(setTime);
+    tm.setTime(EPOCH_2024_JAN_01);
     
     // Get the time back
     time_t gotTime = tm.getUnixTime();
     
     // Should be within a few seconds of what we set
-    TEST_ASSERT_INT_WITHIN(5, setTime, gotTime);
+    TEST_ASSERT_INT_WITHIN(5, EPOCH_2024_JAN_01, gotTime);
 }
 
 // Test getTime fills tm struct correctly
