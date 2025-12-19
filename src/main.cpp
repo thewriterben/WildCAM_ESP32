@@ -404,6 +404,9 @@ void loop() {
                 Serial.printf("Image saved successfully: %s\n", filepath.c_str());
                 
                 // Create and save metadata JSON with extended sensor data
+                // Size calculation: base fields (~150 bytes) + environment (~80 bytes) 
+                // + gps (~100 bytes) + light (~50 bytes) + overhead = ~400 bytes
+                // Using 512 bytes to ensure sufficient space with margin
                 StaticJsonDocument<512> metadata;
                 metadata["timestamp"] = millis();
                 metadata["image_path"] = filepath;

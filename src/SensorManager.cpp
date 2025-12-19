@@ -21,12 +21,14 @@
 #define BME280_REG_CALIB_START  0x88
 #define BME280_REG_CALIB_HUM    0xE1
 
-// BME280 chip ID
+// Chip IDs
 #define BME280_CHIP_ID          0x60
+#define BMP280_CHIP_ID          0x58
 
 // BH1750 commands
 #define BH1750_POWER_ON         0x01
 #define BH1750_CONTINUOUS_HIGH  0x10
+#define BH1750_MEASUREMENT_TIME_MS 180
 
 // Default configuration
 #define DEFAULT_SEA_LEVEL_PRESSURE 1013.25
@@ -185,7 +187,7 @@ bool SensorManager::initBME280(uint8_t address) {
     
     if (Wire.available()) {
         uint8_t chipId = Wire.read();
-        if (chipId != BME280_CHIP_ID && chipId != 0x58) {  // 0x58 is BMP280
+        if (chipId != BME280_CHIP_ID && chipId != BMP280_CHIP_ID) {
             Serial.printf("[Sensors] Invalid chip ID: 0x%02X\n", chipId);
             return false;
         }
@@ -655,7 +657,19 @@ float SensorManager::readLightAnalog() {
     // Convert to approximate lux (assuming LDR with voltage divider)
     // This is a rough approximation - calibrate for specific LDR
     float voltage = (rawValue / 4095.0) * 3.3;
+    
+    // Protect against division by zero when voltage is 0 (complete darkness)
+    if (voltage < 0.001) {
+        return 0.0;  // Return 0 lux for complete darkness
+    }
+    
     float resistance = (3.3 - voltage) * 10000.0 / voltage;  // Assuming 10k resistor
+    
+    // Protect against division by zero if resistance calculation fails
+    if (resistance < 0.001) {
+        return 100000.0;  // Return high lux value for very low resistance (bright light)
+    }
+    
     float lux = 500000.0 / resistance;  // Rough approximation
     
     return lux;
@@ -670,7 +684,9 @@ float SensorManager::readLightBH1750() {
     Wire.write(BH1750_CONTINUOUS_HIGH);
     Wire.endTransmission();
     
-    delay(180);  // Max measurement time for high resolution mode
+    // BH1750 requires up to 180ms for high resolution mode measurement
+    // Note: This is a blocking delay - consider non-blocking approach for time-critical applications
+    delay(BH1750_MEASUREMENT_TIME_MS);
     
     Wire.requestFrom(_lightSensorAddress, (uint8_t)2);
     
