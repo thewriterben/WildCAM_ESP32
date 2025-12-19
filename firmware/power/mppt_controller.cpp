@@ -2,7 +2,7 @@
  * @file mppt_controller.cpp
  * @brief Maximum Power Point Tracking controller implementation
  * @author WildCAM ESP32 Team
- * @date 2025-09-29
+ * @date 2025-12-19
  * @version 3.0.0
  * 
  * Implements MPPT algorithms for efficient solar energy harvesting:
@@ -430,22 +430,34 @@ void MPPTController::executeCV_Algorithm() {
     // Read current voltage
     float voltage = readSolarVoltage();
     
-    // If we haven't determined the reference voltage yet, or it's been a while
+    // Static variables for non-blocking Voc measurement
     static unsigned long last_voc_check = 0;
+    static unsigned long voc_settle_start = 0;
+    static bool voc_settling = false;
     unsigned long now = millis();
+    
+    // Non-blocking Voc measurement state machine
+    if (voc_settling) {
+        // Wait for voltage to settle (10ms)
+        if (now - voc_settle_start >= 10) {
+            float voc = readSolarVoltage();
+            reference_voltage_ = voc * CV_RATIO;  // Target voltage is ~76% of Voc
+            max_power_voltage_ = reference_voltage_;
+            
+            last_voc_check = now;
+            voc_settling = false;
+            Serial.printf("[MPPT] CV: Voc=%.2fV, Vmpp=%.2fV\n", voc, reference_voltage_);
+        }
+        return;  // Don't update duty cycle while settling
+    }
     
     // Periodically check open-circuit voltage (every 5 minutes)
     if (reference_voltage_ == 0 || (now - last_voc_check > 300000)) {
         // Temporarily disable charging to measure Voc
         setPWMDutyCycle(0);
-        delay(10);  // Wait for voltage to settle
-        
-        float voc = readSolarVoltage();
-        reference_voltage_ = voc * CV_RATIO;  // Target voltage is ~76% of Voc
-        max_power_voltage_ = reference_voltage_;
-        
-        last_voc_check = now;
-        Serial.printf("[MPPT] CV: Voc=%.2fV, Vmpp=%.2fV\n", voc, reference_voltage_);
+        voc_settle_start = now;
+        voc_settling = true;
+        return;  // Wait for next update to read Voc
     }
     
     // Simple proportional control to maintain reference voltage
