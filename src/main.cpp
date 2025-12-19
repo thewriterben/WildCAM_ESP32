@@ -73,6 +73,7 @@
 #include "StorageManager.h"
 #include "PowerManager.h"
 #include "WebServer.h"
+#include "MeshManager.h"
 
 // Global instances
 MotionDetector motionDetector;
@@ -285,6 +286,29 @@ void setup() {
         Serial.println("\n5. Web Server disabled (low power mode)");
     }
     
+    // Initialize LoRa Mesh Network (if enabled)
+    #if LORA_ENABLED
+    LOG_INFO("Initializing LoRa Mesh Network...");
+    Serial.println("\n6. Initializing LoRa Mesh Network...");
+    if (meshManager.init()) {
+        // Set node name based on chip ID for identification
+        String nodeName = "CAM" + String((uint32_t)(ESP.getEfuseMac() & 0xFFFF), HEX);
+        meshManager.setNodeName(nodeName);
+        LOG_INFO("LoRa mesh network ready - Node: %s", nodeName.c_str());
+        Serial.printf("   ✓ Mesh network ready - Node: %s\n", nodeName.c_str());
+        
+        // If no coordinator exists after initial beacon, become coordinator
+        // (First node to start typically becomes coordinator)
+    } else {
+        LOG_WARN("LoRa mesh network initialization failed (non-critical)");
+        Serial.println("   ⚠ LoRa mesh network initialization failed");
+        Serial.println("   (Continuing without mesh networking)");
+    }
+    #else
+    Serial.println("\n6. LoRa Mesh Network: Disabled in config");
+    LOG_INFO("LoRa mesh networking is disabled in config");
+    #endif
+    
     // Configure wake-up sources for deep sleep
     LOG_INFO("Configuring wake-up sources...");
     Serial.println("\nConfiguring wake-up sources...");
@@ -384,6 +408,26 @@ void loop() {
                 imageCount++;
                 LOG_INFO("Total images captured: %lu", imageCount);
                 Serial.printf("Total images captured: %lu\n", imageCount);
+                
+                // Broadcast wildlife detection event over mesh network
+                #if LORA_ENABLED
+                if (meshManager.isInitialized()) {
+                    WildlifeEvent event;
+                    event.timestamp = millis();
+                    event.nodeId = meshManager.getNodeId();
+                    event.species = "Unknown";  // Could be set by ML classifier
+                    event.confidence = 0.0f;
+                    event.latitude = 0.0f;
+                    event.longitude = 0.0f;
+                    event.imageSize = fb->len;
+                    event.hasImage = true;
+                    
+                    if (meshManager.sendWildlifeEvent(event)) {
+                        LOG_INFO("Wildlife event broadcast to mesh network");
+                        Serial.println("Wildlife event broadcast to mesh network");
+                    }
+                }
+                #endif
             } else {
                 LOG_ERROR("Failed to save image to SD card");
                 Serial.println("ERROR: Failed to save image to SD card");
@@ -444,6 +488,13 @@ void loop() {
         power.configureWakeOnMotion(PIR_SENSOR_PIN);
         power.enterDeepSleep(DEEP_SLEEP_DURATION);
     }
+    
+    // Process mesh network messages
+    #if LORA_ENABLED
+    if (meshManager.isInitialized()) {
+        meshManager.process();
+    }
+    #endif
     
     // Small delay to prevent CPU spinning
     delay(MAIN_LOOP_DELAY_MS);
