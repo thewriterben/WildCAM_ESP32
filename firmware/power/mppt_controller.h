@@ -2,7 +2,7 @@
  * @file mppt_controller.h
  * @brief Maximum Power Point Tracking controller for solar energy harvesting
  * @author WildCAM ESP32 Team
- * @date 2025-09-29
+ * @date 2025-12-19
  * @version 3.0.0
  */
 
@@ -225,6 +225,11 @@ private:
      * @return Cloud cover percentage (0-100)
      */
     int estimateCloudCover();
+    
+    // Additional state variables (private)
+    bool mppt_enabled_;
+    int current_duty_cycle_;
+    unsigned long last_energy_update_;
 };
 
 #endif // MPPT_CONTROLLER_H
