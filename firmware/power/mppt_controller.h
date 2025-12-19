@@ -225,6 +225,11 @@ private:
      * @return Cloud cover percentage (0-100)
      */
     int estimateCloudCover();
+    
+    // Additional state variables
+    bool mppt_enabled_;
+    int current_duty_cycle_;
+    unsigned long last_energy_update_;
 };
 
 #endif // MPPT_CONTROLLER_H
