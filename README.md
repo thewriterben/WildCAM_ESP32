@@ -24,10 +24,10 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **SD card storage** | ✅ Complete | Automatic file organization with timestamps |
 | **JSON metadata** | ✅ Complete | Each image includes timestamp, battery level, and file info |
 | **Battery monitoring** | ✅ Complete | Real-time voltage and percentage tracking |
-| **Web interface** | ✅ Complete | HTTP server for status and image viewing |
 | **Deep sleep mode** | ✅ Complete | Power-efficient sleep between captures |
 | **Multi-board support** | ✅ Complete | ESP32-CAM, ESP32-S3, FREENOVE, XIAO variants |
 | **Two-factor detection** | ✅ Complete | PIR + Vision confirmation (98% accuracy) |
+| **Time keeping** | ✅ Complete | NTP sync + DS3231 RTC for persistent timestamps |
 
 ### Enterprise Features - In Development 🔄
 
@@ -37,7 +37,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **LoRa mesh networking** | 🔄 Framework | Est. 9-12 months |
 | **Cloud integration** | 🔄 Framework | Est. 9-12 months |
 | **Mobile app** | 🔄 Framework | Est. 12-15 months |
-| **MPPT solar charging** | 🔄 In Progress | Est. 6-9 months |
+| **MPPT solar charging** | ✅ Complete | Implemented |
 | **Satellite communication** | 🔄 Framework | Est. 12-15 months |
 | **Quantum-safe security** | 🔄 Framework | Est. 12-15 months |
 
@@ -51,12 +51,11 @@ The core system is fully production-ready for wildlife monitoring. Advanced ente
 
 - 🎯 **Motion-triggered Image Capture** - PIR sensor detects motion with two-factor vision confirmation (98% accuracy)
 - 💾 **SD Card Storage with Metadata** - Images saved with JSON metadata including timestamps, battery level, and capture count
-- 🔋 **Battery Monitoring** - Real-time voltage monitoring and percentage calculation
-- 🌐 **Web Interface** - Access camera status, view images, and check system health via web browser
 - ⚡ **Deep Sleep Power Management** - Efficient power usage with configurable sleep intervals (30+ day battery life)
 - 🔁 **Automatic Recovery** - Watchdog timer prevents system hangs
 - 📊 **Status Logging** - Serial output for debugging and monitoring
 - 🖥️ **Multi-Board Support** - Compatible with ESP32-CAM, ESP32-S3, FREENOVE-CAM, and XIAO ESP32-S3
+- ⏰ **Accurate Time Keeping** - NTP time sync over WiFi with DS3231 external RTC for persistent timestamps across power cycles
 
 ### Additional Sensor Support (Optional)
 
@@ -88,9 +87,7 @@ See [SENSOR_INTEGRATION.md](SENSOR_INTEGRATION.md) for detailed setup instructio
 | **Solar Panel** | 5V 5W with charge controller | $15-25 | Solar charging |
 | **Weatherproof Enclosure** | IP65 rated, clear window | $10-20 | Outdoor protection |
 | **Battery Monitor** | Voltage divider circuit or dedicated module | $2-5 | Better voltage accuracy |
-| **BME280 Sensor** | I2C temperature/humidity/pressure sensor | $5-10 | Environmental monitoring |
-| **GPS Module** | NEO-6M or similar UART GPS | $10-15 | Location tagging |
-| **BH1750 Light Sensor** | I2C lux sensor | $3-5 | Day/night detection |
+
 
 **Total Cost Estimate:**
 - **Basic Setup:** $25-50 (ESP32-CAM, SD card, PIR sensor, programmer, cables)
@@ -383,7 +380,7 @@ If you see this output, your WildCAM_ESP32 is successfully installed! 🎉
 
 ### Accessing the Web Interface
 
-The WildCAM_ESP32 provides a simple web interface for monitoring and configuration.
+The WildCAM_ESP32 provides an enhanced mobile-responsive web interface for monitoring and configuration.
 
 #### Step 1: Find the IP Address
 
@@ -399,23 +396,49 @@ IP Address: 192.168.1.123
 2. Open a web browser
 3. Navigate to the IP address: `http://192.168.1.123`
 
-#### Step 3: Available Web Endpoints
+#### Step 3: Web Interface Pages
 
-- **`/`** - Home page with basic info and navigation
-- **`/status`** - System status (JSON format):
+The enhanced web interface includes three main pages:
+
+**Dashboard (`/`)**
+- Real-time statistics: uptime, battery %, free storage, image count, memory, voltage
+- Auto-refreshes every 30 seconds
+- Quick action buttons: Capture Now, Refresh, Reboot
+- Latest captured image preview
+
+**Gallery (`/gallery`)**
+- Grid layout with image thumbnails
+- Pagination support (12 images per page)
+- Click to view full-size image in modal
+- Capture new image button
+
+**Settings (`/config`)**
+- Capture interval (1-3600 seconds)
+- Motion sensitivity (0-100%)
+- Night mode toggle
+- Cloud upload toggle
+- Device information display
+
+#### API Endpoints
+
+- **`/api/status`** - System status (JSON format):
   ```json
   {
-    "camera": "ok",
-    "storage": "ok", 
-    "motion": "ready",
-    "battery": 78,
-    "uptime": 1234,
+    "uptime": 123456,
+    "freeHeap": 150000,
+    "batteryVoltage": 4.05,
+    "batteryPercentage": 85,
+    "sdCardFreeSpace": 15000000000,
+    "sdCardUsedSpace": 500000000,
     "imageCount": 42
   }
   ```
+- **`/api/images`** - Paginated list of captured images (JSON)
+- **`/api/config`** - Get/update device configuration (GET/POST)
 - **`/latest`** - View the most recently captured image
-- **`/capture`** - Manually trigger a photo capture
-- **`/images`** - List of all captured images
+- **`/capture`** or **`/api/capture`** - Manually trigger a photo capture (POST)
+- **`/images/*`** - Serve images from SD card
+- **`/thumbnail/*`** - Serve image thumbnails
 
 ### Retrieving Images from SD Card
 
@@ -668,15 +691,12 @@ This is an early MVP release. Here are the current known limitations and issues:
 
 - **WiFi Connection Delays:** First WiFi connection can take 10-30 seconds
   - **Status:** Normal behavior, no fix planned
-  
-- **Time/Date Not Persistent:** ESP32 lacks RTC, timestamps reset on power cycle
-  - **Planned Fix:** Add NTP sync over WiFi or external RTC module support
 
-- **Web Interface Basic:** Current web UI is minimal HTML, not mobile-optimized
-  - **Planned Fix:** Improved responsive web interface in v0.2.0
+- **Web Interface Basic:** ~~Current web UI is minimal HTML, not mobile-optimized~~
+  - **Fixed:** Enhanced mobile-responsive web interface now available in v3.1.0
 
-- **No Image Thumbnails:** Full images loaded in web interface can be slow
-  - **Planned Fix:** Thumbnail generation in future version
+- **No Image Thumbnails:** ~~Full images loaded in web interface can be slow~~
+  - **Fixed:** Image gallery with thumbnail support now available
 
 - **Limited Error Recovery:** Some SD card errors require manual reset
   - **Planned Fix:** Better error handling and automatic retry logic
@@ -701,9 +721,9 @@ This is an early MVP release. Here are the current known limitations and issues:
 - **Weatherproofing:** No official enclosure design provided yet
   - **Workaround:** Use generic IP65 enclosure with clear window for camera
 
-- **Solar Charging:** Basic battery monitoring only, no MPPT charge controller
-  - **Limitation:** Inefficient solar charging
-  - **Planned Fix:** MPPT support in Phase 2
+- **Solar Charging:** MPPT solar charge controller support now available in `firmware/power/`
+  - Supports 3 tracking algorithms (P&O, Incremental Conductance, Constant Voltage)
+  - See `firmware/power/README.md` for setup instructions
 
 ### Reporting Issues
 
@@ -744,17 +764,19 @@ The core wildlife camera system is **production-ready**:
 
 ### 🔄 Phase 2: Enhanced Features (In Progress - Q2-Q4 2026)
 
-- **Improved Power Management**
-  - MPPT solar charge controller support (in progress)
-  - Advanced battery analytics
-  - Adaptive sleep schedules based on motion patterns
+- **Improved Power Management** ✅ **Implemented**
+  - MPPT solar charge controller support (3 algorithms: P&O, Incremental Conductance, Constant Voltage)
+  - Advanced battery analytics (SOC, SOH, multi-stage charging, multi-chemistry support)
+  - Adaptive sleep schedules based on motion patterns (7-day pattern learning)
+  - Battery-aware power modes (Normal, Power Save, Solar Priority, Emergency)
   
-- **Better Time Keeping**
-  - NTP time sync over WiFi
-  - External RTC module support (DS3231)
-  - Persistent timestamps across power cycles
+- **Better Time Keeping** ✅ **COMPLETE**
+  - ✅ NTP time sync over WiFi
+  - ✅ External RTC module support (DS3231)
+  - ✅ Persistent timestamps across power cycles
+  - See [TIME_KEEPING.md](docs/TIME_KEEPING.md) for configuration details
 
-- **Enhanced Web Interface**
+- **Enhanced Web Interface** ✅
   - Mobile-responsive design
   - Image gallery with thumbnails
   - Real-time statistics dashboard

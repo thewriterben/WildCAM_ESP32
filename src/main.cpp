@@ -68,6 +68,7 @@
 // Include all modular components
 #include "config.h"
 #include "Logger.h"
+#include "TimeManager.h"
 #include "MotionDetector.h"
 #include "CameraManager.h"
 #include "StorageManager.h"
@@ -83,6 +84,10 @@ StorageManager storage;
 PowerManager power;
 WebServer webServer(WEB_SERVER_PORT);
 SensorManager sensors;
+
+#if TIME_MANAGEMENT_ENABLED
+TimeManager timeManager;
+#endif
 
 /**
  * @brief System state enumeration
@@ -159,19 +164,56 @@ void setup() {
     LOG_INFO("WildCAM ESP32 Starting Up - Version %s", FIRMWARE_VERSION);
     #endif
     
+    // Initialize Time Manager (before other components that need timestamps)
+    #if TIME_MANAGEMENT_ENABLED
+    Serial.println("\nInitializing Time Manager...");
+    #if LOGGING_ENABLED
+    LOG_INFO("Initializing Time Manager...");
+    #endif
+    if (timeManager.init(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC)) {
+        #if LOGGING_ENABLED
+        LOG_INFO("Time Manager initialized");
+        #endif
+        Serial.println("   ✓ Time Manager initialized");
+        if (timeManager.hasExternalRTC()) {
+            Serial.println("   External RTC (DS3231) detected");
+        }
+        if (timeManager.isTimeSet()) {
+            char timestamp[30];
+            timeManager.getTimestamp(timestamp, sizeof(timestamp));
+            Serial.printf("   Current time: %s\n", timestamp);
+        } else {
+            Serial.println("   Time not set - will sync via NTP when WiFi connects");
+        }
+    } else {
+        #if LOGGING_ENABLED
+        LOG_WARN("Time Manager initialization failed (non-critical)");
+        #endif
+        Serial.println("   ⚠ Time Manager initialization failed");
+    }
+    #endif
+    
     // Initialize watchdog timer for crash recovery
+    #if LOGGING_ENABLED
     LOG_INFO("Initializing watchdog timer...");
+    #endif
     Serial.println("Initializing watchdog timer...");
     esp_task_wdt_init(WDT_TIMEOUT, true);
     esp_task_wdt_add(NULL);
+    #if LOGGING_ENABLED
     LOG_INFO("Watchdog timer initialized");
+    #endif
     Serial.println("   ✓ Watchdog timer initialized\n");
     
     // Initialize Power Manager first
+    #if LOGGING_ENABLED
     LOG_INFO("Initializing Power Manager...");
+    #endif
     Serial.println("1. Initializing Power Manager...");
     if (!power.init(BATTERY_ADC_PIN)) {
+        #if LOGGING_ENABLED
         LOG_ERROR("Power Manager initialization failed!");
+        #endif
         Serial.println("   ✗ Power Manager initialization failed!");
         Serial.println("\nSystem halted due to initialization failure.");
         while (true) {
@@ -269,13 +311,36 @@ void setup() {
             Serial.println(" connected!");
             Serial.printf("   IP Address: %s\n", WiFi.localIP().toString().c_str());
             
+            // Synchronize time via NTP after WiFi connection
+            #if TIME_MANAGEMENT_ENABLED && NTP_AUTO_SYNC
+            Serial.println("   Synchronizing time via NTP...");
+            if (timeManager.syncNTP(NTP_SERVER_PRIMARY, NTP_SYNC_TIMEOUT_MS)) {
+                #if LOGGING_ENABLED
+                LOG_INFO("NTP time sync successful");
+                #endif
+                Serial.println("   ✓ Time synchronized via NTP");
+                char timestamp[30];
+                timeManager.getTimestamp(timestamp, sizeof(timestamp));
+                Serial.printf("   Current time: %s\n", timestamp);
+            } else {
+                #if LOGGING_ENABLED
+                LOG_WARN("NTP time sync failed - using RTC time if available");
+                #endif
+                Serial.println("   ⚠ NTP sync failed - using RTC time if available");
+            }
+            #endif
+            
             // Initialize web server with manager references
             if (webServer.init(&storage, &camera, &power)) {
                 webServer.begin();
+                #if LOGGING_ENABLED
                 LOG_INFO("Web server started");
+                #endif
                 Serial.println("   ✓ Web server started");
             } else {
+                #if LOGGING_ENABLED
                 LOG_ERROR("Web server initialization failed");
+                #endif
                 Serial.println("   ✗ Web server initialization failed");
             }
         } else {
@@ -403,12 +468,11 @@ void loop() {
                 LOG_INFO("Image saved: %s (size: %d bytes)", filepath.c_str(), fb->len);
                 Serial.printf("Image saved successfully: %s\n", filepath.c_str());
                 
-                // Create and save metadata JSON with extended sensor data
-                // Size calculation: base fields (~150 bytes) + environment (~80 bytes) 
-                // + gps (~100 bytes) + light (~50 bytes) + overhead = ~400 bytes
-                // Using 512 bytes to ensure sufficient space with margin
-                StaticJsonDocument<512> metadata;
+
                 metadata["timestamp"] = millis();
+                metadata["time_source"] = "millis";
+                #endif
+                
                 metadata["image_path"] = filepath;
                 metadata["battery_voltage"] = power.getBatteryVoltage();
                 metadata["battery_percent"] = power.getBatteryPercentage();
@@ -465,7 +529,11 @@ void loop() {
                 #if LORA_ENABLED
                 if (meshManager.isInitialized()) {
                     WildlifeEvent event;
+                    #if TIME_MANAGEMENT_ENABLED
+                    event.timestamp = timeManager.isTimeSet() ? (uint32_t)timeManager.getUnixTime() : millis();
+                    #else
                     event.timestamp = millis();
+                    #endif
                     event.nodeId = meshManager.getNodeId();
                     event.species = "Unknown";  // Could be set by ML classifier
                     event.confidence = 0.0f;

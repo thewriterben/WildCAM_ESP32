@@ -407,6 +407,89 @@
 #define MESH_ENCRYPTION_ENABLED true
 
 //==============================================================================
+// TIME MANAGEMENT SETTINGS (NTP and RTC)
+//==============================================================================
+
+/**
+ * @brief Enable time management features
+ * @note When enabled, system will attempt NTP sync and RTC initialization
+ * @default true
+ */
+#define TIME_MANAGEMENT_ENABLED true
+
+/**
+ * @brief Primary NTP server address
+ * @note Used for time synchronization when WiFi is connected
+ * @default "pool.ntp.org"
+ */
+#define NTP_SERVER_PRIMARY "pool.ntp.org"
+
+/**
+ * @brief Secondary NTP server address (backup)
+ * @note Used if primary server is unreachable
+ * @default "time.nist.gov"
+ */
+#define NTP_SERVER_SECONDARY "time.nist.gov"
+
+/**
+ * @brief NTP synchronization timeout in milliseconds
+ * @note Maximum time to wait for NTP response
+ * @default 10000 (10 seconds)
+ */
+#define NTP_SYNC_TIMEOUT_MS 10000
+
+/**
+ * @brief GMT offset in seconds
+ * @note Example: -18000 for EST (UTC-5), 0 for UTC, 3600 for CET (UTC+1)
+ * @default 0 (UTC)
+ */
+#define GMT_OFFSET_SEC 0
+
+/**
+ * @brief Daylight saving time offset in seconds
+ * @note Set to 3600 if DST is observed, 0 otherwise
+ * @default 0
+ */
+#define DAYLIGHT_OFFSET_SEC 0
+
+/**
+ * @brief Enable automatic NTP sync after WiFi connection
+ * @note When enabled, time will be synced automatically when WiFi connects
+ * @default true
+ */
+#define NTP_AUTO_SYNC true
+
+/**
+ * @brief NTP re-synchronization interval in milliseconds
+ * @note How often to re-sync with NTP server (0 = only sync once at startup)
+ * @default 3600000 (1 hour)
+ */
+#define NTP_RESYNC_INTERVAL_MS 3600000
+
+/**
+ * @brief Enable external DS3231 RTC module support
+ * @note When enabled, system will attempt to use external RTC for persistent time
+ * @default true
+ */
+#define RTC_DS3231_ENABLED true
+
+/**
+ * @brief I2C SDA pin for RTC communication
+ * @note Default I2C pins may conflict with camera on AI-Thinker boards
+ * @note Use GPIO 14 for AI-Thinker ESP32-CAM if default pins conflict
+ * @default 21 (ESP32 default SDA)
+ */
+#define RTC_I2C_SDA_PIN 21
+
+/**
+ * @brief I2C SCL pin for RTC communication
+ * @note Default I2C pins may conflict with camera on AI-Thinker boards
+ * @note Use GPIO 15 for AI-Thinker ESP32-CAM if default pins conflict
+ * @default 22 (ESP32 default SCL)
+ */
+#define RTC_I2C_SCL_PIN 22
+
+//==============================================================================
 // LORA PIN DEFINITIONS (ESP32-S3-CAM recommended, conflicts with AI-Thinker)
 //==============================================================================
 
