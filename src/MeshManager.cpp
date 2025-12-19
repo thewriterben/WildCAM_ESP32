@@ -251,7 +251,7 @@ bool MeshManager::sendMessage(uint32_t destination, const uint8_t* data, size_t 
     
     // Copy data
     if (packetLen + length > sizeof(packet)) {
-        LOG_WARN("Message too large: %d bytes", length);
+        LOG_WARN("Message too large: %zu bytes", length);
         return false;
     }
     memcpy(&packet[packetLen], data, length);
@@ -357,7 +357,7 @@ bool MeshManager::sendImage(const uint8_t* imageData, size_t imageSize, const St
     const size_t CHUNK_SIZE = 200;
     size_t totalChunks = (imageSize + CHUNK_SIZE - 1) / CHUNK_SIZE;
     
-    LOG_INFO("Starting image transmission: %s (%d bytes, %d chunks)", 
+    LOG_INFO("Starting image transmission: %s (%zu bytes, %zu chunks)", 
              filename.c_str(), imageSize, totalChunks);
     
     for (size_t chunk = 0; chunk < totalChunks; chunk++) {
@@ -402,14 +402,16 @@ bool MeshManager::sendImage(const uint8_t* imageData, size_t imageSize, const St
         
         _packetsSent++;
         
-        // Small delay between chunks to avoid radio congestion
-        delay(100);
+        // Short delay between chunks to avoid radio congestion
+        // Use yield() to prevent watchdog timeout during long transfers
+        delay(50);
+        yield();
     }
     
     // Return to receive mode
     LoRa.receive();
     
-    LOG_INFO("Image transmission complete: %d packets sent", totalChunks);
+    LOG_INFO("Image transmission complete: %zu packets sent", totalChunks);
     return true;
 #endif
 }
@@ -753,12 +755,18 @@ void MeshManager::cleanupExpiredNodes() {
 }
 
 uint32_t MeshManager::generateNodeId() {
-    // Generate from ESP32 MAC address
+    // Generate from ESP32 MAC address using all 6 bytes
+    // XOR upper bytes with lower to ensure all bits contribute to uniqueness
     uint8_t mac[6];
     WiFi.macAddress(mac);
     
-    return ((uint32_t)mac[2] << 24) | ((uint32_t)mac[3] << 16) |
-           ((uint32_t)mac[4] << 8) | mac[5];
+    // Create a 32-bit ID by XORing pairs of bytes and combining
+    uint32_t upper = ((uint32_t)mac[0] << 8) | mac[1];
+    uint32_t middle = ((uint32_t)mac[2] << 8) | mac[3];
+    uint32_t lower = ((uint32_t)mac[4] << 8) | mac[5];
+    
+    // Combine with XOR for better distribution
+    return (upper << 16) ^ (middle << 8) ^ lower ^ (middle << 16);
 }
 
 SignalStrength MeshManager::classifySignal(int16_t rssi) const {
