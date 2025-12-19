@@ -1,12 +1,13 @@
-# MPPT Solar Charging and Advanced Battery Management
+# Improved Power Management System
 
 ## Overview
 
-This module provides comprehensive solar power management for the WildCAM ESP32 wildlife camera system. It includes:
+This module provides comprehensive power management for the WildCAM ESP32 wildlife camera system. It includes:
 
 - **MPPT (Maximum Power Point Tracking)** solar charge controller
-- **Advanced battery management** with multi-stage charging
-- **Integrated solar power system** combining both for optimal operation
+- **Advanced battery analytics** with multi-stage charging, SOC/SOH estimation, and health monitoring
+- **Adaptive sleep scheduling** based on motion patterns for optimized power consumption
+- **Integrated power system** combining all components for optimal operation
 
 ## Features
 
@@ -47,6 +48,46 @@ Protection features:
 - Over-current protection
 - Temperature protection (high and low)
 - Cell imbalance detection
+
+### Adaptive Sleep Scheduler (`adaptive_sleep_scheduler.h/cpp`)
+
+Intelligent sleep scheduling based on motion pattern analysis:
+
+- **Time-of-day activity learning** - Learns hourly activity patterns over 7 days
+- **Motion frequency analysis** - Tracks motion events per time slot
+- **Adaptive sleep duration** - Adjusts sleep based on expected activity
+- **Battery-aware scheduling** - Increases sleep when battery is low
+- **Aggressiveness levels**:
+  - **CONSERVATIVE** - Minimize missed detections
+  - **BALANCED** - Balance power saving and detection
+  - **AGGRESSIVE** - Prioritize power saving
+  - **ULTRA_AGGRESSIVE** - Maximum power saving for critical battery
+
+Key features:
+- Hourly granularity with 7-day rolling history
+- Activity probability calculation for each time slot
+- Quiet hour detection for extended sleep periods
+- Automatic aggressiveness adjustment based on battery level
+- Crepuscular activity bonus (dawn/dusk weighting)
+
+### Improved Power Manager (`improved_power_manager.h/cpp`)
+
+Unified interface integrating MPPT, battery management, and adaptive sleep:
+
+**Operating Modes:**
+- **NORMAL** - Standard operation with balanced settings
+- **POWER_SAVE** - Reduced power consumption, longer sleep
+- **SOLAR_PRIORITY** - Maximize solar energy harvesting
+- **BATTERY_PRESERVE** - Prioritize battery longevity
+- **EMERGENCY** - Critical battery, minimal operation
+- **MAINTENANCE** - Calibration and diagnostic mode
+
+**Features:**
+- Automatic mode switching based on battery and solar conditions
+- Integrated motion pattern learning
+- Weather-adaptive charging optimization
+- Comprehensive status reporting
+- Deep sleep preparation and management
 
 ### Solar Power System (`solar_power_system.h/cpp`)
 
@@ -218,7 +259,102 @@ void loop() {
 }
 ```
 
-## API Reference
+### Adaptive Sleep Scheduling
+
+```cpp
+#include "adaptive_sleep_scheduler.h"
+
+AdaptiveSleepScheduler sleepScheduler;
+
+void setup() {
+    Serial.begin(115200);
+    
+    SchedulerConfig config = AdaptiveSleepScheduler::getDefaultConfig();
+    config.aggressiveness = SleepAggressiveness::BALANCED;
+    config.battery_low_threshold = 30.0f;
+    
+    sleepScheduler.begin(config);
+}
+
+void loop() {
+    // Update scheduler with current time (from RTC or NTP)
+    sleepScheduler.setCurrentTime(hour, minute);
+    sleepScheduler.update();
+    
+    // Record motion events when detected
+    if (motionDetected) {
+        sleepScheduler.recordMotionEvent();
+    }
+    
+    // Get recommended sleep duration
+    uint32_t sleepDuration = sleepScheduler.getRecommendedSleepDuration();
+    
+    // Check if it's a good time to sleep
+    if (!sleepScheduler.isCurrentlyActiveTime()) {
+        Serial.printf("Quiet time - sleeping for %lu ms\n", sleepDuration);
+        // Enter deep sleep...
+    }
+    
+    delay(100);
+}
+```
+
+### Complete Improved Power Manager
+
+```cpp
+#include "improved_power_manager.h"
+
+ImprovedPowerPins pins = {
+    .battery_voltage_pin = 34,
+    .battery_current_pin = 35,
+    .battery_temp_pin = 32,
+    .charge_enable_pin = 26,
+    .solar_voltage_pin = 33,
+    .solar_current_pin = 36,
+    .mppt_pwm_pin = 25
+};
+
+ImprovedPowerManager powerManager;
+
+void setup() {
+    Serial.begin(115200);
+    
+    ImprovedPowerConfig config = ImprovedPowerManager::getDefaultConfig();
+    config.enable_adaptive_sleep = true;
+    config.enable_auto_mode_switching = true;
+    config.battery_chemistry = BatteryChemistry::LITHIUM_ION;
+    
+    powerManager.begin(pins, config);
+}
+
+void loop() {
+    // Update time from RTC
+    powerManager.setCurrentTime(hour, minute);
+    
+    // Main update
+    powerManager.update();
+    
+    // Record motion events
+    if (motionDetected) {
+        powerManager.recordMotionEvent();
+    }
+    
+    // Get comprehensive status
+    ImprovedPowerStatus status = powerManager.getStatus();
+    
+    Serial.printf("Battery: %.1f%% (%.2fV) Solar: %.1fmW Mode: %d\n",
+                  status.battery_soc, status.battery_voltage,
+                  status.solar_power, static_cast<int>(status.operating_mode));
+    
+    // Check if should sleep
+    if (status.battery_soc < 20.0f || !status.is_active_time) {
+        uint32_t sleepTime = powerManager.getRecommendedSleepDuration();
+        powerManager.enterDeepSleep(sleepTime);
+    }
+    
+    delay(100);
+}
+```
 
 ### MPPTController
 
@@ -277,6 +413,65 @@ void updateWeatherConditions(int cloud, float temp); // Update weather
 void printStatus();                              // Print status to Serial
 ```
 
+### AdaptiveSleepScheduler
+
+```cpp
+bool begin(const SchedulerConfig& config);       // Initialize with configuration
+bool begin();                                    // Initialize with defaults
+void update();                                   // Main update loop
+void recordMotionEvent(unsigned long timestamp); // Record motion detection
+uint32_t getRecommendedSleepDuration();          // Get recommended sleep for now
+uint32_t getRecommendedSleepDuration(uint8_t hour); // Get recommended sleep for hour
+void getDailySchedule(SleepScheduleEntry* schedule); // Get full daily schedule
+MotionSlotStats getSlotStatistics(uint8_t hour); // Get stats for time slot
+bool isCurrentlyActiveTime();                    // Check if current time is active
+bool isActiveTime(uint8_t hour);                 // Check if hour is typically active
+void setAggressiveness(SleepAggressiveness level); // Set power saving level
+void updateBatteryLevel(float percentage);       // Update battery for scheduling
+void setCurrentTime(uint8_t hour, uint8_t minute); // Set current time
+void resetPatterns();                            // Reset learned patterns
+uint8_t getPeakActivityHour();                   // Get busiest hour
+int getQuietHours(uint8_t* hours, int max);      // Get quietest hours
+float getActivityScore();                        // Get current activity score
+void printStatus();                              // Print status to Serial
+void printDailyPattern();                        // Print activity pattern
+```
+
+### ImprovedPowerManager
+
+```cpp
+bool begin(const ImprovedPowerPins& pins, const ImprovedPowerConfig& config);
+bool begin(const ImprovedPowerPins& pins);       // Initialize with defaults
+void update();                                   // Main update loop
+ImprovedPowerStatus getStatus();                 // Get comprehensive status
+float getBatteryVoltage();                       // Get battery voltage
+float getBatterySOC();                           // Get state of charge
+float getBatterySOH();                           // Get state of health
+BatteryHealth getBatteryHealth();                // Get health assessment
+bool isCharging();                               // Check charging status
+float getSolarPower();                           // Get solar power
+bool isSolarAvailable();                         // Check solar availability
+float getDailyEnergyHarvest();                   // Get daily energy in Wh
+void setOperatingMode(PowerSystemMode mode);     // Set operating mode
+PowerSystemMode getOperatingMode();              // Get current mode
+uint32_t getRecommendedSleepDuration();          // Get recommended sleep
+void recordMotionEvent(unsigned long timestamp); // Record motion for learning
+bool isActiveTime();                             // Check if typically active
+float getActivityScore();                        // Get activity score
+void enterDeepSleep(uint32_t duration_ms);       // Enter deep sleep
+void prepareForDeepSleep(uint32_t duration_ms);  // Prepare for sleep
+void setCurrentTime(uint8_t hour, uint8_t minute); // Set time for scheduling
+void updateWeatherConditions(int cloud, float temp); // Update weather
+void setChargingEnabled(bool enable);            // Enable/disable charging
+void calibrateBatteryVoltage(float known_voltage); // Calibrate battery
+void calibrateSolarSensors(float v_factor, float c_factor); // Calibrate solar
+void resetMotionPatterns();                      // Reset learned patterns
+void resetDailyEnergy();                         // Reset energy counter
+void printStatus();                              // Print status to Serial
+void printDailySchedule();                       // Print activity schedule
+static ImprovedPowerConfig getDefaultConfig();   // Get default configuration
+```
+
 ## Testing
 
 Run the unit tests with PlatformIO:
@@ -289,6 +484,8 @@ pio test -e test
 Test files:
 - `test/test_mppt_controller.cpp` - MPPT controller tests
 - `test/test_battery_manager.cpp` - Battery manager tests
+- `test/test_adaptive_sleep_scheduler.cpp` - Adaptive sleep scheduler tests
+- `test/test_improved_power_manager.cpp` - Improved power manager tests
 
 ## Performance Specifications
 
@@ -301,6 +498,17 @@ Test files:
 - SOC accuracy: ±5% with coulomb counting
 - Charge efficiency: >90% typical
 - Protection response time: <100ms
+
+### Adaptive Sleep Scheduler
+- Pattern learning: 7-day rolling history
+- Time resolution: Hourly (24 slots/day)
+- Activity prediction accuracy: Improves over time with more data
+- Battery-aware: Automatically increases sleep when battery is low
+
+### Improved Power Manager
+- Integrates all components with <100ms update cycle
+- Automatic mode switching based on conditions
+- Deep sleep support with pattern-aware wake scheduling
 
 ## License
 
