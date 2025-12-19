@@ -28,6 +28,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **Deep sleep mode** | ✅ Complete | Power-efficient sleep between captures |
 | **Multi-board support** | ✅ Complete | ESP32-CAM, ESP32-S3, FREENOVE, XIAO variants |
 | **Two-factor detection** | ✅ Complete | PIR + Vision confirmation (98% accuracy) |
+| **Time keeping** | ✅ Complete | NTP sync + DS3231 RTC for persistent timestamps |
 
 ### Enterprise Features - In Development 🔄
 
@@ -57,6 +58,7 @@ The core system is fully production-ready for wildlife monitoring. Advanced ente
 - 🔁 **Automatic Recovery** - Watchdog timer prevents system hangs
 - 📊 **Status Logging** - Serial output for debugging and monitoring
 - 🖥️ **Multi-Board Support** - Compatible with ESP32-CAM, ESP32-S3, FREENOVE-CAM, and XIAO ESP32-S3
+- ⏰ **Accurate Time Keeping** - NTP time sync over WiFi with DS3231 external RTC for persistent timestamps across power cycles
 
 ## Hardware Requirements
 
@@ -80,6 +82,7 @@ The core system is fully production-ready for wildlife monitoring. Advanced ente
 | **Solar Panel** | 5V 5W with charge controller | $15-25 | Solar charging |
 | **Weatherproof Enclosure** | IP65 rated, clear window | $10-20 | Outdoor protection |
 | **Battery Monitor** | Voltage divider circuit or dedicated module | $2-5 | Better voltage accuracy |
+| **DS3231 RTC Module** | DS3231 with CR2032 battery | $2-5 | Persistent time keeping across power cycles |
 
 **Total Cost Estimate:**
 - **Basic Setup:** $25-50 (ESP32-CAM, SD card, PIR sensor, programmer, cables)
@@ -656,9 +659,6 @@ This is an early MVP release. Here are the current known limitations and issues:
 
 - **WiFi Connection Delays:** First WiFi connection can take 10-30 seconds
   - **Status:** Normal behavior, no fix planned
-  
-- **Time/Date Not Persistent:** ESP32 lacks RTC, timestamps reset on power cycle
-  - **Planned Fix:** Add NTP sync over WiFi or external RTC module support
 
 - **Web Interface Basic:** Current web UI is minimal HTML, not mobile-optimized
   - **Planned Fix:** Improved responsive web interface in v0.2.0
@@ -737,10 +737,11 @@ The core wildlife camera system is **production-ready**:
   - Advanced battery analytics
   - Adaptive sleep schedules based on motion patterns
   
-- **Better Time Keeping**
-  - NTP time sync over WiFi
-  - External RTC module support (DS3231)
-  - Persistent timestamps across power cycles
+- **Better Time Keeping** ✅ **COMPLETE**
+  - ✅ NTP time sync over WiFi
+  - ✅ External RTC module support (DS3231)
+  - ✅ Persistent timestamps across power cycles
+  - See [TIME_KEEPING.md](docs/TIME_KEEPING.md) for configuration details
 
 - **Enhanced Web Interface**
   - Mobile-responsive design
