@@ -312,6 +312,138 @@
 #define LOW_BATTERY_THRESHOLD BATTERY_LOW_THRESHOLD
 
 //==============================================================================
+// LORA MESH NETWORKING SETTINGS (Meshtastic/MeshCore Compatible)
+//==============================================================================
+
+/**
+ * @brief Enable LoRa mesh networking
+ * @note Set to true to enable long-range mesh communication
+ * @default false (disabled by default due to GPIO conflicts on AI-Thinker)
+ */
+#define LORA_ENABLED false
+
+/**
+ * @brief LoRa radio frequency in Hz
+ * @note 915MHz for US, 868MHz for EU, 433MHz for Asia
+ * @default 915000000 (915 MHz US ISM band)
+ */
+#define LORA_FREQUENCY 915000000
+
+/**
+ * @brief LoRa bandwidth in Hz
+ * @note Options: 125000, 250000, 500000
+ * @default 125000 (125 kHz for best range)
+ */
+#define LORA_BANDWIDTH 125000
+
+/**
+ * @brief LoRa spreading factor
+ * @note Range: 7-12, higher = more range but slower
+ * @default 10 (good balance of range and speed)
+ */
+#define LORA_SPREADING_FACTOR 10
+
+/**
+ * @brief LoRa coding rate
+ * @note Range: 5-8 (4/5 to 4/8)
+ * @default 5 (4/5 coding rate)
+ */
+#define LORA_CODING_RATE 5
+
+/**
+ * @brief LoRa transmit power in dBm
+ * @note Range: 2-20 dBm
+ * @default 17 dBm
+ */
+#define LORA_TX_POWER 17
+
+/**
+ * @brief LoRa sync word for network isolation
+ * @note Use 0x12 for private network, 0x34 for public LoRaWAN
+ * @default 0x12 (private network)
+ */
+#define LORA_SYNC_WORD 0x12
+
+/**
+ * @brief Unique mesh node ID (0 = auto-generate from MAC)
+ * @note Each node must have unique ID
+ * @default 0 (auto-generate)
+ */
+#define MESH_NODE_ID 0
+
+/**
+ * @brief Maximum mesh network hops
+ * @note Limits how far messages propagate
+ * @default 5
+ */
+#define MESH_MAX_HOPS 5
+
+/**
+ * @brief Mesh beacon interval in milliseconds
+ * @note How often to send discovery beacons
+ * @default 30000 (30 seconds)
+ */
+#define MESH_BEACON_INTERVAL_MS 30000
+
+/**
+ * @brief Mesh node timeout in milliseconds
+ * @note Time before considering a node offline
+ * @default 300000 (5 minutes)
+ */
+#define MESH_NODE_TIMEOUT_MS 300000
+
+/**
+ * @brief Maximum nodes in mesh network
+ * @note Memory allocation limit
+ * @default 16
+ */
+#define MESH_MAX_NODES 16
+
+/**
+ * @brief Enable mesh encryption (AES-256)
+ * @note Provides secure communication
+ * @default true
+ */
+#define MESH_ENCRYPTION_ENABLED true
+
+//==============================================================================
+// LORA PIN DEFINITIONS (ESP32-S3-CAM recommended, conflicts with AI-Thinker)
+//==============================================================================
+
+/**
+ * @brief LoRa chip select (CS/NSS) pin
+ * @note Use GPIO 10 for ESP32-S3, or external SPI for AI-Thinker
+ */
+#define LORA_CS_PIN 10
+
+/**
+ * @brief LoRa reset pin
+ * @note Use -1 if not connected
+ */
+#define LORA_RST_PIN 9
+
+/**
+ * @brief LoRa DIO0/IRQ pin
+ * @note Interrupt pin for receive complete
+ */
+#define LORA_DIO0_PIN 14
+
+/**
+ * @brief LoRa SPI clock pin (SCK)
+ */
+#define LORA_SCK_PIN 12
+
+/**
+ * @brief LoRa SPI data out pin (MOSI)
+ */
+#define LORA_MOSI_PIN 11
+
+/**
+ * @brief LoRa SPI data in pin (MISO)
+ */
+#define LORA_MISO_PIN 13
+
+//==============================================================================
 // CAMERA PIN DEFINITIONS (AI-Thinker ESP32-CAM)
 //==============================================================================
 
