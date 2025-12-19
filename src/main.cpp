@@ -68,6 +68,7 @@
 // Include all modular components
 #include "config.h"
 #include "Logger.h"
+#include "TimeManager.h"
 #include "MotionDetector.h"
 #include "CameraManager.h"
 #include "StorageManager.h"
@@ -81,6 +82,10 @@ CameraManager camera;
 StorageManager storage;
 PowerManager power;
 WebServer webServer(WEB_SERVER_PORT);
+
+#if TIME_MANAGEMENT_ENABLED
+TimeManager timeManager;
+#endif
 
 /**
  * @brief System state enumeration
@@ -154,6 +159,29 @@ void setup() {
     Serial.println("Initializing logging system...");
     Logger::init((LogLevel)DEFAULT_LOG_LEVEL, LOG_TO_SERIAL, LOG_TO_SD, LOG_FILE_PATH);
     LOG_INFO("WildCAM ESP32 Starting Up - Version %s", FIRMWARE_VERSION);
+    #endif
+    
+    // Initialize Time Manager (before other components that need timestamps)
+    #if TIME_MANAGEMENT_ENABLED
+    Serial.println("\nInitializing Time Manager...");
+    LOG_INFO("Initializing Time Manager...");
+    if (timeManager.init(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC)) {
+        LOG_INFO("Time Manager initialized");
+        Serial.println("   ✓ Time Manager initialized");
+        if (timeManager.hasExternalRTC()) {
+            Serial.println("   External RTC (DS3231) detected");
+        }
+        if (timeManager.isTimeSet()) {
+            char timestamp[30];
+            timeManager.getTimestamp(timestamp, sizeof(timestamp));
+            Serial.printf("   Current time: %s\n", timestamp);
+        } else {
+            Serial.println("   Time not set - will sync via NTP when WiFi connects");
+        }
+    } else {
+        LOG_WARN("Time Manager initialization failed (non-critical)");
+        Serial.println("   ⚠ Time Manager initialization failed");
+    }
     #endif
     
     // Initialize watchdog timer for crash recovery
@@ -265,6 +293,21 @@ void setup() {
             LOG_INFO("WiFi connected - IP: %s", WiFi.localIP().toString().c_str());
             Serial.println(" connected!");
             Serial.printf("   IP Address: %s\n", WiFi.localIP().toString().c_str());
+            
+            // Synchronize time via NTP after WiFi connection
+            #if TIME_MANAGEMENT_ENABLED && NTP_AUTO_SYNC
+            Serial.println("   Synchronizing time via NTP...");
+            if (timeManager.syncNTP(NTP_SERVER_PRIMARY, NTP_SYNC_TIMEOUT_MS)) {
+                LOG_INFO("NTP time sync successful");
+                Serial.println("   ✓ Time synchronized via NTP");
+                char timestamp[30];
+                timeManager.getTimestamp(timestamp, sizeof(timestamp));
+                Serial.printf("   Current time: %s\n", timestamp);
+            } else {
+                LOG_WARN("NTP time sync failed - using RTC time if available");
+                Serial.println("   ⚠ NTP sync failed - using RTC time if available");
+            }
+            #endif
             
             // Initialize web server with manager references
             if (webServer.init(&storage, &camera, &power)) {
@@ -387,8 +430,25 @@ void loop() {
                 Serial.printf("Image saved successfully: %s\n", filepath.c_str());
                 
                 // Create and save metadata JSON
-                StaticJsonDocument<256> metadata;
+                StaticJsonDocument<512> metadata;
+                
+                // Add timestamp - use real timestamp if available, otherwise use millis
+                #if TIME_MANAGEMENT_ENABLED
+                if (timeManager.isTimeSet()) {
+                    char timestamp[30];
+                    timeManager.getTimestamp(timestamp, sizeof(timestamp));
+                    metadata["timestamp"] = timestamp;
+                    metadata["unix_timestamp"] = timeManager.getUnixTime();
+                    metadata["time_source"] = timeManager.getTimeSourceString();
+                } else {
+                    metadata["timestamp"] = millis();
+                    metadata["time_source"] = "millis";
+                }
+                #else
                 metadata["timestamp"] = millis();
+                metadata["time_source"] = "millis";
+                #endif
+                
                 metadata["image_path"] = filepath;
                 metadata["battery_voltage"] = power.getBatteryVoltage();
                 metadata["battery_percent"] = power.getBatteryPercentage();
@@ -413,7 +473,11 @@ void loop() {
                 #if LORA_ENABLED
                 if (meshManager.isInitialized()) {
                     WildlifeEvent event;
+                    #if TIME_MANAGEMENT_ENABLED
+                    event.timestamp = timeManager.isTimeSet() ? (uint32_t)timeManager.getUnixTime() : millis();
+                    #else
                     event.timestamp = millis();
+                    #endif
                     event.nodeId = meshManager.getNodeId();
                     event.species = "Unknown";  // Could be set by ML classifier
                     event.confidence = 0.0f;
