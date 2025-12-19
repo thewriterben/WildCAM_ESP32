@@ -610,4 +610,100 @@
  */
 #define PCLK_GPIO_NUM     22
 
+//==============================================================================
+// ADDITIONAL SENSOR SETTINGS
+//==============================================================================
+
+/**
+ * @brief Enable BME280 temperature/humidity/pressure sensor
+ * @note Set to true to enable BME280 support
+ * @default false (disabled by default to avoid I2C conflicts)
+ */
+// #define SENSOR_BME280_ENABLED
+
+/**
+ * @brief BME280 I2C address
+ * @note Common addresses: 0x76 (SDO to GND) or 0x77 (SDO to VCC)
+ * @default 0x76
+ */
+#define SENSOR_BME280_ADDRESS 0x76
+
+/**
+ * @brief Enable GPS location tagging (optional)
+ * @note Set to true to enable GPS support
+ * @default false (disabled by default)
+ */
+// #define SENSOR_GPS_ENABLED
+
+/**
+ * @brief GPS module RX pin (GPS TX -> ESP32 RX)
+ * @note Use GPIO 16 for UART2 RX
+ * @default 16
+ */
+#define SENSOR_GPS_RX_PIN 16
+
+/**
+ * @brief GPS module TX pin (GPS RX -> ESP32 TX)
+ * @note Use GPIO 17 for UART2 TX (optional, some GPS modules don't need TX)
+ * @default 17
+ */
+#define SENSOR_GPS_TX_PIN 17
+
+/**
+ * @brief GPS module baud rate
+ * @note Most GPS modules use 9600 baud
+ * @default 9600
+ */
+#define SENSOR_GPS_BAUD 9600
+
+/**
+ * @brief Enable light sensor for day/night detection
+ * @note Set to true to enable light sensor support
+ * @default false (disabled by default)
+ */
+// #define SENSOR_LIGHT_ENABLED
+
+/**
+ * @brief Light sensor analog pin (for LDR/photoresistor)
+ * @note Use -1 for I2C BH1750 sensor
+ * @note GPIO 32 is available on AI-Thinker ESP32-CAM (but conflicts with camera)
+ * @default -1 (use I2C BH1750)
+ */
+// #define SENSOR_LIGHT_ANALOG_PIN 32
+
+/**
+ * @brief BH1750 I2C address
+ * @note Common addresses: 0x23 (ADDR to GND) or 0x5C (ADDR to VCC)
+ * @default 0x23
+ */
+#define SENSOR_BH1750_ADDRESS 0x23
+
+/**
+ * @brief I2C SDA pin for sensors
+ * @note On AI-Thinker ESP32-CAM, GPIO 14 can be used (check for conflicts)
+ * @default 14
+ */
+#define SENSOR_I2C_SDA_PIN 14
+
+/**
+ * @brief I2C SCL pin for sensors
+ * @note On AI-Thinker ESP32-CAM, GPIO 15 can be used (check for conflicts)
+ * @default 15
+ */
+#define SENSOR_I2C_SCL_PIN 15
+
+/**
+ * @brief Daytime light threshold in lux
+ * @note Light level above this is considered daytime
+ * @default 100 lux
+ */
+#define SENSOR_DAYTIME_THRESHOLD 100.0
+
+/**
+ * @brief Sensor read interval in milliseconds
+ * @note How often to read environmental sensors
+ * @default 60000ms (60 seconds)
+ */
+#define SENSOR_READ_INTERVAL_MS 60000
+
 #endif // CONFIG_H

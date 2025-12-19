@@ -57,6 +57,14 @@ The core system is fully production-ready for wildlife monitoring. Advanced ente
 - 🖥️ **Multi-Board Support** - Compatible with ESP32-CAM, ESP32-S3, FREENOVE-CAM, and XIAO ESP32-S3
 - ⏰ **Accurate Time Keeping** - NTP time sync over WiFi with DS3231 external RTC for persistent timestamps across power cycles
 
+### Additional Sensor Support (Optional)
+
+- 🌡️ **BME280 Environmental Sensor** - Temperature, humidity, and pressure monitoring
+- 📍 **GPS Location Tagging** - Geo-tag captured images with GPS coordinates
+- 💡 **Light Sensor (BH1750/LDR)** - Day/night detection for adaptive camera settings
+
+See [SENSOR_INTEGRATION.md](SENSOR_INTEGRATION.md) for detailed setup instructions.
+
 ## Hardware Requirements
 
 ### Required Components
@@ -79,11 +87,12 @@ The core system is fully production-ready for wildlife monitoring. Advanced ente
 | **Solar Panel** | 5V 5W with charge controller | $15-25 | Solar charging |
 | **Weatherproof Enclosure** | IP65 rated, clear window | $10-20 | Outdoor protection |
 | **Battery Monitor** | Voltage divider circuit or dedicated module | $2-5 | Better voltage accuracy |
-| **DS3231 RTC Module** | DS3231 with CR2032 battery | $2-5 | Persistent time keeping across power cycles |
+
 
 **Total Cost Estimate:**
 - **Basic Setup:** $25-50 (ESP32-CAM, SD card, PIR sensor, programmer, cables)
 - **Field Deployment:** $60-100 (includes battery, solar panel, enclosure)
+- **Full Sensor Suite:** $90-130 (includes all optional sensors)
 
 ## Wiring Diagram
 
