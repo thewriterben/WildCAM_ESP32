@@ -74,6 +74,7 @@
 #include "PowerManager.h"
 #include "WebServer.h"
 #include "MeshManager.h"
+#include "SensorManager.h"
 
 // Global instances
 MotionDetector motionDetector;
@@ -81,6 +82,7 @@ CameraManager camera;
 StorageManager storage;
 PowerManager power;
 WebServer webServer(WEB_SERVER_PORT);
+SensorManager sensors;
 
 /**
  * @brief System state enumeration
@@ -112,6 +114,7 @@ bool enableWebServer = true;  // Set to false for low-power operation
 unsigned long lastMotionTime = 0;
 unsigned long imageCount = 0;
 unsigned long lastBatteryCheck = 0;
+unsigned long lastSensorRead = 0;
 
 // Watchdog timeout (30 seconds)
 #define WDT_TIMEOUT 30
@@ -309,6 +312,19 @@ void setup() {
     LOG_INFO("LoRa mesh networking is disabled in config");
     #endif
     
+    // Initialize Additional Sensors (BME280, GPS, Light Sensor)
+    Serial.println("\n7. Initializing Additional Sensors...");
+    LOG_INFO("Initializing Additional Sensors...");
+    if (sensors.init()) {
+        LOG_INFO("Additional sensors initialized");
+        Serial.println("   ✓ Additional sensors initialized");
+        sensors.printStatus();
+    } else {
+        LOG_INFO("No additional sensors configured (non-critical)");
+        Serial.println("   ⚠ No additional sensors configured");
+        Serial.println("   (Enable BME280/GPS/Light sensor in config.h)");
+    }
+    
     // Configure wake-up sources for deep sleep
     LOG_INFO("Configuring wake-up sources...");
     Serial.println("\nConfiguring wake-up sources...");
@@ -325,6 +341,7 @@ void setup() {
     // Initialize last motion time
     lastMotionTime = millis();
     lastBatteryCheck = millis();
+    lastSensorRead = millis();
     
     currentState = IDLE;
 }
@@ -386,14 +403,46 @@ void loop() {
                 LOG_INFO("Image saved: %s (size: %d bytes)", filepath.c_str(), fb->len);
                 Serial.printf("Image saved successfully: %s\n", filepath.c_str());
                 
-                // Create and save metadata JSON
-                StaticJsonDocument<256> metadata;
+                // Create and save metadata JSON with extended sensor data
+                StaticJsonDocument<512> metadata;
                 metadata["timestamp"] = millis();
                 metadata["image_path"] = filepath;
                 metadata["battery_voltage"] = power.getBatteryVoltage();
                 metadata["battery_percent"] = power.getBatteryPercentage();
                 metadata["image_size"] = fb->len;
                 metadata["image_count"] = imageCount + 1;
+                
+                // Add environmental sensor data if available
+                if (sensors.isBME280Available()) {
+                    EnvironmentalData envData = sensors.readEnvironmental();
+                    if (envData.valid) {
+                        JsonObject env = metadata.createNestedObject("environment");
+                        env["temperature"] = envData.temperature;
+                        env["humidity"] = envData.humidity;
+                        env["pressure"] = envData.pressure;
+                        env["altitude"] = envData.altitude;
+                    }
+                }
+                
+                // Add GPS location data if available
+                if (sensors.isGPSAvailable() && sensors.hasGPSFix()) {
+                    GPSData gpsData = sensors.readGPS();
+                    JsonObject gps = metadata.createNestedObject("gps");
+                    gps["latitude"] = gpsData.latitude;
+                    gps["longitude"] = gpsData.longitude;
+                    gps["altitude"] = gpsData.altitude;
+                    gps["satellites"] = gpsData.satellites;
+                }
+                
+                // Add light sensor data if available
+                if (sensors.isLightSensorAvailable()) {
+                    LightData lightData = sensors.readLight();
+                    if (lightData.valid) {
+                        JsonObject light = metadata.createNestedObject("light");
+                        light["lux"] = lightData.lux;
+                        light["is_daytime"] = lightData.isDaytime;
+                    }
+                }
                 
                 // Save metadata
                 if (storage.saveMetadata(filepath, metadata)) {
@@ -417,8 +466,17 @@ void loop() {
                     event.nodeId = meshManager.getNodeId();
                     event.species = "Unknown";  // Could be set by ML classifier
                     event.confidence = 0.0f;
-                    event.latitude = 0.0f;
-                    event.longitude = 0.0f;
+                    
+                    // Include GPS coordinates if available
+                    if (sensors.isGPSAvailable() && sensors.hasGPSFix()) {
+                        GPSData gpsData = sensors.readGPS();
+                        event.latitude = gpsData.latitude;
+                        event.longitude = gpsData.longitude;
+                    } else {
+                        event.latitude = 0.0f;
+                        event.longitude = 0.0f;
+                    }
+                    
                     event.imageSize = fb->len;
                     event.hasImage = true;
                     
@@ -456,6 +514,37 @@ void loop() {
         LOG_DEBUG("Returning to idle state");
         Serial.println("Returning to idle state\n");
     }
+    
+    // Update GPS data regularly (if enabled)
+    if (sensors.isGPSAvailable()) {
+        sensors.updateGPS();
+    }
+    
+    // Read environmental sensors periodically
+    #ifdef SENSOR_READ_INTERVAL_MS
+    if (millis() - lastSensorRead > SENSOR_READ_INTERVAL_MS) {
+        if (sensors.isBME280Available() || sensors.isLightSensorAvailable()) {
+            LOG_DEBUG("Periodic sensor reading");
+            
+            if (sensors.isBME280Available()) {
+                EnvironmentalData env = sensors.readEnvironmental();
+                if (env.valid) {
+                    LOG_INFO("Environment: %.1f°C, %.1f%% RH, %.1f hPa", 
+                             env.temperature, env.humidity, env.pressure);
+                }
+            }
+            
+            if (sensors.isLightSensorAvailable()) {
+                LightData light = sensors.readLight();
+                if (light.valid) {
+                    LOG_INFO("Light: %.1f lux (%s)", light.lux, 
+                             light.isDaytime ? "Day" : "Night");
+                }
+            }
+        }
+        lastSensorRead = millis();
+    }
+    #endif
     
     // Check battery status periodically (every 60 seconds)
     if (millis() - lastBatteryCheck > BATTERY_CHECK_INTERVAL_MS) {
