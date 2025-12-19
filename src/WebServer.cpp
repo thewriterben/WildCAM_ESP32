@@ -9,6 +9,11 @@
 #include <WiFi.h>
 #include <SD_MMC.h>
 
+// JSON buffer sizes for API responses
+static const size_t MAX_IMAGE_LIST_JSON_SIZE = 2048;
+static const size_t MAX_CONFIG_JSON_SIZE = 512;
+static const size_t MAX_STATUS_JSON_SIZE = 512;
+
 // Store constant strings in PROGMEM to save RAM
 static const char TAG_ERROR_INIT[] PROGMEM = "ERROR: WebServer init failed - null reference(s) provided";
 static const char TAG_SUCCESS_INIT[] PROGMEM = "WebServer initialized successfully";
@@ -110,11 +115,22 @@ void WebServer::begin() {
         handleGetConfig(request);
     });
     
-    // Handle POST config with body
+    // Handle POST config with body - with size limit for DoS protection
     server->on("/api/config", HTTP_POST, 
         [](AsyncWebServerRequest* request) {},
         nullptr,
         [this](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+            // Validate Content-Type header
+            if (!request->hasHeader("Content-Type") || 
+                request->header("Content-Type").indexOf("application/json") < 0) {
+                request->send(400, "application/json", "{\"error\":\"Content-Type must be application/json\"}");
+                return;
+            }
+            // Size limit to prevent DoS
+            if (len > 512) {
+                request->send(413, "application/json", "{\"error\":\"Payload too large\"}");
+                return;
+            }
             handlePostConfig(request, data, len);
         }
     );
@@ -162,12 +178,8 @@ void WebServer::handleConfig(AsyncWebServerRequest* request) {
 }
 
 void WebServer::handleStatus(AsyncWebServerRequest* request) {
-    // Use StaticJsonDocument with adequate size for status data
-    // JSON keys: 'uptime', 'freeHeap', 'batteryVoltage', 'batteryPercentage',
-    // 'sdCardFreeSpace', 'sdCardUsedSpace', 'imageCount' (~100 bytes)
-    // Plus values (up to 8 bytes each) and JSON overhead (~50%)
-    // Total: ~300 bytes, using 512 bytes for safety margin
-    StaticJsonDocument<512> doc;
+    // Use StaticJsonDocument with named constant for maintainability
+    StaticJsonDocument<MAX_STATUS_JSON_SIZE> doc;
     
     // System status
     doc["uptime"] = millis();
@@ -304,8 +316,8 @@ void WebServer::handleImagesList(AsyncWebServerRequest* request) {
     int endIndex = startIndex + perPage;
     if (endIndex > totalImages) endIndex = totalImages;
     
-    // Build JSON response
-    StaticJsonDocument<2048> doc;
+    // Build JSON response using named constant for buffer size
+    StaticJsonDocument<MAX_IMAGE_LIST_JSON_SIZE> doc;
     doc["total"] = totalImages;
     doc["page"] = page;
     doc["perPage"] = perPage;
@@ -332,6 +344,22 @@ void WebServer::handleImage(AsyncWebServerRequest* request, const String& imageP
         return;
     }
     
+    // Security: Prevent path traversal attacks
+    // Check for ".." sequences that could escape the images directory
+    if (imagePath.indexOf("..") >= 0) {
+        request->send(403, "application/json", "{\"error\":\"Invalid path\"}");
+        return;
+    }
+    
+    // Validate path contains only allowed characters (alphanumeric, /, _, -, .)
+    for (unsigned int i = 0; i < imagePath.length(); i++) {
+        char c = imagePath.charAt(i);
+        if (!isalnum(c) && c != '/' && c != '_' && c != '-' && c != '.') {
+            request->send(403, "application/json", "{\"error\":\"Invalid path characters\"}");
+            return;
+        }
+    }
+    
     String fullPath = "/images" + imagePath;
     if (SD_MMC.exists(fullPath)) {
         request->send(SD_MMC, fullPath, "image/jpeg");
@@ -348,7 +376,7 @@ void WebServer::handleThumbnail(AsyncWebServerRequest* request, const String& im
 }
 
 void WebServer::handleGetConfig(AsyncWebServerRequest* request) {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<MAX_CONFIG_JSON_SIZE> doc;
     doc["captureInterval"] = captureInterval;
     doc["motionSensitivity"] = motionSensitivity;
     doc["nightMode"] = nightMode;
@@ -361,7 +389,7 @@ void WebServer::handleGetConfig(AsyncWebServerRequest* request) {
 }
 
 void WebServer::handlePostConfig(AsyncWebServerRequest* request, uint8_t* data, size_t len) {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<MAX_CONFIG_JSON_SIZE> doc;
     DeserializationError error = deserializeJson(doc, data, len);
     
     if (error) {
@@ -540,9 +568,9 @@ const char* WebServer::getIndexHTML() {
             }
         }
         
-        // Initial load and auto-refresh
+        // Initial load and auto-refresh (30 seconds to preserve battery)
         refreshStats();
-        setInterval(refreshStats, 5000);
+        setInterval(refreshStats, 30000);
     </script>
 </body>
 </html>)rawliteral";
@@ -613,7 +641,19 @@ const char* WebServer::getGalleryHTML() {
                 data.images.forEach(img => {
                     const card = document.createElement('div');
                     card.className = 'gallery-card';
-                    card.innerHTML = '<img src="' + img.thumbnail + '" alt="' + img.name + '" onclick="openModal(\'' + img.path + '\', \'' + img.name + '\')"><div class="gallery-card-title">' + img.name + '</div>';
+                    
+                    // Use DOM methods to prevent XSS from malicious filenames
+                    const imgEl = document.createElement('img');
+                    imgEl.src = img.thumbnail;
+                    imgEl.alt = img.name;
+                    imgEl.onclick = () => openModal(img.path, img.name);
+                    
+                    const titleEl = document.createElement('div');
+                    titleEl.className = 'gallery-card-title';
+                    titleEl.textContent = img.name;
+                    
+                    card.appendChild(imgEl);
+                    card.appendChild(titleEl);
                     grid.appendChild(card);
                 });
                 

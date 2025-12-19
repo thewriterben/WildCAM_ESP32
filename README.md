@@ -24,7 +24,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **SD card storage** | ✅ Complete | Automatic file organization with timestamps |
 | **JSON metadata** | ✅ Complete | Each image includes timestamp, battery level, and file info |
 | **Battery monitoring** | ✅ Complete | Real-time voltage and percentage tracking |
-| **Web interface** | ✅ Complete | HTTP server for status and image viewing |
+| **Web interface** | ✅ Complete | Enhanced mobile-responsive UI with dashboard, gallery, and settings |
 | **Deep sleep mode** | ✅ Complete | Power-efficient sleep between captures |
 | **Multi-board support** | ✅ Complete | ESP32-CAM, ESP32-S3, FREENOVE, XIAO variants |
 | **Two-factor detection** | ✅ Complete | PIR + Vision confirmation (98% accuracy) |
@@ -52,7 +52,7 @@ The core system is fully production-ready for wildlife monitoring. Advanced ente
 - 🎯 **Motion-triggered Image Capture** - PIR sensor detects motion with two-factor vision confirmation (98% accuracy)
 - 💾 **SD Card Storage with Metadata** - Images saved with JSON metadata including timestamps, battery level, and capture count
 - 🔋 **Battery Monitoring** - Real-time voltage monitoring and percentage calculation
-- 🌐 **Web Interface** - Access camera status, view images, and check system health via web browser
+- 🌐 **Enhanced Web Interface** - Mobile-responsive dashboard, image gallery with thumbnails, configuration page, real-time statistics
 - ⚡ **Deep Sleep Power Management** - Efficient power usage with configurable sleep intervals (30+ day battery life)
 - 🔁 **Automatic Recovery** - Watchdog timer prevents system hangs
 - 📊 **Status Logging** - Serial output for debugging and monitoring
@@ -371,7 +371,7 @@ If you see this output, your WildCAM_ESP32 is successfully installed! 🎉
 
 ### Accessing the Web Interface
 
-The WildCAM_ESP32 provides a simple web interface for monitoring and configuration.
+The WildCAM_ESP32 provides an enhanced mobile-responsive web interface for monitoring and configuration.
 
 #### Step 1: Find the IP Address
 
@@ -387,23 +387,49 @@ IP Address: 192.168.1.123
 2. Open a web browser
 3. Navigate to the IP address: `http://192.168.1.123`
 
-#### Step 3: Available Web Endpoints
+#### Step 3: Web Interface Pages
 
-- **`/`** - Home page with basic info and navigation
-- **`/status`** - System status (JSON format):
+The enhanced web interface includes three main pages:
+
+**Dashboard (`/`)**
+- Real-time statistics: uptime, battery %, free storage, image count, memory, voltage
+- Auto-refreshes every 30 seconds
+- Quick action buttons: Capture Now, Refresh, Reboot
+- Latest captured image preview
+
+**Gallery (`/gallery`)**
+- Grid layout with image thumbnails
+- Pagination support (12 images per page)
+- Click to view full-size image in modal
+- Capture new image button
+
+**Settings (`/config`)**
+- Capture interval (1-3600 seconds)
+- Motion sensitivity (0-100%)
+- Night mode toggle
+- Cloud upload toggle
+- Device information display
+
+#### API Endpoints
+
+- **`/api/status`** - System status (JSON format):
   ```json
   {
-    "camera": "ok",
-    "storage": "ok", 
-    "motion": "ready",
-    "battery": 78,
-    "uptime": 1234,
+    "uptime": 123456,
+    "freeHeap": 150000,
+    "batteryVoltage": 4.05,
+    "batteryPercentage": 85,
+    "sdCardFreeSpace": 15000000000,
+    "sdCardUsedSpace": 500000000,
     "imageCount": 42
   }
   ```
+- **`/api/images`** - Paginated list of captured images (JSON)
+- **`/api/config`** - Get/update device configuration (GET/POST)
 - **`/latest`** - View the most recently captured image
-- **`/capture`** - Manually trigger a photo capture
-- **`/images`** - List of all captured images
+- **`/capture`** or **`/api/capture`** - Manually trigger a photo capture (POST)
+- **`/images/*`** - Serve images from SD card
+- **`/thumbnail/*`** - Serve image thumbnails
 
 ### Retrieving Images from SD Card
 
@@ -660,11 +686,11 @@ This is an early MVP release. Here are the current known limitations and issues:
 - **Time/Date Not Persistent:** ESP32 lacks RTC, timestamps reset on power cycle
   - **Planned Fix:** Add NTP sync over WiFi or external RTC module support
 
-- **Web Interface Basic:** Current web UI is minimal HTML, not mobile-optimized
-  - **Planned Fix:** Improved responsive web interface in v0.2.0
+- **Web Interface Basic:** ~~Current web UI is minimal HTML, not mobile-optimized~~
+  - **Fixed:** Enhanced mobile-responsive web interface now available in v3.1.0
 
-- **No Image Thumbnails:** Full images loaded in web interface can be slow
-  - **Planned Fix:** Thumbnail generation in future version
+- **No Image Thumbnails:** ~~Full images loaded in web interface can be slow~~
+  - **Fixed:** Image gallery with thumbnail support now available
 
 - **Limited Error Recovery:** Some SD card errors require manual reset
   - **Planned Fix:** Better error handling and automatic retry logic
@@ -742,7 +768,7 @@ The core wildlife camera system is **production-ready**:
   - External RTC module support (DS3231)
   - Persistent timestamps across power cycles
 
-- **Enhanced Web Interface**
+- **Enhanced Web Interface** ✅
   - Mobile-responsive design
   - Image gallery with thumbnails
   - Real-time statistics dashboard
