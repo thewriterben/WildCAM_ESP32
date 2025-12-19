@@ -24,6 +24,9 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **SD card storage** | ✅ Complete | Automatic file organization with timestamps |
 | **JSON metadata** | ✅ Complete | Each image includes timestamp, battery level, and file info |
 | **Battery monitoring** | ✅ Complete | Real-time voltage and percentage tracking |
+| **Advanced battery analytics** | ✅ Complete | SOC, SOH, multi-stage charging, health monitoring |
+| **MPPT solar charging** | ✅ Complete | 3 algorithms: P&O, IC, and CV |
+| **Adaptive sleep scheduling** | ✅ Complete | Motion pattern learning, battery-aware scheduling |
 | **Web interface** | ✅ Complete | HTTP server for status and image viewing |
 | **Deep sleep mode** | ✅ Complete | Power-efficient sleep between captures |
 | **Multi-board support** | ✅ Complete | ESP32-CAM, ESP32-S3, FREENOVE, XIAO variants |
@@ -37,7 +40,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **LoRa mesh networking** | 🔄 Framework | Est. 9-12 months |
 | **Cloud integration** | 🔄 Framework | Est. 9-12 months |
 | **Mobile app** | 🔄 Framework | Est. 12-15 months |
-| **MPPT solar charging** | 🔄 In Progress | Est. 6-9 months |
+| **MPPT solar charging** | ✅ Complete | Implemented |
 | **Satellite communication** | 🔄 Framework | Est. 12-15 months |
 | **Quantum-safe security** | 🔄 Framework | Est. 12-15 months |
 
@@ -51,7 +54,9 @@ The core system is fully production-ready for wildlife monitoring. Advanced ente
 
 - 🎯 **Motion-triggered Image Capture** - PIR sensor detects motion with two-factor vision confirmation (98% accuracy)
 - 💾 **SD Card Storage with Metadata** - Images saved with JSON metadata including timestamps, battery level, and capture count
-- 🔋 **Battery Monitoring** - Real-time voltage monitoring and percentage calculation
+- 🔋 **Advanced Battery Management** - Real-time SOC/SOH monitoring, multi-chemistry support (Li-ion, LiFePO4, Lead-Acid, NiMH)
+- ☀️ **MPPT Solar Charging** - Maximum Power Point Tracking with P&O, Incremental Conductance, and Constant Voltage algorithms
+- 😴 **Adaptive Sleep Scheduling** - Motion pattern learning for intelligent sleep optimization (7-day rolling history)
 - 🌐 **Web Interface** - Access camera status, view images, and check system health via web browser
 - ⚡ **Deep Sleep Power Management** - Efficient power usage with configurable sleep intervals (30+ day battery life)
 - 🔁 **Automatic Recovery** - Watchdog timer prevents system hangs
@@ -689,9 +694,9 @@ This is an early MVP release. Here are the current known limitations and issues:
 - **Weatherproofing:** No official enclosure design provided yet
   - **Workaround:** Use generic IP65 enclosure with clear window for camera
 
-- **Solar Charging:** Basic battery monitoring only, no MPPT charge controller
-  - **Limitation:** Inefficient solar charging
-  - **Planned Fix:** MPPT support in Phase 2
+- **Solar Charging:** MPPT solar charge controller support now available in `firmware/power/`
+  - Supports 3 tracking algorithms (P&O, Incremental Conductance, Constant Voltage)
+  - See `firmware/power/README.md` for setup instructions
 
 ### Reporting Issues
 
@@ -732,10 +737,11 @@ The core wildlife camera system is **production-ready**:
 
 ### 🔄 Phase 2: Enhanced Features (In Progress - Q2-Q4 2026)
 
-- **Improved Power Management**
-  - MPPT solar charge controller support (in progress)
-  - Advanced battery analytics
-  - Adaptive sleep schedules based on motion patterns
+- **Improved Power Management** ✅ **Implemented**
+  - MPPT solar charge controller support (3 algorithms: P&O, Incremental Conductance, Constant Voltage)
+  - Advanced battery analytics (SOC, SOH, multi-stage charging, multi-chemistry support)
+  - Adaptive sleep schedules based on motion patterns (7-day pattern learning)
+  - Battery-aware power modes (Normal, Power Save, Solar Priority, Emergency)
   
 - **Better Time Keeping**
   - NTP time sync over WiFi
