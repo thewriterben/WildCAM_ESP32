@@ -72,13 +72,45 @@ static const size_t MIN_IMAGE_SIZE = 1024;
 static unsigned long g_duplicatesSkipped = 0;
 static unsigned long g_bytesCompressed = 0;
 
+// PROGMEM strings for error handling
+static const char TAG_RETRY[] PROGMEM = "SD operation retry %d/%d after %dms delay\n";
+static const char TAG_REMOUNT_ATTEMPT[] PROGMEM = "Attempting SD card remount...\n";
+static const char TAG_REMOUNT_SUCCESS[] PROGMEM = "SD card remount successful\n";
+static const char TAG_REMOUNT_FAIL[] PROGMEM = "SD card remount failed\n";
+static const char TAG_HEALTH_CHECK[] PROGMEM = "SD card health check: %s\n";
+static const char TAG_LOW_MEMORY[] PROGMEM = "WARNING: Low memory detected (%d bytes free)\n";
+static const char TAG_MEMORY_OPTIMIZED[] PROGMEM = "Memory optimized, freed ~%d bytes\n";
+
 StorageManager::StorageManager() 
     : initialized(false), 
       basePath("/images"), 
       imageCounter(0),
       compressionQuality(STORAGE_DEFAULT_COMPRESSION_QUALITY),
       compressionEnabled(true),
-      duplicateDetectionEnabled(true) {
+      duplicateDetectionEnabled(true),
+      lastError(SD_ERROR_NONE),
+      maxRetries(SD_CARD_MAX_RETRIES),
+      retryDelayMs(SD_CARD_RETRY_DELAY_MS),
+      maxRetryDelayMs(SD_CARD_MAX_RETRY_DELAY_MS),
+      autoRemountEnabled(SD_CARD_AUTO_REMOUNT),
+      writeBuffer(nullptr),
+      writeBufferSize(SD_WRITE_BUFFER_SIZE),
+      memoryPoolEnabled(true) {
+    // Initialize card health structure
+    cardHealth.mounted = false;
+    cardHealth.cardType = CARD_NONE;
+    cardHealth.totalBytes = 0;
+    cardHealth.usedBytes = 0;
+    cardHealth.freeBytes = 0;
+    cardHealth.lastHealthCheck = 0;
+    cardHealth.consecutiveErrors = 0;
+    cardHealth.totalErrors = 0;
+    cardHealth.successfulOps = 0;
+    cardHealth.errorRate = 0.0f;
+}
+
+StorageManager::~StorageManager() {
+    freeWriteBuffer();
 }
 
 bool StorageManager::init() {

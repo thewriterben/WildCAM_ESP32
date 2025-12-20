@@ -278,6 +278,91 @@
 #define AUTO_DELETE_DAYS 7
 
 //==============================================================================
+// SD CARD ERROR HANDLING AND RETRY SETTINGS
+//==============================================================================
+
+/**
+ * @brief Maximum retry attempts for SD card operations
+ * @note Number of times to retry a failed SD card operation before giving up
+ * @default 3
+ */
+#define SD_CARD_MAX_RETRIES 3
+
+/**
+ * @brief Initial delay between SD card retry attempts in milliseconds
+ * @note Uses exponential backoff: delay doubles after each retry
+ * @default 100ms
+ */
+#define SD_CARD_RETRY_DELAY_MS 100
+
+/**
+ * @brief Maximum delay between SD card retry attempts in milliseconds
+ * @note Caps the exponential backoff delay
+ * @default 1000ms (1 second)
+ */
+#define SD_CARD_MAX_RETRY_DELAY_MS 1000
+
+/**
+ * @brief Enable automatic SD card remount on error
+ * @note When true, attempts to remount SD card after certain errors
+ * @default true
+ */
+#define SD_CARD_AUTO_REMOUNT true
+
+/**
+ * @brief SD card health check interval in milliseconds
+ * @note How often to verify SD card is responsive (0 = disabled)
+ * @default 30000ms (30 seconds)
+ */
+#define SD_CARD_HEALTH_CHECK_INTERVAL_MS 30000
+
+/**
+ * @brief Maximum consecutive SD card errors before remount attempt
+ * @note Triggers automatic remount after this many consecutive failures
+ * @default 5
+ */
+#define SD_CARD_ERROR_THRESHOLD 5
+
+//==============================================================================
+// MEMORY MANAGEMENT SETTINGS
+//==============================================================================
+
+/**
+ * @brief Enable memory pool for file operations
+ * @note Uses pre-allocated buffers to reduce fragmentation
+ * @default true
+ */
+#define MEMORY_POOL_ENABLED true
+
+/**
+ * @brief Size of the write buffer for SD card operations in bytes
+ * @note Larger buffers improve write speed but use more memory
+ * @default 4096 bytes (4KB)
+ */
+#define SD_WRITE_BUFFER_SIZE 4096
+
+/**
+ * @brief Minimum free heap memory before triggering cleanup in bytes
+ * @note When free heap drops below this, memory optimization is triggered
+ * @default 32768 bytes (32KB)
+ */
+#define MIN_FREE_HEAP_BYTES 32768
+
+/**
+ * @brief Enable heap fragmentation monitoring
+ * @note When true, logs warnings about memory fragmentation
+ * @default true
+ */
+#define HEAP_FRAGMENTATION_MONITORING true
+
+/**
+ * @brief Maximum acceptable heap fragmentation percentage
+ * @note Triggers warning when fragmentation exceeds this value
+ * @default 30%
+ */
+#define MAX_HEAP_FRAGMENTATION_PERCENT 30
+
+//==============================================================================
 // BACKWARD COMPATIBILITY ALIASES
 //==============================================================================
 
