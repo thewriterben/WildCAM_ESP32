@@ -21,6 +21,32 @@
 #include <esp_camera.h>
 #include <Preferences.h>
 #include <vector>
+#include <map>
+
+// Default configuration values for improved storage features
+#ifndef STORAGE_DEFAULT_COMPRESSION_QUALITY
+#define STORAGE_DEFAULT_COMPRESSION_QUALITY 15  // Default JPEG quality (1-63, lower is higher quality)
+#endif
+
+#ifndef STORAGE_MIN_FREE_SPACE_KB
+#define STORAGE_MIN_FREE_SPACE_KB 10240  // Minimum 10MB free space before triggering cleanup
+#endif
+
+#ifndef STORAGE_DUPLICATE_THRESHOLD
+#define STORAGE_DUPLICATE_THRESHOLD 95  // Percentage similarity threshold for duplicate detection
+#endif
+
+/**
+ * @brief Structure to hold image quality metrics for smart deletion
+ */
+struct ImageQualityInfo {
+    String path;           ///< Full path to the image file
+    size_t fileSize;       ///< File size in bytes
+    uint32_t timestamp;    ///< Unix timestamp when image was captured
+    float qualityScore;    ///< Calculated quality score (0.0-100.0)
+    uint32_t hash;         ///< Simple hash for duplicate detection
+    bool isValid;          ///< Whether the image file is valid
+};
 
 /**
  * @class StorageManager
@@ -91,8 +117,16 @@ private:
     String basePath;               ///< Base directory path for image storage (default: "/images")
     unsigned long imageCounter;    ///< Persistent counter for unique image numbering
     Preferences preferences;       ///< Non-volatile storage for persistent counter across reboots
+    int compressionQuality;        ///< JPEG compression quality setting (1-63)
+    bool compressionEnabled;       ///< Whether automatic compression is enabled
+    bool duplicateDetectionEnabled;///< Whether duplicate detection is enabled
+    std::map<uint32_t, String> recentImageHashes; ///< Cache of recent image hashes for duplicate detection
+    static const size_t MAX_HASH_CACHE_SIZE = 50; ///< Maximum number of hashes to keep in cache
     
-
+    /**
+     * @brief Get the current date-based path component
+     * @return String Date path component (e.g., "/20241029")
+     */
     String getCurrentDatePath();
     
     /**
@@ -108,6 +142,54 @@ private:
      * @note Filename is guaranteed to be unique within the same second via counter
      */
     String generateFilename();
+    
+    /**
+     * @brief Calculate a simple hash of image data for duplicate detection
+     * 
+     * Uses a sampling-based hash to quickly identify potential duplicates
+     * without requiring full image comparison.
+     * 
+     * @param data Pointer to image data buffer
+     * @param length Length of image data in bytes
+     * @return uint32_t Hash value for the image
+     */
+    uint32_t calculateImageHash(const uint8_t* data, size_t length);
+    
+    /**
+     * @brief Check if an image is a duplicate of a recently saved image
+     * 
+     * @param hash Hash value of the image to check
+     * @return bool true if image appears to be a duplicate, false otherwise
+     */
+    bool isDuplicateImage(uint32_t hash);
+    
+    /**
+     * @brief Calculate quality score for an image
+     * 
+     * Scores image quality based on file size, estimated sharpness,
+     * and other metrics to help with smart deletion decisions.
+     * 
+     * @param data Pointer to image data buffer
+     * @param length Length of image data in bytes
+     * @return float Quality score from 0.0 to 100.0
+     */
+    float calculateQualityScore(const uint8_t* data, size_t length);
+    
+    /**
+     * @brief Scan directory and collect image quality information
+     * 
+     * @param dirPath Path to directory to scan
+     * @param images Vector to populate with image information
+     */
+    void collectImageInfo(const String& dirPath, std::vector<ImageQualityInfo>& images);
+    
+    /**
+     * @brief Delete a file and its associated metadata file
+     * 
+     * @param imagePath Path to the image file to delete
+     * @return bool true if deletion successful, false otherwise
+     */
+    bool deleteImageAndMetadata(const String& imagePath);
 
 public:
     /**
@@ -305,6 +387,117 @@ public:
      * @note Can be manually reset by clearing preferences
      */
     unsigned long getImageCount();
+    
+    // ============================================================================
+    // Improved Storage Features
+    // ============================================================================
+    
+    /**
+     * @brief Enable or disable automatic image compression
+     * 
+     * When enabled, images will be checked and potentially re-compressed
+     * if they exceed the target quality setting to save storage space.
+     * 
+     * @param enable true to enable compression, false to disable
+     */
+    void setCompressionEnabled(bool enable);
+    
+    /**
+     * @brief Check if compression is enabled
+     * 
+     * @return bool true if compression is enabled, false otherwise
+     */
+    bool isCompressionEnabled() const;
+    
+    /**
+     * @brief Set the target compression quality
+     * 
+     * @param quality JPEG quality value (1-63, lower is higher quality)
+     * @note Values outside range will be clamped to valid range
+     */
+    void setCompressionQuality(int quality);
+    
+    /**
+     * @brief Get the current compression quality setting
+     * 
+     * @return int Current JPEG quality value (1-63)
+     */
+    int getCompressionQuality() const;
+    
+    /**
+     * @brief Enable or disable duplicate detection
+     * 
+     * When enabled, new images will be compared against recently saved
+     * images to detect and skip duplicates, saving storage space.
+     * 
+     * @param enable true to enable duplicate detection, false to disable
+     */
+    void setDuplicateDetectionEnabled(bool enable);
+    
+    /**
+     * @brief Check if duplicate detection is enabled
+     * 
+     * @return bool true if duplicate detection is enabled, false otherwise
+     */
+    bool isDuplicateDetectionEnabled() const;
+    
+    /**
+     * @brief Clear the duplicate detection hash cache
+     * 
+     * Clears the internal cache of recent image hashes. Useful when
+     * starting a new capture session where duplicates from previous
+     * sessions should not be considered.
+     */
+    void clearDuplicateCache();
+    
+    /**
+     * @brief Perform smart deletion to free up storage space
+     * 
+     * Analyzes all stored images and deletes lower quality duplicates
+     * and less important images to free up space while keeping the
+     * best quality unique images.
+     * 
+     * @param targetFreeSpaceKB Target free space in kilobytes to achieve
+     * @return int Number of files deleted, or -1 on error
+     * 
+     * @note Uses quality scoring to determine which images to keep
+     * @note Prefers keeping recent images over older ones
+     * @note Will not delete the last N images regardless of quality
+     * 
+     * Example:
+     * @code
+     * // Free up at least 50MB of space
+     * int deleted = storage.smartDelete(51200);
+     * Serial.printf("Deleted %d files to free space\n", deleted);
+     * @endcode
+     */
+    int smartDelete(unsigned long targetFreeSpaceKB = STORAGE_MIN_FREE_SPACE_KB);
+    
+    /**
+     * @brief Save image with improved storage features
+     * 
+     * Enhanced version of saveImage that includes:
+     * - Optional automatic compression
+     * - Duplicate detection and skipping
+     * - Automatic cleanup when storage is low
+     * 
+     * @param fb Pointer to camera frame buffer containing JPEG data
+     * @param customPath Optional custom path for saving (overrides automatic naming)
+     * @param skipDuplicates Whether to skip saving if duplicate detected (default: true)
+     * @return String Full path of saved image, empty string on failure or duplicate
+     * 
+     * @note Returns empty string if image is detected as duplicate and skipDuplicates is true
+     */
+    String saveImageWithCompression(camera_fb_t* fb, const String& customPath = "", bool skipDuplicates = true);
+    
+    /**
+     * @brief Get storage statistics including improved storage metrics
+     * 
+     * @param totalImages Output: Total number of images stored
+     * @param duplicatesSkipped Output: Number of duplicates skipped (since boot)
+     * @param bytesCompressed Output: Estimated bytes saved through compression (since boot)
+     */
+    void getStorageStats(unsigned long& totalImages, unsigned long& duplicatesSkipped, unsigned long& bytesCompressed);
 };
 
 #endif // STORAGE_MANAGER_H

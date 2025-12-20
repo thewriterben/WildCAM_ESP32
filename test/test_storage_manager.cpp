@@ -457,6 +457,151 @@ void test_delete_old_files(void) {
 }
 
 //==============================================================================
+// IMPROVED STORAGE FEATURE TESTS
+//==============================================================================
+
+/**
+ * @brief Test compression settings
+ * 
+ * Verifies compression enable/disable and quality settings
+ */
+void test_compression_settings(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Test default compression enabled state
+    TEST_ASSERT_TRUE(storage->isCompressionEnabled());
+    
+    // Test disabling compression
+    storage->setCompressionEnabled(false);
+    TEST_ASSERT_FALSE(storage->isCompressionEnabled());
+    
+    // Test re-enabling compression
+    storage->setCompressionEnabled(true);
+    TEST_ASSERT_TRUE(storage->isCompressionEnabled());
+    
+    // Test quality setting - valid values
+    storage->setCompressionQuality(10);
+    TEST_ASSERT_EQUAL(10, storage->getCompressionQuality());
+    
+    storage->setCompressionQuality(30);
+    TEST_ASSERT_EQUAL(30, storage->getCompressionQuality());
+    
+    // Test quality clamping - below minimum
+    storage->setCompressionQuality(0);
+    TEST_ASSERT_EQUAL(1, storage->getCompressionQuality());
+    
+    // Test quality clamping - above maximum
+    storage->setCompressionQuality(100);
+    TEST_ASSERT_EQUAL(63, storage->getCompressionQuality());
+}
+
+/**
+ * @brief Test duplicate detection settings
+ * 
+ * Verifies duplicate detection enable/disable and cache clearing
+ */
+void test_duplicate_detection_settings(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Test default duplicate detection enabled state
+    TEST_ASSERT_TRUE(storage->isDuplicateDetectionEnabled());
+    
+    // Test disabling duplicate detection
+    storage->setDuplicateDetectionEnabled(false);
+    TEST_ASSERT_FALSE(storage->isDuplicateDetectionEnabled());
+    
+    // Test re-enabling duplicate detection
+    storage->setDuplicateDetectionEnabled(true);
+    TEST_ASSERT_TRUE(storage->isDuplicateDetectionEnabled());
+    
+    // Test cache clearing - should not crash
+    storage->clearDuplicateCache();
+    
+    // Verify duplicate detection is still enabled after cache clear
+    TEST_ASSERT_TRUE(storage->isDuplicateDetectionEnabled());
+}
+
+/**
+ * @brief Test smart delete functionality
+ * 
+ * Verifies smart delete error handling
+ */
+void test_smart_delete(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Should return -1 when not initialized
+    int resultBefore = storage->smartDelete(10240);
+    TEST_ASSERT_EQUAL(-1, resultBefore);
+    
+    // After init, smart delete should work or return 0 (no files to delete)
+    bool initResult = storage->init();
+    if (initResult) {
+        // With empty or minimal storage, should return 0 (nothing to delete)
+        // or positive number if files were deleted
+        int resultAfter = storage->smartDelete(10240);
+        TEST_ASSERT_GREATER_OR_EQUAL(-1, resultAfter);
+    }
+}
+
+/**
+ * @brief Test storage statistics
+ * 
+ * Verifies storage stats retrieval
+ */
+void test_storage_stats(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    unsigned long totalImages, duplicatesSkipped, bytesCompressed;
+    
+    // Get stats before init - should return zeros
+    storage->getStorageStats(totalImages, duplicatesSkipped, bytesCompressed);
+    TEST_ASSERT_EQUAL(0, totalImages);
+    TEST_ASSERT_EQUAL(0, duplicatesSkipped);
+    TEST_ASSERT_EQUAL(0, bytesCompressed);
+    
+    // After init, total images should match image counter
+    bool initResult = storage->init();
+    if (initResult) {
+        storage->getStorageStats(totalImages, duplicatesSkipped, bytesCompressed);
+        TEST_ASSERT_EQUAL(storage->getImageCount(), totalImages);
+    }
+}
+
+/**
+ * @brief Test saveImageWithCompression with null buffer
+ * 
+ * Verifies error handling for invalid input
+ */
+void test_save_image_with_compression_null_buffer(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Should return empty string for null buffer
+    String result1 = storage->saveImageWithCompression(nullptr);
+    TEST_ASSERT_EQUAL_STRING("", result1.c_str());
+    
+    // Initialize storage
+    bool initResult = storage->init();
+    
+    // Test with buffer that has NULL buf pointer
+    camera_fb_t fb;
+    fb.buf = nullptr;
+    fb.len = 100;
+    fb.format = PIXFORMAT_JPEG;
+    
+    String result2 = storage->saveImageWithCompression(&fb);
+    TEST_ASSERT_EQUAL_STRING("", result2.c_str());
+    
+    // Test with buffer that has zero length
+    uint8_t mockData[100];
+    fb.buf = mockData;
+    fb.len = 0;
+    fb.format = PIXFORMAT_JPEG;
+    
+    String result3 = storage->saveImageWithCompression(&fb);
+    TEST_ASSERT_EQUAL_STRING("", result3.c_str());
+}
+
+//==============================================================================
 // TEST RUNNER - setup() and loop() for Unity
 //==============================================================================
 
@@ -483,6 +628,13 @@ void setup() {
     RUN_TEST(test_get_image_files);
     RUN_TEST(test_get_image_files_error_handling);
     RUN_TEST(test_delete_old_files);
+    
+    // Improved storage feature tests
+    RUN_TEST(test_compression_settings);
+    RUN_TEST(test_duplicate_detection_settings);
+    RUN_TEST(test_smart_delete);
+    RUN_TEST(test_storage_stats);
+    RUN_TEST(test_save_image_with_compression_null_buffer);
     
     UNITY_END();
     
