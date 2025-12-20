@@ -463,7 +463,7 @@ def create_app(config_name='development'):
             # Base query filters
             base_filters = [
                 WildlifeDetection.timestamp >= start_date,
-                WildlifeDetection.is_false_positive == False
+                WildlifeDetection.is_false_positive.is_(False)
             ]
             
             # Species frequency data
@@ -498,7 +498,7 @@ def create_app(config_name='development'):
                 db.func.count(WildlifeDetection.id).label('count')
             ).filter(
                 *base_filters,
-                WildlifeDetection.detected_species.isnot(None)
+                WildlifeDetection.detected_species.is_not(None)
             ).group_by(
                 WildlifeDetection.detected_species,
                 db.func.extract('hour', WildlifeDetection.timestamp)

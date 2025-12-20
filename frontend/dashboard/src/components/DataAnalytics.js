@@ -194,14 +194,20 @@ function DataAnalytics() {
     if (selectedSpecies === 'all') {
       return analyticsData.hourlyActivity;
     }
+    // Return species-specific data, or fallback to all activity if species not found
     return analyticsData.activityBySpecies[selectedSpecies] || analyticsData.hourlyActivity;
   }, [selectedSpecies, analyticsData]);
 
   // Prepare radar chart data (24-hour polar chart)
   const radarData = useMemo(() => {
+    if (!currentActivityData || currentActivityData.length === 0) {
+      return [];
+    }
+    const maxDetections = currentActivityData.reduce((max, d) => Math.max(max, d.detections), 0);
+    const fullMark = maxDetections > 0 ? maxDetections * 1.2 : 100;
     return currentActivityData.map(item => ({
       ...item,
-      fullMark: Math.max(...currentActivityData.map(d => d.detections)) * 1.2 || 100,
+      fullMark,
     }));
   }, [currentActivityData]);
 
