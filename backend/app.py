@@ -451,6 +451,90 @@ def create_app(config_name='development'):
             logger.error(f"Activity analytics error: {e}")
             return jsonify({'error': 'Failed to fetch activity analytics'}), 500
     
+    @app.route('/api/analytics/data', methods=['GET'])
+    @jwt_required()
+    def data_analytics():
+        """Get comprehensive data analytics including species-specific activity patterns"""
+        try:
+            days = request.args.get('days', 30, type=int)
+            species = request.args.get('species')
+            start_date = datetime.utcnow() - timedelta(days=days)
+            
+            # Base query filters
+            base_filters = [
+                WildlifeDetection.timestamp >= start_date,
+                WildlifeDetection.is_false_positive == False
+            ]
+            
+            # Species frequency data
+            species_query = db.session.query(
+                WildlifeDetection.detected_species,
+                db.func.count(WildlifeDetection.id).label('count'),
+                db.func.avg(WildlifeDetection.confidence_score).label('avg_confidence')
+            ).filter(*base_filters).group_by(WildlifeDetection.detected_species)
+            
+            species_data = species_query.all()
+            
+            # Hourly activity pattern (optionally filtered by species)
+            hourly_filters = base_filters.copy()
+            if species:
+                hourly_filters.append(WildlifeDetection.detected_species == species)
+            
+            hourly_data = db.session.query(
+                db.func.extract('hour', WildlifeDetection.timestamp).label('hour'),
+                db.func.count(WildlifeDetection.id).label('count')
+            ).filter(*hourly_filters).group_by('hour').all()
+            
+            # Daily activity pattern
+            daily_data = db.session.query(
+                db.func.date(WildlifeDetection.timestamp).label('date'),
+                db.func.count(WildlifeDetection.id).label('count')
+            ).filter(*hourly_filters).group_by('date').order_by('date').all()
+            
+            # Species-specific hourly activity
+            species_hourly_activity = {}
+            for sp in species_data:
+                if sp.detected_species:
+                    sp_hourly = db.session.query(
+                        db.func.extract('hour', WildlifeDetection.timestamp).label('hour'),
+                        db.func.count(WildlifeDetection.id).label('count')
+                    ).filter(
+                        *base_filters,
+                        WildlifeDetection.detected_species == sp.detected_species
+                    ).group_by('hour').all()
+                    
+                    species_hourly_activity[sp.detected_species] = [
+                        {'hour': int(item.hour), 'count': item.count}
+                        for item in sp_hourly
+                    ]
+            
+            return jsonify({
+                'species_frequency': [
+                    {
+                        'species': item.detected_species,
+                        'count': item.count,
+                        'avg_confidence': float(item.avg_confidence or 0)
+                    }
+                    for item in species_data if item.detected_species
+                ],
+                'hourly_activity': [
+                    {'hour': int(item.hour), 'count': item.count}
+                    for item in hourly_data
+                ],
+                'daily_activity': [
+                    {'date': item.date.isoformat(), 'count': item.count}
+                    for item in daily_data
+                ],
+                'species_hourly_activity': species_hourly_activity,
+                'period_days': days,
+                'start_date': start_date.isoformat(),
+                'species_filter': species
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"Data analytics error: {e}")
+            return jsonify({'error': 'Failed to fetch data analytics'}), 500
+    
     @app.route('/api/alerts', methods=['GET'])
     @jwt_required()
     def get_alerts():

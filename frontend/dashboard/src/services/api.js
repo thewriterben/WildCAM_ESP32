@@ -198,6 +198,19 @@ class APIService {
     }
   }
 
+  async getDataAnalytics(days = 30, species = null) {
+    try {
+      const params = { days };
+      if (species) {
+        params.species = species;
+      }
+      const response = await this.client.get('/api/analytics/data', { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Failed to fetch data analytics');
+    }
+  }
+
   // Alerts
   async getAlerts(unreadOnly = false) {
     try {
