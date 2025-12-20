@@ -267,6 +267,7 @@ class AlertPreference(db.Model):
     # Channel preferences
     email_enabled = db.Column(db.Boolean, default=True)
     sms_enabled = db.Column(db.Boolean, default=False)
+    phone_number = db.Column(db.String(20))  # Phone number for SMS alerts
     push_enabled = db.Column(db.Boolean, default=True)
     slack_webhook = db.Column(db.String(500))
     discord_webhook = db.Column(db.String(500))
@@ -289,11 +290,19 @@ class AlertPreference(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def to_dict(self):
+        # Mask phone number for display (show first 4 and last 2 characters)
+        masked_phone = None
+        if self.phone_number and len(self.phone_number) >= 8:
+            masked_phone = self.phone_number[:4] + '****' + self.phone_number[-2:]
+        elif self.phone_number:
+            masked_phone = '****'  # For short numbers, mask entirely
+        
         return {
             'id': self.id,
             'user_id': self.user_id,
             'email_enabled': self.email_enabled,
             'sms_enabled': self.sms_enabled,
+            'phone_number': masked_phone,
             'push_enabled': self.push_enabled,
             'slack_webhook': self.slack_webhook[:20] + '...' if self.slack_webhook else None,
             'discord_webhook': self.discord_webhook[:20] + '...' if self.discord_webhook else None,
@@ -333,20 +342,4 @@ class AnalyticsData(db.Model):
             'value': self.value,
             'metadata': self.metadata,
             'created_at': self.created_at.isoformat() if self.created_at else None
-        }
-
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'user_id': self.user_id,
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
         }

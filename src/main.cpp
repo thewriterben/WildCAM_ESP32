@@ -76,6 +76,7 @@
 #include "WebServer.h"
 #include "MeshManager.h"
 #include "SensorManager.h"
+#include "CloudManager.h"
 
 // Global instances
 MotionDetector motionDetector;
@@ -84,6 +85,11 @@ StorageManager storage;
 PowerManager power;
 WebServer webServer(WEB_SERVER_PORT);
 SensorManager sensors;
+
+#if CLOUD_UPLOAD_ENABLED
+CloudManager cloudManager;
+unsigned long lastCloudStatusReport = 0;
+#endif
 
 #if TIME_MANAGEMENT_ENABLED
 TimeManager timeManager;
@@ -343,6 +349,38 @@ void setup() {
                 #endif
                 Serial.println("   ✗ Web server initialization failed");
             }
+            
+            // Initialize Cloud Manager for automatic uploads
+            #if CLOUD_UPLOAD_ENABLED
+            Serial.println("\n   Initializing Cloud Manager...");
+            String deviceId = String((uint32_t)(ESP.getEfuseMac() & 0xFFFFFFFF), HEX);
+            String serverUrl = CLOUD_SERVER_URL;
+            if (serverUrl.length() > 0) {
+                if (cloudManager.init(serverUrl, deviceId, CLOUD_API_KEY)) {
+                    #if LOGGING_ENABLED
+                    LOG_INFO("Cloud Manager initialized - Device ID: %s", deviceId.c_str());
+                    #endif
+                    Serial.printf("   ✓ Cloud Manager initialized - Device ID: %s\n", deviceId.c_str());
+                    
+                    // Register device with backend
+                    if (cloudManager.registerDevice(CLOUD_DEVICE_NAME, "")) {
+                        Serial.println("   ✓ Device registered with cloud backend");
+                    } else {
+                        Serial.println("   ⚠ Device registration pending (will retry)");
+                    }
+                } else {
+                    #if LOGGING_ENABLED
+                    LOG_WARN("Cloud Manager initialization failed");
+                    #endif
+                    Serial.println("   ⚠ Cloud Manager initialization failed");
+                }
+            } else {
+                Serial.println("   ⚠ Cloud upload disabled (no server URL configured)");
+                #if LOGGING_ENABLED
+                LOG_INFO("Cloud upload disabled - no server URL configured");
+                #endif
+            }
+            #endif
         } else {
             LOG_WARN("WiFi connection failed after %d attempts", attempts);
             Serial.println(" failed!");
@@ -407,6 +445,9 @@ void setup() {
     lastMotionTime = millis();
     lastBatteryCheck = millis();
     lastSensorRead = millis();
+    #if CLOUD_UPLOAD_ENABLED
+    lastCloudStatusReport = millis();
+    #endif
     
     currentState = IDLE;
 }
@@ -557,6 +598,25 @@ void loop() {
                     }
                 }
                 #endif
+                
+                // Upload image to cloud if enabled
+                #if CLOUD_UPLOAD_ENABLED
+                if (cloudManager.isInitialized() && cloudManager.isUploadEnabled()) {
+                    Serial.println("Uploading image to cloud...");
+                    CloudUploadStatus uploadStatus = cloudManager.uploadImage(fb, "", 0.0, "");
+                    if (uploadStatus == UPLOAD_SUCCESS) {
+                        LOG_INFO("Image uploaded to cloud successfully");
+                        Serial.println("   ✓ Image uploaded to cloud");
+                    } else if (uploadStatus == UPLOAD_QUEUED) {
+                        LOG_INFO("Image queued for cloud upload");
+                        Serial.println("   ⏳ Image queued for upload (no WiFi)");
+                    } else {
+                        LOG_WARN("Cloud upload failed, queuing for retry");
+                        Serial.println("   ⚠ Cloud upload failed, queued for retry");
+                        cloudManager.queueUpload(filepath, "");
+                    }
+                }
+                #endif
             } else {
                 LOG_ERROR("Failed to save image to SD card");
                 Serial.println("ERROR: Failed to save image to SD card");
@@ -635,6 +695,43 @@ void loop() {
         
         lastBatteryCheck = millis();
     }
+    
+    // Cloud Manager: Process queued uploads and report status
+    #if CLOUD_UPLOAD_ENABLED
+    if (cloudManager.isInitialized()) {
+        // Process any queued uploads
+        if (cloudManager.getQueueSize() > 0) {
+            int processed = cloudManager.process();
+            if (processed > 0) {
+                LOG_DEBUG("CloudManager: Processed %d queued uploads", processed);
+            }
+        }
+        
+        // Report device status periodically
+        #if CLOUD_STATUS_REPORT_INTERVAL_MS > 0
+        if (millis() - lastCloudStatusReport > CLOUD_STATUS_REPORT_INTERVAL_MS) {
+            float voltage = power.getBatteryVoltage();
+            int percent = power.getBatteryPercentage();
+            float temp = 0.0;
+            float humidity = 0.0;
+            
+            // Get environmental data if available
+            if (sensors.isBME280Available()) {
+                EnvironmentalData envData = sensors.readEnvironmental();
+                if (envData.valid) {
+                    temp = envData.temperature;
+                    humidity = envData.humidity;
+                }
+            }
+            
+            if (cloudManager.reportStatus(voltage, percent, temp, humidity)) {
+                LOG_DEBUG("CloudManager: Status reported to cloud");
+            }
+            lastCloudStatusReport = millis();
+        }
+        #endif
+    }
+    #endif
     
     // Check for inactivity - enter deep sleep if no motion for extended period
     // Convert DEEP_SLEEP_DURATION from seconds to milliseconds for comparison
