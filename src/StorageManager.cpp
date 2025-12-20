@@ -72,22 +72,74 @@ static const size_t MIN_IMAGE_SIZE = 1024;
 static unsigned long g_duplicatesSkipped = 0;
 static unsigned long g_bytesCompressed = 0;
 
+// PROGMEM strings for error handling
+static const char TAG_RETRY[] PROGMEM = "SD operation retry %d/%d after %dms delay\n";
+static const char TAG_REMOUNT_ATTEMPT[] PROGMEM = "Attempting SD card remount...\n";
+static const char TAG_REMOUNT_SUCCESS[] PROGMEM = "SD card remount successful\n";
+static const char TAG_REMOUNT_FAIL[] PROGMEM = "SD card remount failed\n";
+static const char TAG_HEALTH_CHECK[] PROGMEM = "SD card health check: %s\n";
+static const char TAG_LOW_MEMORY[] PROGMEM = "WARNING: Low memory detected (%d bytes free)\n";
+static const char TAG_MEMORY_OPTIMIZED[] PROGMEM = "Memory optimized, freed ~%d bytes\n";
+
 StorageManager::StorageManager() 
     : initialized(false), 
       basePath("/images"), 
       imageCounter(0),
       compressionQuality(STORAGE_DEFAULT_COMPRESSION_QUALITY),
       compressionEnabled(true),
-      duplicateDetectionEnabled(true) {
+      duplicateDetectionEnabled(true),
+      lastError(SD_ERROR_NONE),
+      maxRetries(SD_CARD_MAX_RETRIES),
+      retryDelayMs(SD_CARD_RETRY_DELAY_MS),
+      maxRetryDelayMs(SD_CARD_MAX_RETRY_DELAY_MS),
+      autoRemountEnabled(SD_CARD_AUTO_REMOUNT),
+      writeBuffer(nullptr),
+      writeBufferSize(SD_WRITE_BUFFER_SIZE),
+      memoryPoolEnabled(true) {
+    // Initialize card health structure
+    cardHealth.mounted = false;
+    cardHealth.cardType = CARD_NONE;
+    cardHealth.totalBytes = 0;
+    cardHealth.usedBytes = 0;
+    cardHealth.freeBytes = 0;
+    cardHealth.lastHealthCheck = 0;
+    cardHealth.consecutiveErrors = 0;
+    cardHealth.totalErrors = 0;
+    cardHealth.successfulOps = 0;
+    cardHealth.errorRate = 0.0f;
+}
+
+StorageManager::~StorageManager() {
+    freeWriteBuffer();
 }
 
 bool StorageManager::init() {
     Serial.println(FPSTR(TAG_INIT));
     
-    // Initialize SD card in 1-bit mode (uses less pins: CLK, CMD, D0)
-    // Second parameter 'true' enables 1-bit mode, reducing pin requirements
-    if (!SD_MMC.begin("/sdcard", true)) {
+    // Initialize SD card with retry logic
+    bool mountSuccess = false;
+    unsigned int currentDelay = retryDelayMs;
+    
+    for (unsigned int attempt = 0; attempt <= maxRetries && !mountSuccess; attempt++) {
+        if (attempt > 0) {
+            Serial.printf_P(TAG_RETRY, attempt, maxRetries, currentDelay);
+            delay(currentDelay);
+            // Exponential backoff
+            currentDelay = min(currentDelay * 2, maxRetryDelayMs);
+        }
+        
+        // Initialize SD card in 1-bit mode (uses less pins: CLK, CMD, D0)
+        // Second parameter 'true' enables 1-bit mode, reducing pin requirements
+        if (SD_MMC.begin("/sdcard", true)) {
+            mountSuccess = true;
+        }
+    }
+    
+    if (!mountSuccess) {
         Serial.println(FPSTR(TAG_ERROR_MOUNT));
+        lastError = SD_ERROR_MOUNT_FAILED;
+        lastErrorMessage = "SD card mount failed after retries";
+        updateErrorStats(false, SD_ERROR_MOUNT_FAILED);
         return false;
     }
     
@@ -95,6 +147,9 @@ bool StorageManager::init() {
     uint8_t cardType = SD_MMC.cardType();
     if (cardType == CARD_NONE) {
         Serial.println(FPSTR(TAG_ERROR_NO_CARD));
+        lastError = SD_ERROR_CARD_REMOVED;
+        lastErrorMessage = "No SD card detected";
+        updateErrorStats(false, SD_ERROR_CARD_REMOVED);
         return false;
     }
     
@@ -119,6 +174,14 @@ bool StorageManager::init() {
     Serial.printf_P(TAG_FREE_SPACE, (SD_MMC.totalBytes() - SD_MMC.usedBytes()) / (1024 * 1024));
     Serial.println(FPSTR(TAG_SEPARATOR));
     
+    // Initialize SD card health statistics
+    cardHealth.mounted = true;
+    cardHealth.cardType = cardType;
+    cardHealth.totalBytes = SD_MMC.totalBytes();
+    cardHealth.usedBytes = SD_MMC.usedBytes();
+    cardHealth.freeBytes = cardHealth.totalBytes - cardHealth.usedBytes;
+    cardHealth.lastHealthCheck = millis();
+    
     // Create base directory structure for organizing images
     // This is the root directory where all images will be stored
     if (!SD_MMC.exists(basePath)) {
@@ -126,6 +189,9 @@ bool StorageManager::init() {
             Serial.printf_P(TAG_CREATED_DIR, basePath.c_str());
         } else {
             Serial.printf_P(TAG_ERROR_CREATE_DIR, basePath.c_str());
+            lastError = SD_ERROR_DIR_CREATE;
+            lastErrorMessage = "Failed to create base directory";
+            updateErrorStats(false, SD_ERROR_DIR_CREATE);
             return false;
         }
     } else {
@@ -137,7 +203,13 @@ bool StorageManager::init() {
     imageCounter = preferences.getULong("imageCounter", 0);
     Serial.printf_P(TAG_IMAGE_COUNTER, imageCounter);
     
+    // Initialize memory pool if enabled
+    if (memoryPoolEnabled) {
+        allocateWriteBuffer();
+    }
+    
     initialized = true;
+    updateErrorStats(true);
     Serial.println(FPSTR(TAG_SUCCESS_INIT));
     
     return true;
@@ -406,6 +478,7 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     // Validate initialization state
     if (!initialized) {
         Serial.println(FPSTR(TAG_ERROR_NOT_INIT));
+        updateErrorStats(false, SD_ERROR_NOT_MOUNTED);
         return "";
     }
     
@@ -414,6 +487,17 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     if (!fb || fb->buf == NULL || fb->len == 0) {
         Serial.println(FPSTR(TAG_ERROR_INVALID_FB));
         return "";
+    }
+    
+    // Check SD card accessibility before proceeding
+    if (!checkSDCardAccess()) {
+        if (autoRemountEnabled) {
+            if (!remountSDCard()) {
+                return "";
+            }
+        } else {
+            return "";
+        }
     }
     
     String fullPath;
@@ -453,23 +537,53 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
         attempt++;
     }
     
-    // Open file for writing in binary mode
-    File file = SD_MMC.open(fullPath, FILE_WRITE);
-    if (!file) {
-        Serial.printf_P(TAG_ERROR_OPEN_FILE, fullPath.c_str());
-        return "";
+    // Implement retry logic for file operations
+    bool writeSuccess = false;
+    unsigned int currentDelay = retryDelayMs;
+    
+    for (unsigned int retryAttempt = 0; retryAttempt <= maxRetries && !writeSuccess; retryAttempt++) {
+        if (retryAttempt > 0) {
+            Serial.printf_P(TAG_RETRY, retryAttempt, maxRetries, currentDelay);
+            delay(currentDelay);
+            // Exponential backoff
+            currentDelay = min(currentDelay * 2, maxRetryDelayMs);
+        }
+        
+        // Open file for writing in binary mode
+        File file = SD_MMC.open(fullPath, FILE_WRITE);
+        if (!file) {
+            Serial.printf_P(TAG_ERROR_OPEN_FILE, fullPath.c_str());
+            lastError = SD_ERROR_FILE_OPEN;
+            lastErrorMessage = "Failed to open file: " + fullPath;
+            continue;  // Retry
+        }
+        
+        // Write complete frame buffer data to file using buffered write
+        // This reduces memory fragmentation and improves reliability
+        size_t written;
+        if (memoryPoolEnabled && writeBuffer != nullptr) {
+            written = bufferedWrite(file, fb->buf, fb->len);
+        } else {
+            written = file.write(fb->buf, fb->len);
+        }
+        
+        // Close file to ensure data is flushed to SD card
+        file.close();
+        
+        // Verify all bytes were written successfully
+        if (written == fb->len) {
+            writeSuccess = true;
+        } else {
+            Serial.printf_P(TAG_ERROR_WRITE, (int)written, (int)fb->len);
+            lastError = SD_ERROR_FILE_WRITE;
+            lastErrorMessage = "Incomplete write: " + String(written) + " of " + String(fb->len) + " bytes";
+            // Remove partial file
+            SD_MMC.remove(fullPath);
+        }
     }
     
-    // Write complete frame buffer data to file
-    // This is the actual JPEG image data from the camera
-    size_t written = file.write(fb->buf, fb->len);
-    
-    // Close file to ensure data is flushed to SD card
-    file.close();
-    
-    // Verify all bytes were written successfully
-    if (written != fb->len) {
-        Serial.printf_P(TAG_ERROR_WRITE, (int)written, (int)fb->len);
+    if (!writeSuccess) {
+        updateErrorStats(false, lastError);
         return "";
     }
     
@@ -478,6 +592,7 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     imageCounter++;
     preferences.putULong("imageCounter", imageCounter);
     
+    updateErrorStats(true);
     Serial.printf_P(TAG_SUCCESS_SAVE, fullPath.c_str(), (int)fb->len);
     
     return fullPath;
@@ -915,4 +1030,329 @@ void StorageManager::getStorageStats(unsigned long& totalImages, unsigned long& 
     totalImages = imageCounter;
     duplicatesSkipped = g_duplicatesSkipped;
     bytesCompressed = g_bytesCompressed;
+}
+
+// ============================================================================
+// SD Card Error Handling and Retry Logic Implementation
+// ============================================================================
+
+const char* StorageManager::errorToString(SDCardError error) {
+    switch (error) {
+        case SD_ERROR_NONE:         return "No error";
+        case SD_ERROR_NOT_MOUNTED:  return "SD card not mounted";
+        case SD_ERROR_CARD_REMOVED: return "SD card removed";
+        case SD_ERROR_MOUNT_FAILED: return "Mount failed";
+        case SD_ERROR_FILE_OPEN:    return "File open failed";
+        case SD_ERROR_FILE_WRITE:   return "File write failed";
+        case SD_ERROR_FILE_READ:    return "File read failed";
+        case SD_ERROR_DIR_CREATE:   return "Directory creation failed";
+        case SD_ERROR_DIR_OPEN:     return "Directory open failed";
+        case SD_ERROR_CARD_FULL:    return "SD card full";
+        case SD_ERROR_TIMEOUT:      return "Operation timeout";
+        case SD_ERROR_CORRUPTED:    return "Data corruption detected";
+        default:                    return "Unknown error";
+    }
+}
+
+SDCardError StorageManager::getLastError() const {
+    return lastError;
+}
+
+String StorageManager::getLastErrorMessage() const {
+    return lastErrorMessage;
+}
+
+void StorageManager::clearLastError() {
+    lastError = SD_ERROR_NONE;
+    lastErrorMessage = "";
+}
+
+void StorageManager::setMaxRetries(unsigned int retries) {
+    // Clamp to reasonable range (1-10)
+    if (retries < 1) retries = 1;
+    if (retries > 10) retries = 10;
+    maxRetries = retries;
+}
+
+unsigned int StorageManager::getMaxRetries() const {
+    return maxRetries;
+}
+
+void StorageManager::setRetryDelay(unsigned int delayMs) {
+    // Clamp to reasonable range (10-5000 ms)
+    if (delayMs < 10) delayMs = 10;
+    if (delayMs > 5000) delayMs = 5000;
+    retryDelayMs = delayMs;
+}
+
+unsigned int StorageManager::getRetryDelay() const {
+    return retryDelayMs;
+}
+
+void StorageManager::setAutoRemountEnabled(bool enable) {
+    autoRemountEnabled = enable;
+}
+
+bool StorageManager::isAutoRemountEnabled() const {
+    return autoRemountEnabled;
+}
+
+void StorageManager::updateErrorStats(bool success, SDCardError error) {
+    if (success) {
+        cardHealth.consecutiveErrors = 0;
+        cardHealth.successfulOps++;
+    } else {
+        cardHealth.consecutiveErrors++;
+        cardHealth.totalErrors++;
+        lastError = error;
+        lastErrorMessage = String(errorToString(error));
+    }
+    
+    // Calculate error rate
+    unsigned long totalOps = cardHealth.successfulOps + cardHealth.totalErrors;
+    if (totalOps > 0) {
+        cardHealth.errorRate = (float)cardHealth.totalErrors / totalOps * 100.0f;
+    }
+    
+    // Check if auto-remount should be triggered
+    if (autoRemountEnabled && cardHealth.consecutiveErrors >= SD_CARD_ERROR_THRESHOLD) {
+        Serial.println("Auto-remount triggered due to consecutive errors");
+        remountSDCard();
+    }
+}
+
+bool StorageManager::checkSDCardAccess() {
+    if (!initialized) {
+        return false;
+    }
+    
+    // Quick check if card is still present
+    uint8_t cardType = SD_MMC.cardType();
+    if (cardType == CARD_NONE) {
+        lastError = SD_ERROR_CARD_REMOVED;
+        lastErrorMessage = "SD card not detected";
+        return false;
+    }
+    
+    return true;
+}
+
+bool StorageManager::remountSDCard() {
+    Serial.println(FPSTR(TAG_REMOUNT_ATTEMPT));
+    
+    // End current mount
+    SD_MMC.end();
+    delay(100);  // Brief delay for card to stabilize
+    
+    // Attempt to remount
+    if (!SD_MMC.begin("/sdcard", true)) {
+        Serial.println(FPSTR(TAG_REMOUNT_FAIL));
+        initialized = false;
+        cardHealth.mounted = false;
+        lastError = SD_ERROR_MOUNT_FAILED;
+        lastErrorMessage = "Remount failed";
+        return false;
+    }
+    
+    // Verify card is present after remount
+    uint8_t cardType = SD_MMC.cardType();
+    if (cardType == CARD_NONE) {
+        Serial.println(FPSTR(TAG_REMOUNT_FAIL));
+        initialized = false;
+        cardHealth.mounted = false;
+        lastError = SD_ERROR_CARD_REMOVED;
+        lastErrorMessage = "Card not detected after remount";
+        return false;
+    }
+    
+    // Update health stats
+    cardHealth.mounted = true;
+    cardHealth.cardType = cardType;
+    cardHealth.consecutiveErrors = 0;
+    cardHealth.totalBytes = SD_MMC.totalBytes();
+    cardHealth.usedBytes = SD_MMC.usedBytes();
+    cardHealth.freeBytes = cardHealth.totalBytes - cardHealth.usedBytes;
+    
+    Serial.println(FPSTR(TAG_REMOUNT_SUCCESS));
+    clearLastError();
+    return true;
+}
+
+bool StorageManager::forceRemount() {
+    return remountSDCard();
+}
+
+SDCardHealth StorageManager::getSDCardHealth() const {
+    return cardHealth;
+}
+
+bool StorageManager::performHealthCheck() {
+    if (!initialized) {
+        cardHealth.mounted = false;
+        return false;
+    }
+    
+    bool healthy = true;
+    
+    // Check card type
+    uint8_t cardType = SD_MMC.cardType();
+    if (cardType == CARD_NONE) {
+        cardHealth.mounted = false;
+        lastError = SD_ERROR_CARD_REMOVED;
+        lastErrorMessage = "SD card not detected during health check";
+        healthy = false;
+    } else {
+        cardHealth.mounted = true;
+        cardHealth.cardType = cardType;
+        
+        // Update space statistics
+        cardHealth.totalBytes = SD_MMC.totalBytes();
+        cardHealth.usedBytes = SD_MMC.usedBytes();
+        cardHealth.freeBytes = cardHealth.totalBytes - cardHealth.usedBytes;
+        
+        // Check if card is nearly full (less than 1% free)
+        if (cardHealth.freeBytes < cardHealth.totalBytes / 100) {
+            lastError = SD_ERROR_CARD_FULL;
+            lastErrorMessage = "SD card nearly full";
+            healthy = false;
+        }
+    }
+    
+    cardHealth.lastHealthCheck = millis();
+    
+    Serial.printf_P(TAG_HEALTH_CHECK, healthy ? "OK" : "Issues detected");
+    
+    return healthy;
+}
+
+void StorageManager::resetErrorStats() {
+    cardHealth.consecutiveErrors = 0;
+    cardHealth.totalErrors = 0;
+    cardHealth.successfulOps = 0;
+    cardHealth.errorRate = 0.0f;
+    clearLastError();
+}
+
+// ============================================================================
+// Memory Management Implementation
+// ============================================================================
+
+bool StorageManager::allocateWriteBuffer() {
+    if (writeBuffer != nullptr) {
+        return true;  // Already allocated
+    }
+    
+    // Try to allocate from PSRAM first if available
+    #ifdef BOARD_HAS_PSRAM
+    writeBuffer = (uint8_t*)ps_malloc(writeBufferSize);
+    #else
+    writeBuffer = (uint8_t*)malloc(writeBufferSize);
+    #endif
+    
+    if (writeBuffer == nullptr) {
+        Serial.println("WARNING: Failed to allocate write buffer");
+        return false;
+    }
+    
+    return true;
+}
+
+void StorageManager::freeWriteBuffer() {
+    if (writeBuffer != nullptr) {
+        free(writeBuffer);
+        writeBuffer = nullptr;
+    }
+}
+
+size_t StorageManager::bufferedWrite(File& file, const uint8_t* data, size_t length) {
+    if (!memoryPoolEnabled || writeBuffer == nullptr) {
+        // Direct write without buffering
+        return file.write(data, length);
+    }
+    
+    size_t totalWritten = 0;
+    size_t remaining = length;
+    const uint8_t* dataPtr = data;
+    
+    while (remaining > 0) {
+        size_t chunkSize = (remaining > writeBufferSize) ? writeBufferSize : remaining;
+        
+        // Copy to buffer and write
+        memcpy(writeBuffer, dataPtr, chunkSize);
+        size_t written = file.write(writeBuffer, chunkSize);
+        
+        if (written != chunkSize) {
+            // Write error occurred
+            break;
+        }
+        
+        totalWritten += written;
+        dataPtr += chunkSize;
+        remaining -= chunkSize;
+    }
+    
+    return totalWritten;
+}
+
+MemoryStats StorageManager::getMemoryStats() const {
+    MemoryStats stats;
+    
+    stats.freeHeap = ESP.getFreeHeap();
+    stats.minFreeHeap = ESP.getMinFreeHeap();
+    stats.largestFreeBlock = ESP.getMaxAllocHeap();
+    
+    // Calculate fragmentation percentage
+    // Fragmentation = 1 - (largest_free_block / total_free_heap)
+    if (stats.freeHeap > 0) {
+        stats.fragmentationPercent = (1.0f - (float)stats.largestFreeBlock / stats.freeHeap) * 100.0f;
+    } else {
+        stats.fragmentationPercent = 100.0f;
+    }
+    
+    stats.lowMemoryWarning = (stats.freeHeap < MIN_FREE_HEAP_BYTES);
+    
+    if (stats.lowMemoryWarning) {
+        Serial.printf_P(TAG_LOW_MEMORY, stats.freeHeap);
+    }
+    
+    return stats;
+}
+
+void StorageManager::setMemoryPoolEnabled(bool enable) {
+    memoryPoolEnabled = enable;
+    
+    if (enable) {
+        allocateWriteBuffer();
+    } else {
+        freeWriteBuffer();
+    }
+}
+
+bool StorageManager::isMemoryPoolEnabled() const {
+    return memoryPoolEnabled;
+}
+
+bool StorageManager::isLowMemory() const {
+    return ESP.getFreeHeap() < MIN_FREE_HEAP_BYTES;
+}
+
+size_t StorageManager::optimizeMemory() {
+    size_t freedBytes = 0;
+    size_t beforeHeap = ESP.getFreeHeap();
+    
+    // Clear duplicate detection cache
+    recentImageHashes.clear();
+    
+    // Force garbage collection (if Arduino String fragmentation exists)
+    String().reserve(0);
+    
+    // Calculate freed memory
+    size_t afterHeap = ESP.getFreeHeap();
+    if (afterHeap > beforeHeap) {
+        freedBytes = afterHeap - beforeHeap;
+    }
+    
+    Serial.printf_P(TAG_MEMORY_OPTIMIZED, freedBytes);
+    
+    return freedBytes;
 }

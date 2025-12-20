@@ -36,6 +36,95 @@
 #define STORAGE_DUPLICATE_THRESHOLD 95  // Percentage similarity threshold for duplicate detection
 #endif
 
+// SD card error handling defaults (can be overridden in config.h)
+#ifndef SD_CARD_MAX_RETRIES
+#define SD_CARD_MAX_RETRIES 3
+#endif
+
+#ifndef SD_CARD_RETRY_DELAY_MS
+#define SD_CARD_RETRY_DELAY_MS 100
+#endif
+
+#ifndef SD_CARD_MAX_RETRY_DELAY_MS
+#define SD_CARD_MAX_RETRY_DELAY_MS 1000
+#endif
+
+#ifndef SD_CARD_AUTO_REMOUNT
+#define SD_CARD_AUTO_REMOUNT true
+#endif
+
+#ifndef SD_CARD_ERROR_THRESHOLD
+#define SD_CARD_ERROR_THRESHOLD 5
+#endif
+
+// Memory management defaults (can be overridden in config.h)
+#ifndef SD_WRITE_BUFFER_SIZE
+#define SD_WRITE_BUFFER_SIZE 4096
+#endif
+
+#ifndef MIN_FREE_HEAP_BYTES
+#define MIN_FREE_HEAP_BYTES 32768
+#endif
+
+/**
+ * @brief Enumeration of SD card operation error types
+ * 
+ * Used for categorizing errors and determining appropriate retry strategies.
+ */
+enum SDCardError {
+    SD_ERROR_NONE = 0,           ///< No error - operation successful
+    SD_ERROR_NOT_MOUNTED,        ///< SD card not mounted
+    SD_ERROR_CARD_REMOVED,       ///< SD card physically removed
+    SD_ERROR_MOUNT_FAILED,       ///< Failed to mount SD card
+    SD_ERROR_FILE_OPEN,          ///< Failed to open file
+    SD_ERROR_FILE_WRITE,         ///< Failed to write to file
+    SD_ERROR_FILE_READ,          ///< Failed to read from file
+    SD_ERROR_DIR_CREATE,         ///< Failed to create directory
+    SD_ERROR_DIR_OPEN,           ///< Failed to open directory
+    SD_ERROR_CARD_FULL,          ///< SD card is full
+    SD_ERROR_TIMEOUT,            ///< Operation timed out
+    SD_ERROR_CORRUPTED,          ///< Data corruption detected
+    SD_ERROR_UNKNOWN             ///< Unknown error
+};
+
+/**
+ * @brief Structure to hold SD card operation result with error details
+ */
+struct SDOperationResult {
+    bool success;                ///< Whether the operation succeeded
+    SDCardError error;           ///< Error code if operation failed
+    int retryCount;              ///< Number of retries attempted
+    unsigned long operationTime; ///< Time taken for the operation in ms
+    String errorMessage;         ///< Human-readable error description
+};
+
+/**
+ * @brief Structure to hold SD card health statistics
+ */
+struct SDCardHealth {
+    bool mounted;                ///< Whether SD card is currently mounted
+    uint8_t cardType;            ///< Type of SD card (MMC, SD, SDHC)
+    uint64_t totalBytes;         ///< Total capacity in bytes
+    uint64_t usedBytes;          ///< Used space in bytes
+    uint64_t freeBytes;          ///< Free space in bytes
+    unsigned long lastHealthCheck; ///< Timestamp of last health check
+    unsigned int consecutiveErrors; ///< Count of consecutive errors
+    unsigned int totalErrors;    ///< Total error count since init
+    unsigned int successfulOps;  ///< Total successful operations
+    float errorRate;             ///< Error rate percentage
+};
+
+/**
+ * @brief Structure to hold memory management statistics
+ */
+struct MemoryStats {
+    size_t freeHeap;             ///< Current free heap memory
+    size_t minFreeHeap;          ///< Minimum free heap since boot
+    size_t largestFreeBlock;     ///< Largest contiguous free block
+    float fragmentationPercent;  ///< Heap fragmentation percentage
+    bool lowMemoryWarning;       ///< True if memory is critically low
+};
+
 /**
  * @brief Structure to hold image quality metrics for smart deletion
  */
@@ -123,6 +212,20 @@ private:
     std::map<uint32_t, String> recentImageHashes; ///< Cache of recent image hashes for duplicate detection
     static const size_t MAX_HASH_CACHE_SIZE = 50; ///< Maximum number of hashes to keep in cache
     
+    // Error handling and retry logic members
+    SDCardHealth cardHealth;       ///< Current SD card health statistics
+    SDCardError lastError;         ///< Last error code encountered
+    String lastErrorMessage;       ///< Human-readable description of last error
+    unsigned int maxRetries;       ///< Maximum retry attempts for operations
+    unsigned int retryDelayMs;     ///< Base delay between retries in milliseconds
+    unsigned int maxRetryDelayMs;  ///< Maximum delay cap for exponential backoff
+    bool autoRemountEnabled;       ///< Whether automatic remount is enabled
+    
+    // Memory management members
+    uint8_t* writeBuffer;          ///< Pre-allocated write buffer to reduce fragmentation
+    size_t writeBufferSize;        ///< Size of the write buffer
+    bool memoryPoolEnabled;        ///< Whether memory pooling is enabled
+    
     /**
      * @brief Get the current date-based path component
      * @return String Date path component (e.g., "/20241029")
@@ -190,6 +293,76 @@ private:
      * @return bool true if deletion successful, false otherwise
      */
     bool deleteImageAndMetadata(const String& imagePath);
+    
+    /**
+     * @brief Execute an SD card operation with automatic retry logic
+     * 
+     * Wraps SD card operations with exponential backoff retry logic.
+     * Automatically handles transient errors and attempts recovery.
+     * 
+     * @tparam T Return type of the operation
+     * @param operation Lambda function that performs the SD card operation
+     * @param operationName Name of the operation for logging
+     * @return SDOperationResult Result containing success status and error details
+     */
+    template<typename T>
+    SDOperationResult executeWithRetry(std::function<T()> operation, const char* operationName);
+    
+    /**
+     * @brief Attempt to remount the SD card after an error
+     * 
+     * Unmounts and remounts the SD card to recover from certain error states.
+     * 
+     * @return bool true if remount successful, false otherwise
+     */
+    bool remountSDCard();
+    
+    /**
+     * @brief Check if the SD card is currently accessible
+     * 
+     * Performs a quick health check on the SD card without full initialization.
+     * 
+     * @return bool true if SD card is accessible, false otherwise
+     */
+    bool checkSDCardAccess();
+    
+    /**
+     * @brief Update error statistics after an operation
+     * 
+     * @param success Whether the operation succeeded
+     * @param error Error code if operation failed
+     */
+    void updateErrorStats(bool success, SDCardError error = SD_ERROR_NONE);
+    
+    /**
+     * @brief Allocate the write buffer for memory pool operations
+     * 
+     * @return bool true if allocation successful, false otherwise
+     */
+    bool allocateWriteBuffer();
+    
+    /**
+     * @brief Free the write buffer
+     */
+    void freeWriteBuffer();
+    
+    /**
+     * @brief Write data to file using buffered writes to reduce fragmentation
+     * 
+     * @param file File handle to write to
+     * @param data Data buffer to write
+     * @param length Number of bytes to write
+     * @return size_t Number of bytes actually written
+     */
+    size_t bufferedWrite(File& file, const uint8_t* data, size_t length);
+    
+    /**
+     * @brief Convert SDCardError enum to human-readable string
+     * 
+     * @param error Error code to convert
+     * @return const char* Human-readable error description
+     */
+    const char* errorToString(SDCardError error);
 
 public:
     /**
@@ -498,6 +671,171 @@ public:
      * @param bytesCompressed Output: Estimated bytes saved through compression (since boot)
      */
     void getStorageStats(unsigned long& totalImages, unsigned long& duplicatesSkipped, unsigned long& bytesCompressed);
+    
+    // ============================================================================
+    // SD Card Error Handling and Retry Logic
+    // ============================================================================
+    
+    /**
+     * @brief Get the last SD card error that occurred
+     * 
+     * @return SDCardError The most recent error code
+     */
+    SDCardError getLastError() const;
+    
+    /**
+     * @brief Get a human-readable description of the last error
+     * 
+     * @return String Human-readable error message
+     */
+    String getLastErrorMessage() const;
+    
+    /**
+     * @brief Clear the last error state
+     * 
+     * Resets the error state to SD_ERROR_NONE and clears the error message.
+     */
+    void clearLastError();
+    
+    /**
+     * @brief Set the maximum number of retry attempts for SD card operations
+     * 
+     * @param retries Maximum retry attempts (1-10)
+     */
+    void setMaxRetries(unsigned int retries);
+    
+    /**
+     * @brief Get the current maximum retry setting
+     * 
+     * @return unsigned int Current maximum retries
+     */
+    unsigned int getMaxRetries() const;
+    
+    /**
+     * @brief Set the base delay between retry attempts
+     * 
+     * @param delayMs Delay in milliseconds (10-5000)
+     */
+    void setRetryDelay(unsigned int delayMs);
+    
+    /**
+     * @brief Get the current retry delay setting
+     * 
+     * @return unsigned int Current retry delay in milliseconds
+     */
+    unsigned int getRetryDelay() const;
+    
+    /**
+     * @brief Enable or disable automatic SD card remounting on errors
+     * 
+     * When enabled, the StorageManager will attempt to remount the SD card
+     * after certain types of errors to recover from transient issues.
+     * 
+     * @param enable true to enable auto-remount, false to disable
+     */
+    void setAutoRemountEnabled(bool enable);
+    
+    /**
+     * @brief Check if automatic remounting is enabled
+     * 
+     * @return bool true if auto-remount is enabled
+     */
+    bool isAutoRemountEnabled() const;
+    
+    /**
+     * @brief Manually trigger an SD card remount
+     * 
+     * Unmounts and remounts the SD card. Useful for recovery from
+     * certain error states or after physically removing/reinserting the card.
+     * 
+     * @return bool true if remount successful, false otherwise
+     */
+    bool forceRemount();
+    
+    /**
+     * @brief Get current SD card health statistics
+     * 
+     * Returns a structure containing health metrics including error rates,
+     * consecutive errors, and space usage.
+     * 
+     * @return SDCardHealth Current health statistics
+     */
+    SDCardHealth getSDCardHealth() const;
+    
+    /**
+     * @brief Perform an SD card health check
+     * 
+     * Verifies the SD card is accessible and updates health statistics.
+     * Should be called periodically or after suspected errors.
+     * 
+     * @return bool true if SD card is healthy, false if issues detected
+     */
+    bool performHealthCheck();
+    
+    /**
+     * @brief Reset SD card error statistics
+     * 
+     * Clears the error counters and consecutive error count.
+     * Does not affect the card mount state.
+     */
+    void resetErrorStats();
+    
+    // ============================================================================
+    // Memory Management
+    // ============================================================================
+    
+    /**
+     * @brief Get current memory statistics
+     * 
+     * Returns information about heap memory usage and fragmentation.
+     * Useful for monitoring memory health in long-running applications.
+     * 
+     * @return MemoryStats Current memory statistics
+     */
+    MemoryStats getMemoryStats() const;
+    
+    /**
+     * @brief Enable or disable memory pool usage
+     * 
+     * When enabled, uses pre-allocated buffers to reduce memory fragmentation
+     * during SD card operations.
+     * 
+     * @param enable true to enable memory pooling, false to disable
+     */
+    void setMemoryPoolEnabled(bool enable);
+    
+    /**
+     * @brief Check if memory pool is enabled
+     * 
+     * @return bool true if memory pool is enabled
+     */
+    bool isMemoryPoolEnabled() const;
+    
+    /**
+     * @brief Check if memory is critically low
+     * 
+     * Returns true if free heap memory is below the configured threshold.
+     * 
+     * @return bool true if memory is critically low
+     */
+    bool isLowMemory() const;
+    
+    /**
+     * @brief Perform memory optimization
+     * 
+     * Attempts to reduce memory fragmentation by clearing caches
+     * and releasing non-essential allocations.
+     * 
+     * @return size_t Approximate bytes freed
+     */
+    size_t optimizeMemory();
+    
+    /**
+     * @brief Destructor
+     * 
+     * Cleans up allocated resources including the write buffer.
+     */
+    ~StorageManager();
 };
 
 #endif // STORAGE_MANAGER_H

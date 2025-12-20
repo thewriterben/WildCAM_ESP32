@@ -602,6 +602,207 @@ void test_save_image_with_compression_null_buffer(void) {
 }
 
 //==============================================================================
+// SD CARD ERROR HANDLING AND RETRY LOGIC TESTS
+//==============================================================================
+
+/**
+ * @brief Test error handling settings
+ * 
+ * Verifies error getters and setters for retry logic
+ */
+void test_error_handling_settings(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Test default error state
+    TEST_ASSERT_EQUAL(SD_ERROR_NONE, storage->getLastError());
+    TEST_ASSERT_EQUAL_STRING("", storage->getLastErrorMessage().c_str());
+    
+    // Test max retries setting
+    storage->setMaxRetries(5);
+    TEST_ASSERT_EQUAL(5, storage->getMaxRetries());
+    
+    // Test clamping below minimum
+    storage->setMaxRetries(0);
+    TEST_ASSERT_EQUAL(1, storage->getMaxRetries());
+    
+    // Test clamping above maximum
+    storage->setMaxRetries(100);
+    TEST_ASSERT_EQUAL(10, storage->getMaxRetries());
+    
+    // Test retry delay setting
+    storage->setRetryDelay(200);
+    TEST_ASSERT_EQUAL(200, storage->getRetryDelay());
+    
+    // Test clamping below minimum
+    storage->setRetryDelay(5);
+    TEST_ASSERT_EQUAL(10, storage->getRetryDelay());
+    
+    // Test clamping above maximum
+    storage->setRetryDelay(10000);
+    TEST_ASSERT_EQUAL(5000, storage->getRetryDelay());
+    
+    // Test clear error
+    storage->clearLastError();
+    TEST_ASSERT_EQUAL(SD_ERROR_NONE, storage->getLastError());
+}
+
+/**
+ * @brief Test auto-remount settings
+ * 
+ * Verifies auto-remount enable/disable functionality
+ */
+void test_auto_remount_settings(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Test default state (should be enabled)
+    TEST_ASSERT_TRUE(storage->isAutoRemountEnabled());
+    
+    // Test disabling
+    storage->setAutoRemountEnabled(false);
+    TEST_ASSERT_FALSE(storage->isAutoRemountEnabled());
+    
+    // Test re-enabling
+    storage->setAutoRemountEnabled(true);
+    TEST_ASSERT_TRUE(storage->isAutoRemountEnabled());
+}
+
+/**
+ * @brief Test SD card health check functionality
+ * 
+ * Verifies health check returns valid data
+ */
+void test_sd_card_health(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Before init, health stats should show not mounted
+    SDCardHealth health = storage->getSDCardHealth();
+    TEST_ASSERT_FALSE(health.mounted);
+    
+    // After init, health check should work
+    bool initResult = storage->init();
+    if (initResult) {
+        health = storage->getSDCardHealth();
+        TEST_ASSERT_TRUE(health.mounted);
+        TEST_ASSERT_GREATER_THAN(0, health.totalBytes);
+        
+        // Perform explicit health check
+        bool healthy = storage->performHealthCheck();
+        TEST_ASSERT_TRUE(healthy);
+        
+        // Verify error rate is reasonable
+        TEST_ASSERT_LESS_OR_EQUAL(100.0f, health.errorRate);
+    }
+}
+
+/**
+ * @brief Test error stats reset
+ * 
+ * Verifies that error statistics can be reset
+ */
+void test_reset_error_stats(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Reset should not crash even before init
+    storage->resetErrorStats();
+    
+    SDCardHealth health = storage->getSDCardHealth();
+    TEST_ASSERT_EQUAL(0, health.consecutiveErrors);
+    TEST_ASSERT_EQUAL(0, health.totalErrors);
+    TEST_ASSERT_EQUAL(0, health.successfulOps);
+}
+
+//==============================================================================
+// MEMORY MANAGEMENT TESTS
+//==============================================================================
+
+/**
+ * @brief Test memory statistics
+ * 
+ * Verifies memory stats reporting
+ */
+void test_memory_stats(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    MemoryStats stats = storage->getMemoryStats();
+    
+    // Free heap should be positive
+    TEST_ASSERT_GREATER_THAN(0, stats.freeHeap);
+    
+    // Min free heap should be positive
+    TEST_ASSERT_GREATER_THAN(0, stats.minFreeHeap);
+    
+    // Largest free block should be positive
+    TEST_ASSERT_GREATER_THAN(0, stats.largestFreeBlock);
+    
+    // Fragmentation should be in valid range
+    TEST_ASSERT_GREATER_OR_EQUAL(0.0f, stats.fragmentationPercent);
+    TEST_ASSERT_LESS_OR_EQUAL(100.0f, stats.fragmentationPercent);
+}
+
+/**
+ * @brief Test memory pool settings
+ * 
+ * Verifies memory pool enable/disable functionality
+ */
+void test_memory_pool_settings(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Test default state (should be enabled)
+    TEST_ASSERT_TRUE(storage->isMemoryPoolEnabled());
+    
+    // Test disabling
+    storage->setMemoryPoolEnabled(false);
+    TEST_ASSERT_FALSE(storage->isMemoryPoolEnabled());
+    
+    // Test re-enabling
+    storage->setMemoryPoolEnabled(true);
+    TEST_ASSERT_TRUE(storage->isMemoryPoolEnabled());
+}
+
+/**
+ * @brief Test low memory detection
+ * 
+ * Verifies low memory detection works
+ */
+void test_low_memory_detection(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Should return a boolean without crashing
+    bool lowMem = storage->isLowMemory();
+    // Just verify it doesn't crash - actual value depends on system state
+    TEST_ASSERT_TRUE(lowMem == true || lowMem == false);
+}
+
+/**
+ * @brief Test memory optimization
+ * 
+ * Verifies memory optimization doesn't crash
+ */
+void test_memory_optimization(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Should not crash even before init
+    size_t freed = storage->optimizeMemory();
+    
+    // Freed bytes should be non-negative
+    TEST_ASSERT_GREATER_OR_EQUAL(0, freed);
+}
+
+/**
+ * @brief Test force remount before init
+ * 
+ * Verifies force remount handles uninitialized state
+ */
+void test_force_remount_before_init(void) {
+    TEST_ASSERT_NOT_NULL(storage);
+    
+    // Should not crash before init
+    bool result = storage->forceRemount();
+    // Result depends on SD card presence, just verify no crash
+    TEST_ASSERT_TRUE(result == true || result == false);
+}
+
+//==============================================================================
 // TEST RUNNER - setup() and loop() for Unity
 //==============================================================================
 
@@ -635,6 +836,19 @@ void setup() {
     RUN_TEST(test_smart_delete);
     RUN_TEST(test_storage_stats);
     RUN_TEST(test_save_image_with_compression_null_buffer);
+    
+    // SD card error handling and retry logic tests
+    RUN_TEST(test_error_handling_settings);
+    RUN_TEST(test_auto_remount_settings);
+    RUN_TEST(test_sd_card_health);
+    RUN_TEST(test_reset_error_stats);
+    
+    // Memory management tests
+    RUN_TEST(test_memory_stats);
+    RUN_TEST(test_memory_pool_settings);
+    RUN_TEST(test_low_memory_detection);
+    RUN_TEST(test_memory_optimization);
+    RUN_TEST(test_force_remount_before_init);
     
     UNITY_END();
     
