@@ -98,6 +98,30 @@
 #define MESH_RELAY_OPTIMIZATION_THRESHOLD 3
 #endif
 
+/**
+ * @brief Maximum nodes in mesh network (from config.h if not defined)
+ * @default 16
+ */
+#ifndef MESH_MAX_NODES
+#define MESH_MAX_NODES 16
+#endif
+
+/**
+ * @brief Node timeout in milliseconds (from config.h if not defined)
+ * @default 300000 (5 minutes)
+ */
+#ifndef MESH_NODE_TIMEOUT_MS
+#define MESH_NODE_TIMEOUT_MS 300000
+#endif
+
+/**
+ * @brief Maximum mesh network hops (from config.h if not defined)
+ * @default 5
+ */
+#ifndef MESH_MAX_HOPS
+#define MESH_MAX_HOPS 5
+#endif
+
 //==============================================================================
 // MULTI-CAMERA COORDINATION STRUCTURES
 //==============================================================================

@@ -1295,7 +1295,7 @@ void AdvancedMeshNetwork::leaveFLRound() {
     LOG_INFO("Leaving FL round %08X", _currentFLRound.roundId);
     
     // Send leave notification
-    uint8_t packet[8];
+    uint8_t packet[12];
     packet[0] = ADV_PACKET_FL_LEAVE;
     uint32_t roundId = _currentFLRound.roundId;
     packet[1] = (roundId >> 24) & 0xFF;
@@ -1303,9 +1303,13 @@ void AdvancedMeshNetwork::leaveFLRound() {
     packet[3] = (roundId >> 8) & 0xFF;
     packet[4] = roundId & 0xFF;
     uint32_t nodeId = _meshManager.getNodeId();
-    packet[5] = (nodeId >> 8) & 0xFF;
-    packet[6] = nodeId & 0xFF;
-    packet[7] = 0;
+    packet[5] = (nodeId >> 24) & 0xFF;
+    packet[6] = (nodeId >> 16) & 0xFF;
+    packet[7] = (nodeId >> 8) & 0xFF;
+    packet[8] = nodeId & 0xFF;
+    packet[9] = 0;  // Reserved
+    packet[10] = 0;
+    packet[11] = 0;
     
     _meshManager.broadcastMessage(packet, sizeof(packet), PRIORITY_NORMAL);
     
@@ -1358,7 +1362,8 @@ bool AdvancedMeshNetwork::submitModelUpdate(const uint8_t* gradients, size_t gra
         chunk.compression = _flCompression;
         
         size_t offset = i * MESH_FL_MAX_CHUNK_SIZE;
-        chunk.dataSize = min((size_t)MESH_FL_MAX_CHUNK_SIZE, compressedSize - offset);
+        size_t remaining = compressedSize - offset;
+        chunk.dataSize = (remaining < MESH_FL_MAX_CHUNK_SIZE) ? remaining : MESH_FL_MAX_CHUNK_SIZE;
         memcpy(chunk.data, dataToSend + offset, chunk.dataSize);
         
         if (!sendModelChunk(chunk)) {
@@ -2101,8 +2106,9 @@ void AdvancedMeshNetwork::handleFLMessage(uint32_t fromNode, const uint8_t* data
             
         case ADV_PACKET_FL_LEAVE:
             // Participant left
-            if (length >= 7) {
-                uint32_t nodeId = ((uint32_t)data[5] << 8) | data[6];
+            if (length >= 9) {
+                uint32_t nodeId = ((uint32_t)data[5] << 24) | ((uint32_t)data[6] << 16) |
+                                 ((uint32_t)data[7] << 8) | data[8];
                 
                 for (auto it = _flParticipants.begin(); it != _flParticipants.end(); ++it) {
                     if (it->nodeId == nodeId) {
