@@ -126,7 +126,7 @@ This roadmap provides a comprehensive overview of the WildCAM ESP32 wildlife mon
 - 🔄 **Advanced Analytics** - Population dynamics, behavior analysis (40%)
 
 ### Planned Features
-- 📋 **Federated Learning** - Production deployment of distributed training
+- 📋 **Federated Learning Production Scale** - Large-scale deployment of distributed training
 - 📋 **Global Conservation Network** - Multi-organization data sharing
 - 📋 **Multi-Cloud Orchestration** - Cross-cloud deployment automation
 
