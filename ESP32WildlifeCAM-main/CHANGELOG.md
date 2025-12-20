@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2025-12-20 - Comprehensive Sensor Support Release
+### 🎯 Feature Release - Enhanced Environmental Monitoring
+
+This release adds comprehensive sensor support with a unified abstraction layer, enabling rich environmental data collection alongside wildlife images.
+
+### Added
+- **Sensor Abstraction Layer**
+  - Unified `BaseSensor` interface for all sensor types
+  - `SensorRegistry` for multi-sensor coordination and batch operations
+  - `SensorFactory` for auto-detection and dynamic instantiation
+  - Support for 30+ sensor types via `UnifiedSensorType` enum
+  - Health monitoring with scores and failure tracking
+
+- **Environmental Sensors**
+  - BME280 temperature, humidity, and pressure sensor support
+  - DHT11/DHT22 temperature and humidity with heat index calculation
+  - BH1750 digital light sensor for day/night detection
+  - LDR/Photoresistor analog light sensing
+
+- **Distance & Proximity Sensors**
+  - HC-SR04 ultrasonic distance sensor (2-400cm range)
+  - Median filtering for noise reduction
+  - Wildlife proximity detection logic
+
+- **Gas & Air Quality Sensors**
+  - MQ-2 (smoke, LPG, CO, alcohol, propane, hydrogen)
+  - MQ-7 (carbon monoxide)
+  - MQ-135 (air quality, CO2, NH3, NOx, benzene)
+  - Automatic calibration in clean air
+  - PPM calculation from analog readings
+
+- **GPS Location Tagging**
+  - NEO-6M/7M/8M and ATGM336H GPS module support
+  - Automatic fix detection with satellite count
+  - Latitude/longitude in decimal degrees
+  - HDOP signal quality reporting
+
+- **Documentation**
+  - `firmware/src/sensors/README_SENSORS.md` - Comprehensive API guide
+  - `examples/README_SENSOR_EXAMPLES.md` - Hardware setup and wiring
+  - `docs/SENSOR_QUICKSTART.md` - 5-15 minute quick start guides
+  - Updated `SENSOR_INTEGRATION.md` with all sensor types
+
+- **Example Applications**
+  - `examples/basic_sensor_reading/` - Single sensor demonstration
+  - `examples/multi_sensor_integration/` - Multi-sensor wildlife station
+
+### Changed
+- Updated project completion from 72% to 78%
+- Enhanced metadata format to include environmental data
+- Improved I2C bus management for multi-sensor configurations
+
+### Technical Details
+- 14 new files added (approximately 3,577 lines of code and documentation)
+- No breaking changes - all new code is additive
+- Backward compatible with existing deployments
+- Memory-efficient sensor instances (200-280 bytes each)
+
+---
+
 ## [3.0.0] - 2025-10-10 - Core Firmware Architecture Overhaul
 ### 🎯 Major Release - Production-Grade System Architecture
 

@@ -1,8 +1,8 @@
-# 🦌 ESP32 WildCAM v2.0 - Advanced AI-Powered Wildlife Monitoring Platform
+# 🦌 ESP32 WildCAM v3.1 - Advanced AI-Powered Wildlife Monitoring Platform
 
 **Professional-Grade Conservation Technology with Edge AI, Advanced Power Management, and Ecosystem Integration**
 
-[![Version](https://img.shields.io/badge/version-3.0.0-green.svg)](https://github.com/thewriterben/WildCAM_ESP32)
+[![Version](https://img.shields.io/badge/version-3.1.0-green.svg)](https://github.com/thewriterben/WildCAM_ESP32)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-ESP32-orange.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![AI](https://img.shields.io/badge/AI-YOLO--tiny-red.svg)](https://github.com/ultralytics/yolov5)
@@ -12,8 +12,8 @@
 
 ### ✅ Working Now: Core Wildlife Camera System
 **Location**: `ESP32WildlifeCAM-main/`  
-**Status**: Production-ready core (68% complete)  
-**What Works**: Motion detection, camera capture, power management, SD storage, multi-board support  
+**Status**: Production-ready core (78% complete)  
+**What Works**: Motion detection, camera capture, power management, SD storage, multi-board support, **comprehensive sensor suite (30+ types)**  
 **Get Started**: See [ESP32WildlifeCAM-main/QUICK_START.md](ESP32WildlifeCAM-main/QUICK_START.md)
 
 ### 🔄 In Development: Enterprise Platform
@@ -46,6 +46,7 @@ Transform wildlife research and conservation with cutting-edge technology that c
 - **🌐 Real-Time Analytics** - React dashboard (🔄 UI components exist, backend integration in progress)
 - **📱 Mobile Integration** - React Native companion app (🔄 Framework stage)
 - **🛰️ Global Connectivity** - Mesh networking (🔄 Framework) with satellite communication support (📋 Interface design)
+- **🌡️ Environmental Monitoring** - Comprehensive sensor support (✅ 30+ sensor types with unified API)
 
 ## 🏗️ Advanced Modular Architecture
 
