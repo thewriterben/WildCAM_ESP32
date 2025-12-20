@@ -39,7 +39,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **Edge AI (YOLO-tiny)** | 🔄 Framework | Est. 12-18 months to production |
 | **LoRa mesh networking** | ✅ Complete | Federated learning support added (Dec 2025) |
 | **Cloud integration** | ✅ Complete | CloudManager, SMS alerts, remote API (Dec 2025) |
-| **Mobile app** | 🔄 Framework | Est. 12-15 months to production |
+| **Mobile app** | ✅ Framework Complete | iOS, Android, React Native with push notifications (Dec 2025) |
 | **MPPT solar charging** | ✅ Complete | Implemented |
 | **Satellite communication** | 🔄 Framework | Est. 12-15 months to production |
 | **Quantum-safe security** | ✅ Foundation | Digital signatures implemented |
@@ -861,10 +861,11 @@ See [PHASE_3_IMPLEMENTATION_COMPLETE.md](PHASE_3_IMPLEMENTATION_COMPLETE.md) for
   - Global coverage for remote deployments
   - Message compression and prioritization
 
-- **Mobile App** 🔄 Framework
-  - iOS and Android companion app
-  - Real-time notifications
-  - Remote configuration
+- **Mobile App** ✅ **Framework Complete**
+  - iOS and Android companion app (Swift/Kotlin/React Native)
+  - Real-time push notifications with customizable preferences
+  - Remote configuration and device management
+  - See [mobile/MOBILE_APP_README.md](mobile/MOBILE_APP_README.md) for details
 
 - **Production Cloud Deployment** 🔄 In Progress
   - AWS/Azure/GCP production setup
