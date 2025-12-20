@@ -1,7 +1,7 @@
 {
   "name": "wildcam-mobile",
   "version": "3.0.0",
-  "description": "WildCAM ESP32 v2.0 Mobile Companion App",
+  "description": "WildCAM ESP32 Mobile Companion App - iOS & Android",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -9,7 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:android": "expo build:android",
-    "build:ios": "expo build:ios"
+    "build:ios": "expo build:ios",
+    "lint": "eslint src/",
+    "test": "jest"
   },
   "dependencies": {
     "expo": "~49.0.0",
@@ -23,6 +25,9 @@
     "@react-navigation/stack": "^6.3.17",
     "@react-navigation/bottom-tabs": "^6.5.8",
     "react-native-push-notification": "^8.1.1",
+    "@react-native-community/push-notification-ios": "^1.11.0",
+    "@react-native-async-storage/async-storage": "^1.19.3",
+    "@react-native-community/slider": "^4.4.3",
     "react-native-permissions": "^3.8.0",
     "react-native-image-picker": "^5.6.0",
     "react-native-chart-kit": "^6.12.0",
@@ -32,10 +37,14 @@
     "socket.io-client": "^4.7.2",
     "react-native-super-grid": "^4.9.9",
     "react-native-modal": "^13.0.1",
-    "react-native-animatable": "^1.3.8"
+    "react-native-animatable": "^1.3.8",
+    "react-native-safe-area-context": "^4.7.2",
+    "react-native-screens": "^3.25.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0"
+    "@babel/core": "^7.20.0",
+    "eslint": "^8.51.0",
+    "jest": "^29.7.0"
   },
   "private": true
 }
