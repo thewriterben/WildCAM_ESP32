@@ -1,11 +1,16 @@
 /**
  * @file wildlife_detector.h
  * @brief Foundational AI wildlife detection system
- * @version 1.0.0
+ * @version 1.1.0
  * 
  * This file provides the foundational framework for AI-powered wildlife detection.
  * It integrates with the existing comprehensive AI system in firmware/src/ai/ while
  * providing a simplified, modular interface for basic wildlife classification.
+ * 
+ * Enhanced with basic AI features:
+ * - On-device motion detection with false positive reduction
+ * - Simple animal vs. non-animal classification
+ * - Size estimation for detected objects
  */
 
 #ifndef WILDLIFE_DETECTOR_H
@@ -14,6 +19,7 @@
 #include <stdint.h>
 #include <vector>
 #include <memory>
+#include "basic_ai_features.h"
 
 namespace WildlifeDetection {
 
@@ -70,6 +76,12 @@ struct DetectorConfig {
     bool enable_species_classification = true;
     bool enable_size_estimation = true;
     uint8_t max_detections_per_frame = 5;
+    
+    // Basic AI features configuration
+    bool enable_false_positive_reduction = true;  ///< Enable false positive reduction
+    bool enable_animal_classification = true;      ///< Enable animal vs non-animal classification
+    float false_positive_threshold = 0.5f;         ///< Threshold for false positive rejection (0.0-1.0)
+    uint8_t motion_history_frames = 5;             ///< Number of frames for motion history
 };
 
 /**
@@ -130,6 +142,9 @@ public:
         uint32_t total_detections = 0;
         uint32_t species_counts[static_cast<int>(SpeciesType::HUMAN) + 1] = {0};
         uint32_t false_positives = 0;
+        uint32_t false_positives_filtered = 0;  ///< False positives caught by basic AI
+        uint32_t animal_classifications = 0;     ///< Count of animal classifications
+        uint32_t non_animal_classifications = 0; ///< Count of non-animal classifications
         uint32_t processing_time_ms = 0;
         float average_confidence = 0.0f;
     };
@@ -142,6 +157,24 @@ public:
      */
     bool isReady() const { return initialized_; }
 
+    /**
+     * @brief Get false positive score for last detection
+     * @return Float value 0.0 (definitely real) to 1.0 (definitely false positive)
+     */
+    float getLastFalsePositiveScore() const { return last_fp_score_; }
+
+    /**
+     * @brief Check if last detection was classified as animal
+     * @return true if classified as animal
+     */
+    bool wasLastDetectionAnimal() const { return last_was_animal_; }
+
+    /**
+     * @brief Get size category of last detection
+     * @return Size category from basic AI
+     */
+    BasicAI::SizeCategory getLastSizeCategory() const { return last_size_category_; }
+
 private:
     DetectorConfig config_;
     Statistics stats_;
@@ -152,12 +185,26 @@ private:
     uint16_t frame_width_;
     uint16_t frame_height_;
     
+    // Basic AI processor for enhanced detection
+    std::unique_ptr<BasicAI::BasicAIProcessor> ai_processor_;
+    
+    // Last detection results from basic AI
+    float last_fp_score_;
+    bool last_was_animal_;
+    BasicAI::SizeCategory last_size_category_;
+    
     // Internal processing methods
     bool preprocessFrame(const uint8_t* frame_data, size_t frame_size);
     SpeciesType classifyObject(const uint8_t* region_data, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
     ConfidenceLevel calculateConfidence(float score);
     float estimateSize(uint16_t width, uint16_t height, uint16_t frame_width, uint16_t frame_height);
     void updateStatistics(const DetectionResult& result);
+    
+    // Basic AI integration methods
+    bool initializeBasicAI();
+    bool runBasicAIAnalysis(const uint8_t* frame_data, size_t frame_size, 
+                           uint16_t width, uint16_t height,
+                           BasicAI::AIAnalysisResult& result);
 };
 
 } // namespace WildlifeDetection
