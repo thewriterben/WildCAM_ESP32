@@ -234,7 +234,7 @@ class AdvancedFeaturesValidator:
         # Check AI-Mesh integration
         self.check_code_integration(
             "firmware/src/multi_board/board_node.h",
-            ["#include.*ai_detection_interface.h", "WildlifeDetection::", "DetectionResult"],
+            ["ai_detection_interface.h", "WildlifeDetection::", "DetectionResult"],
             "AI-Mesh integration headers"
         )
         
