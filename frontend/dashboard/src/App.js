@@ -19,6 +19,7 @@ import DashboardHome from './components/DashboardHome';
 import LiveDetections from './components/LiveDetections';
 import SpeciesAnalytics from './components/SpeciesAnalytics';
 import CameraManagement from './components/CameraManagement';
+import DataAnalytics from './components/DataAnalytics';
 
 // Import WebSocket service
 import WebSocketService from './services/WebSocketService';
@@ -149,6 +150,7 @@ function App() {
     { id: 'dashboard', label: 'Dashboard', icon: <Dashboard /> },
     { id: 'detections', label: 'Live Detections', icon: <PhotoCamera /> },
     { id: 'analytics', label: 'Species Analytics', icon: <Analytics /> },
+    { id: 'data-analytics', label: 'Data Analytics', icon: <Assessment /> },
     { id: 'devices', label: 'Device Management', icon: <DeviceHub /> },
     { id: 'map', label: 'Map View', icon: <Map /> },
     { id: 'timeline', label: 'Activity Timeline', icon: <Timeline /> },
@@ -170,6 +172,8 @@ function App() {
         return <LiveDetections />;
       case 'analytics':
         return <SpeciesAnalytics />;
+      case 'data-analytics':
+        return <DataAnalytics />;
       case 'devices':
         return <CameraManagement />;
       case 'map':
