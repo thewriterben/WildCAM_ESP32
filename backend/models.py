@@ -343,19 +343,3 @@ class AnalyticsData(db.Model):
             'metadata': self.metadata,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
-
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'user_id': self.user_id,
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-        }
