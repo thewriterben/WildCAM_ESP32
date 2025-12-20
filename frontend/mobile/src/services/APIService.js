@@ -311,7 +311,7 @@ class APIService {
 async function getUniqueDeviceId() {
   let deviceId = await AsyncStorage.getItem('deviceId');
   if (!deviceId) {
-    deviceId = `${Platform.OS}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    deviceId = `${Platform.OS}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     await AsyncStorage.setItem('deviceId', deviceId);
   }
   return deviceId;

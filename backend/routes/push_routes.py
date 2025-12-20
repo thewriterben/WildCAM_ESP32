@@ -1,11 +1,11 @@
-/**
- * Push Notification Routes
- * API endpoints for mobile push notification management
- * 
- * @author WildCAM ESP32 Team
- * @version 1.0.0
- * @date 2025
- */
+"""
+Push Notification Routes
+API endpoints for mobile push notification management
+
+Author: WildCAM ESP32 Team
+Version: 1.0.0
+Date: 2025
+"""
 
 from flask import Blueprint, request, jsonify
 from datetime import datetime

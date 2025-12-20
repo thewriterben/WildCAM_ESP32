@@ -62,13 +62,18 @@ class ConfigurationService: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    // Default URLs for development - should be overridden via Info.plist in production
+    private static let defaultAPIURL = "https://api.wildlife-monitor.com"
+    private static let defaultWebSocketURL = "wss://api.wildlife-monitor.com/ws"
+    
     private init() {
         // Load API URLs from Info.plist or use defaults
+        // In production, set API_BASE_URL and WEBSOCKET_URL in Info.plist
         let bundle = Bundle.main
         self.apiBaseURL = bundle.object(forInfoDictionaryKey: "API_BASE_URL") as? String
-            ?? "https://api.wildlife-monitor.com"
+            ?? Self.defaultAPIURL
         self.websocketURL = bundle.object(forInfoDictionaryKey: "WEBSOCKET_URL") as? String
-            ?? "wss://api.wildlife-monitor.com/ws"
+            ?? Self.defaultWebSocketURL
         
         // Load local settings from UserDefaults
         captureInterval = UserDefaults.standard.integer(forKey: "captureInterval")

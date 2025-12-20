@@ -159,7 +159,11 @@ class NotificationService {
     // Check if notification should be shown based on preferences
     const shouldShow = await this.shouldShowNotification(notification);
     if (!shouldShow) {
-      notification.finish && notification.finish(PushNotificationIOS?.FetchResult?.NoData);
+      // Use proper fallback for iOS fetch result
+      const fetchResult = PushNotificationIOS?.FetchResult?.NoData ?? 0;
+      if (notification.finish) {
+        notification.finish(fetchResult);
+      }
       return;
     }
 
