@@ -721,9 +721,12 @@
  * @brief Backend server URL for cloud uploads
  * @note Include protocol and port (e.g., "http://192.168.1.100:5000")
  * @note For production, use HTTPS with proper certificates
+ * @note Define in secrets.h to override this default
  * @default "" (disabled until configured)
  */
+#ifndef CLOUD_SERVER_URL
 #define CLOUD_SERVER_URL ""
+#endif
 
 /**
  * @brief API key for cloud server authentication
@@ -740,6 +743,13 @@
  * @default "WildCAM-ESP32"
  */
 #define CLOUD_DEVICE_NAME "WildCAM-ESP32"
+
+/**
+ * @brief Maximum file size for cloud upload in bytes
+ * @note Files larger than this will be rejected
+ * @default 5242880 (5MB)
+ */
+#define CLOUD_MAX_FILE_SIZE 5242880
 
 /**
  * @brief Upload on WiFi connection only

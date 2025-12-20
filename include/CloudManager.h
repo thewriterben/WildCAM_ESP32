@@ -137,12 +137,12 @@ public:
     /**
      * @brief Register device with the backend server
      * @param name Device name
-     * @param location Location name
+     * @param locationName Location name for the device
      * @param latitude GPS latitude (optional)
      * @param longitude GPS longitude (optional)
      * @return true if registration successful
      */
-    bool registerDevice(const String& name, const String& location, 
+    bool registerDevice(const String& name, const String& locationName, 
                         float latitude = 0.0, float longitude = 0.0);
     
     /**

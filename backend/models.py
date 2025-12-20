@@ -290,12 +290,19 @@ class AlertPreference(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def to_dict(self):
+        # Mask phone number for display (show first 4 and last 2 characters)
+        masked_phone = None
+        if self.phone_number and len(self.phone_number) >= 8:
+            masked_phone = self.phone_number[:4] + '****' + self.phone_number[-2:]
+        elif self.phone_number:
+            masked_phone = '****'  # For short numbers, mask entirely
+        
         return {
             'id': self.id,
             'user_id': self.user_id,
             'email_enabled': self.email_enabled,
             'sms_enabled': self.sms_enabled,
-            'phone_number': self.phone_number[:4] + '****' + self.phone_number[-2:] if self.phone_number and len(self.phone_number) > 6 else None,
+            'phone_number': masked_phone,
             'push_enabled': self.push_enabled,
             'slack_webhook': self.slack_webhook[:20] + '...' if self.slack_webhook else None,
             'discord_webhook': self.discord_webhook[:20] + '...' if self.discord_webhook else None,

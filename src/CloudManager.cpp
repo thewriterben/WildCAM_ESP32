@@ -64,7 +64,7 @@ bool CloudManager::init(const String& serverUrl, const String& deviceId, const S
     return true;
 }
 
-bool CloudManager::registerDevice(const String& name, const String& location,
+bool CloudManager::registerDevice(const String& name, const String& locationName,
                                    float latitude, float longitude) {
     if (!_initialized || !isConnected()) {
         #if LOGGING_ENABLED
@@ -88,7 +88,7 @@ bool CloudManager::registerDevice(const String& name, const String& location,
     StaticJsonDocument<512> doc;
     doc["device_id"] = _deviceId;
     doc["name"] = name;
-    doc["location_name"] = location;
+    doc["location_name"] = locationName;
     doc["firmware_version"] = FIRMWARE_VERSION;
     
     if (latitude != 0.0 || longitude != 0.0) {
@@ -220,10 +220,10 @@ CloudUploadStatus CloudManager::uploadImageFromSD(const String& filePath, const 
     }
     
     size_t fileSize = file.size();
-    if (fileSize == 0 || fileSize > 5 * 1024 * 1024) { // Max 5MB
+    if (fileSize == 0 || fileSize > CLOUD_MAX_FILE_SIZE) {
         file.close();
         #if LOGGING_ENABLED
-        LOG_ERROR("CloudManager: Invalid file size: %d", fileSize);
+        LOG_ERROR("CloudManager: Invalid file size: %d (max: %d)", fileSize, CLOUD_MAX_FILE_SIZE);
         #endif
         return UPLOAD_FAILED_FILE;
     }
@@ -291,8 +291,9 @@ int CloudManager::sendImagePost(const String& url, const uint8_t* imageData, siz
         http.addHeader("Authorization", "Bearer " + _apiKey);
     }
     
-    // Create multipart form data
-    String boundary = "----WildCAMBoundary" + String(random(10000, 99999));
+    // Create multipart form data with unique boundary using device ID and timestamp
+    // This ensures uniqueness even if random() produces same value
+    String boundary = "----WildCAM" + _deviceId.substring(0, 8) + String(millis()) + String(random(1000, 9999));
     http.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
     
     // Build multipart body

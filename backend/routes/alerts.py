@@ -674,15 +674,28 @@ def test_alert_notification():
         recipient = {'email': user.email}
         
         if preferences:
-            if channel == 'sms' and preferences.sms_enabled:
-                # Note: Phone number would need to be stored in user or preferences
-                recipient['phone'] = data.get('phone_number')
-            elif channel == 'slack' and preferences.slack_webhook:
+            if channel == 'sms':
+                if not preferences.sms_enabled:
+                    return jsonify({'error': 'SMS notifications not enabled'}), 400
+                if not preferences.phone_number:
+                    return jsonify({'error': 'No phone number configured'}), 400
+                # Use phone number from user preferences (not from request data for security)
+                recipient['phone'] = preferences.phone_number
+            elif channel == 'slack':
+                if not preferences.slack_webhook:
+                    return jsonify({'error': 'No Slack webhook configured'}), 400
                 recipient['slack_webhook'] = preferences.slack_webhook
-            elif channel == 'discord' and preferences.discord_webhook:
+            elif channel == 'discord':
+                if not preferences.discord_webhook:
+                    return jsonify({'error': 'No Discord webhook configured'}), 400
                 recipient['discord_webhook'] = preferences.discord_webhook
-            elif channel == 'webhook' and preferences.custom_webhook:
+            elif channel == 'webhook':
+                if not preferences.custom_webhook:
+                    return jsonify({'error': 'No custom webhook configured'}), 400
                 recipient['webhook_url'] = preferences.custom_webhook
+        else:
+            if channel not in ['email']:
+                return jsonify({'error': f'No preferences configured for {channel} channel'}), 400
         
         # Initialize notification service and send test
         notification_service = NotificationService()
