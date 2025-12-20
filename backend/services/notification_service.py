@@ -86,6 +86,8 @@ class NotificationService:
             try:
                 if channel == NotificationChannel.EMAIL:
                     results[channel] = self._send_email(alert_data, recipients)
+                elif channel == NotificationChannel.SMS:
+                    results[channel] = self._send_sms(alert_data, recipients)
                 elif channel == NotificationChannel.WEBHOOK:
                     results[channel] = self._send_webhook(alert_data, recipients)
                 elif channel == NotificationChannel.SLACK:
@@ -100,6 +102,96 @@ class NotificationService:
         self._track_notification(alert_data)
         
         return results
+    
+    def _send_sms(self, alert_data: Dict, recipients: List[Dict]) -> Dict:
+        """
+        Send SMS notification via Twilio
+        
+        Requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER
+        environment variables to be set.
+        """
+        try:
+            import os
+            
+            # Get Twilio credentials from config or environment
+            twilio_config = self.config.get('twilio', {})
+            account_sid = twilio_config.get('account_sid') or os.environ.get('TWILIO_ACCOUNT_SID')
+            auth_token = twilio_config.get('auth_token') or os.environ.get('TWILIO_AUTH_TOKEN')
+            from_number = twilio_config.get('phone_number') or os.environ.get('TWILIO_PHONE_NUMBER')
+            
+            if not account_sid or not auth_token or not from_number:
+                return {'success': False, 'error': 'Twilio not configured'}
+            
+            # Get recipient phone numbers
+            phone_numbers = [r.get('phone') for r in recipients if r.get('phone')]
+            if not phone_numbers:
+                return {'success': False, 'error': 'No phone recipients'}
+            
+            # Format SMS message (keep it short for SMS)
+            message = self._format_sms_body(alert_data)
+            
+            # Send SMS via Twilio REST API
+            sent_count = 0
+            errors = []
+            
+            for to_number in phone_numbers:
+                try:
+                    # Use requests to call Twilio API directly (avoids extra dependency)
+                    import base64
+                    
+                    auth_string = base64.b64encode(f"{account_sid}:{auth_token}".encode()).decode()
+                    
+                    response = requests.post(
+                        f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json",
+                        data={
+                            'From': from_number,
+                            'To': to_number,
+                            'Body': message
+                        },
+                        headers={
+                            'Authorization': f'Basic {auth_string}'
+                        },
+                        timeout=10
+                    )
+                    
+                    if response.status_code in [200, 201]:
+                        sent_count += 1
+                        logger.info(f"SMS sent to {to_number}")
+                    else:
+                        error_msg = response.json().get('message', 'Unknown error')
+                        errors.append(f"{to_number}: {error_msg}")
+                        logger.error(f"SMS send error to {to_number}: {error_msg}")
+                        
+                except Exception as e:
+                    errors.append(f"{to_number}: {str(e)}")
+                    logger.error(f"SMS send error to {to_number}: {e}")
+            
+            return {
+                'success': sent_count > 0,
+                'sent_count': sent_count,
+                'total_recipients': len(phone_numbers),
+                'errors': errors if errors else None
+            }
+            
+        except Exception as e:
+            logger.error(f"SMS send error: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _format_sms_body(self, alert_data: Dict, max_length: int = 160) -> str:
+        """Format SMS body (must be concise for SMS character limits)"""
+        species = alert_data.get('species', 'Wildlife')
+        confidence = alert_data.get('confidence', 0) * 100
+        camera = alert_data.get('camera_id', 'Unknown')
+        level = alert_data.get('alert_level', 'INFO').upper()
+        
+        # Build concise message
+        message = f"[{level}] {species} ({confidence:.0f}%) at {camera}"
+        
+        # Truncate if needed
+        if len(message) > max_length:
+            message = message[:max_length-3] + '...'
+        
+        return message
     
     def _send_email(self, alert_data: Dict, recipients: List[Dict]) -> Dict:
         """Send email notification"""

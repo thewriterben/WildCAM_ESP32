@@ -706,4 +706,80 @@
  */
 #define SENSOR_READ_INTERVAL_MS 60000
 
+//==============================================================================
+// CLOUD INTEGRATION SETTINGS
+//==============================================================================
+
+/**
+ * @brief Enable cloud upload functionality
+ * @note Set to true to enable automatic image upload to backend server
+ * @default true
+ */
+#define CLOUD_UPLOAD_ENABLED true
+
+/**
+ * @brief Backend server URL for cloud uploads
+ * @note Include protocol and port (e.g., "http://192.168.1.100:5000")
+ * @note For production, use HTTPS with proper certificates
+ * @default "" (disabled until configured)
+ */
+#define CLOUD_SERVER_URL ""
+
+/**
+ * @brief API key for cloud server authentication
+ * @note Leave empty if server doesn't require authentication
+ * @note For security, create include/secrets.h with your API key
+ */
+#ifndef CLOUD_API_KEY
+#define CLOUD_API_KEY ""
+#endif
+
+/**
+ * @brief Device name for cloud registration
+ * @note Human-readable name shown in the dashboard
+ * @default "WildCAM-ESP32"
+ */
+#define CLOUD_DEVICE_NAME "WildCAM-ESP32"
+
+/**
+ * @brief Upload on WiFi connection only
+ * @note When true, uploads are queued until WiFi is available
+ * @default true
+ */
+#define CLOUD_UPLOAD_ON_WIFI_ONLY true
+
+/**
+ * @brief Maximum upload queue size
+ * @note Maximum number of images to queue for upload when offline
+ * @default 50
+ */
+#define CLOUD_MAX_QUEUE_SIZE 50
+
+/**
+ * @brief Automatic status reporting interval in milliseconds
+ * @note How often to report device status to cloud (0 = disabled)
+ * @default 300000ms (5 minutes)
+ */
+#define CLOUD_STATUS_REPORT_INTERVAL_MS 300000
+
+/**
+ * @brief Upload timeout in milliseconds
+ * @note Maximum time to wait for upload response
+ * @default 30000ms (30 seconds)
+ */
+#define CLOUD_UPLOAD_TIMEOUT_MS 30000
+
+/**
+ * @brief Enable upload retry on failure
+ * @note When true, failed uploads will be retried
+ * @default true
+ */
+#define CLOUD_RETRY_ENABLED true
+
+/**
+ * @brief Maximum retry attempts for failed uploads
+ * @default 3
+ */
+#define CLOUD_MAX_RETRIES 3
+
 #endif // CONFIG_H

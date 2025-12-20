@@ -267,6 +267,7 @@ class AlertPreference(db.Model):
     # Channel preferences
     email_enabled = db.Column(db.Boolean, default=True)
     sms_enabled = db.Column(db.Boolean, default=False)
+    phone_number = db.Column(db.String(20))  # Phone number for SMS alerts
     push_enabled = db.Column(db.Boolean, default=True)
     slack_webhook = db.Column(db.String(500))
     discord_webhook = db.Column(db.String(500))
@@ -294,6 +295,7 @@ class AlertPreference(db.Model):
             'user_id': self.user_id,
             'email_enabled': self.email_enabled,
             'sms_enabled': self.sms_enabled,
+            'phone_number': self.phone_number[:4] + '****' + self.phone_number[-2:] if self.phone_number and len(self.phone_number) > 6 else None,
             'push_enabled': self.push_enabled,
             'slack_webhook': self.slack_webhook[:20] + '...' if self.slack_webhook else None,
             'discord_webhook': self.discord_webhook[:20] + '...' if self.discord_webhook else None,
