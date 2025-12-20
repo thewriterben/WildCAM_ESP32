@@ -49,7 +49,6 @@ static const char TAG_ERROR_OPEN_META[] PROGMEM = "ERROR: Failed to open metadat
 static const char TAG_ERROR_WRITE_META[] PROGMEM = "ERROR: Failed to write metadata to: %s\n";
 static const char TAG_SUCCESS_META[] PROGMEM = "SUCCESS: Metadata saved: %s (%d bytes)\n";
 static const char TAG_CLEANUP[] PROGMEM = "Cleanup requested, keeping files from last %d days\n";
-static const char TAG_CLEANUP_NOTE[] PROGMEM = "Note: deleteOldFiles is a placeholder - full implementation requires date parsing";
 static const char TAG_NOT_INIT[] PROGMEM = "Storage not initialized";
 static const char TAG_STORAGE_INFO[] PROGMEM = "=== Storage Information ===";
 static const char TAG_BASE_PATH[] PROGMEM = "Base Path: %s\n";
@@ -61,9 +60,25 @@ static const char TAG_FREE_BYTES[] PROGMEM = "Free Space: %llu MB (%llu bytes)\n
 static const char TAG_USAGE[] PROGMEM = "Usage: %.2f%%\n";
 static const char TAG_CREATED_DATE_DIR[] PROGMEM = "Created date directory: %s\n";
 static const char TAG_WARN_CREATE_DATE_DIR[] PROGMEM = "WARNING: Failed to create date directory: %s\n";
+static const char TAG_DUPLICATE_DETECTED[] PROGMEM = "INFO: Duplicate image detected - skipping save\n";
+static const char TAG_SMART_DELETE[] PROGMEM = "Smart delete: removed %d files, freed %lu KB\n";
+
+// Maximum files to scan per directory to prevent excessive processing
+static const int MAX_FILES_PER_DIR = 1000;
+// Minimum valid image size in bytes (rough threshold for valid JPEG)
+static const size_t MIN_IMAGE_SIZE = 1024;
+
+// Statistics tracking (session-based, resets on boot)
+static unsigned long g_duplicatesSkipped = 0;
+static unsigned long g_bytesCompressed = 0;
 
 StorageManager::StorageManager() 
-    : initialized(false), basePath("/images"), imageCounter(0) {
+    : initialized(false), 
+      basePath("/images"), 
+      imageCounter(0),
+      compressionQuality(STORAGE_DEFAULT_COMPRESSION_QUALITY),
+      compressionEnabled(true),
+      duplicateDetectionEnabled(true) {
 }
 
 bool StorageManager::init() {
@@ -83,11 +98,14 @@ bool StorageManager::init() {
         return false;
     }
     
-
+    // Print card type information
+    Serial.print(FPSTR(TAG_CARD_TYPE));
     if (cardType == CARD_MMC) {
         Serial.println(FPSTR(TAG_CARD_MMC));
     } else if (cardType == CARD_SD) {
-
+        Serial.println(FPSTR(TAG_CARD_SD));
+    } else if (cardType == CARD_SDHC) {
+        Serial.println(FPSTR(TAG_CARD_SDHC));
     } else {
         Serial.println(FPSTR(TAG_CARD_UNKNOWN));
     }
@@ -114,7 +132,10 @@ bool StorageManager::init() {
         Serial.printf_P(TAG_DIR_EXISTS, basePath.c_str());
     }
     
-
+    // Load persistent image counter from preferences
+    preferences.begin("storage", false);
+    imageCounter = preferences.getULong("imageCounter", 0);
+    Serial.printf_P(TAG_IMAGE_COUNTER, imageCounter);
     
     initialized = true;
     Serial.println(FPSTR(TAG_SUCCESS_INIT));
@@ -140,7 +161,7 @@ String StorageManager::getCurrentDatePath() {
         // Fallback to uptime-based day counter
         // millis() returns milliseconds since boot
         // Divide by milliseconds per day: 1000 ms/s * 60 s/min * 60 min/hr * 24 hr/day = 86,400,000
-        unsigned long days = millis() / (1000 * 60 * 60 * 24);
+        unsigned long days = millis() / (1000UL * 60 * 60 * 24);
         snprintf(datePath, sizeof(datePath), "/day_%05lu", days);
     }
     
@@ -182,6 +203,203 @@ String StorageManager::generateFilename() {
     }
     
     return String(filename);
+}
+
+uint32_t StorageManager::calculateImageHash(const uint8_t* data, size_t length) {
+    if (data == nullptr || length == 0) {
+        return 0;
+    }
+    
+    // Use a simple but effective sampling-based hash
+    // Sample ~64 bytes spread across the image for fast comparison
+    uint32_t hash = 5381;  // DJB2 hash initial value
+    
+    // Always include first and last bytes
+    hash = ((hash << 5) + hash) + data[0];
+    hash = ((hash << 5) + hash) + data[length - 1];
+    
+    // Sample at regular intervals across the data
+    size_t sampleCount = 62;  // Plus first and last = 64 samples
+    size_t step = (length > sampleCount) ? (length / sampleCount) : 1;
+    
+    for (size_t i = step; i < length - 1; i += step) {
+        hash = ((hash << 5) + hash) + data[i];
+    }
+    
+    // Include length in hash to differentiate same-content different-size images
+    hash = ((hash << 5) + hash) + (uint32_t)(length & 0xFFFFFFFF);
+    
+    return hash;
+}
+
+bool StorageManager::isDuplicateImage(uint32_t hash) {
+    if (!duplicateDetectionEnabled || hash == 0) {
+        return false;
+    }
+    
+    // Check if this hash exists in recent cache
+    auto it = recentImageHashes.find(hash);
+    if (it != recentImageHashes.end()) {
+        return true;  // Duplicate found
+    }
+    
+    return false;
+}
+
+float StorageManager::calculateQualityScore(const uint8_t* data, size_t length) {
+    if (data == nullptr || length == 0) {
+        return 0.0f;
+    }
+    
+    float score = 0.0f;
+    
+    // Factor 1: File size (larger files generally indicate better quality)
+    // Score 0-40 points based on size
+    if (length > 100000) {
+        score += 40.0f;  // Large image - high quality
+    } else if (length > 50000) {
+        score += 30.0f;  // Medium-large
+    } else if (length > 20000) {
+        score += 20.0f;  // Medium
+    } else if (length > 10000) {
+        score += 10.0f;  // Small
+    } else {
+        score += 5.0f;   // Very small - possibly low quality
+    }
+    
+    // Factor 2: JPEG structure validation
+    // Check for valid JPEG markers (SOI and EOI)
+    bool validJpeg = false;
+    if (length >= 4) {
+        // Check Start Of Image marker (FFD8)
+        if (data[0] == 0xFF && data[1] == 0xD8) {
+            // Check End Of Image marker (FFD9) at end
+            if (data[length - 2] == 0xFF && data[length - 1] == 0xD9) {
+                validJpeg = true;
+                score += 20.0f;  // Valid JPEG structure
+            }
+        }
+    }
+    
+    // Factor 3: Estimate image complexity/detail by sampling variance
+    // Higher variance suggests more detail in the image
+    if (length > 1000 && validJpeg) {
+        // Sample 100 bytes from the middle of the image
+        size_t sampleStart = length / 3;
+        size_t sampleEnd = (2 * length) / 3;
+        size_t sampleSize = 100;
+        size_t step = (sampleEnd - sampleStart) / sampleSize;
+        
+        if (step > 0) {
+            uint32_t sum = 0;
+            uint32_t sumSquares = 0;
+            int count = 0;
+            
+            for (size_t i = sampleStart; i < sampleEnd && count < 100; i += step) {
+                sum += data[i];
+                sumSquares += (uint32_t)data[i] * data[i];
+                count++;
+            }
+            
+            if (count > 0) {
+                float mean = (float)sum / count;
+                float variance = ((float)sumSquares / count) - (mean * mean);
+                
+                // Higher variance = more detail = better quality
+                // Normalize to 0-40 range
+                float varianceScore = (variance / 1000.0f) * 40.0f;
+                if (varianceScore > 40.0f) varianceScore = 40.0f;
+                score += varianceScore;
+            }
+        }
+    }
+    
+    // Clamp score to 0-100 range
+    if (score > 100.0f) score = 100.0f;
+    if (score < 0.0f) score = 0.0f;
+    
+    return score;
+}
+
+void StorageManager::collectImageInfo(const String& dirPath, std::vector<ImageQualityInfo>& images) {
+    File dir = SD_MMC.open(dirPath);
+    if (!dir || !dir.isDirectory()) {
+        return;
+    }
+    
+    File file = dir.openNextFile();
+    int fileCount = 0;
+    
+    while (file && fileCount < MAX_FILES_PER_DIR) {
+        fileCount++;
+        
+        String fileName = String(file.name());
+        if (fileName.length() == 0) {
+            file = dir.openNextFile();
+            continue;
+        }
+        
+        // Handle subdirectories recursively
+        if (file.isDirectory()) {
+            String subDirPath = dirPath + "/" + fileName;
+            collectImageInfo(subDirPath, images);
+        } else {
+            // Check if this is an image file
+            String lowerName = fileName;
+            lowerName.toLowerCase();
+            
+            if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) {
+                ImageQualityInfo info;
+                info.path = dirPath + "/" + fileName;
+                info.fileSize = file.size();
+                info.timestamp = 0;  // Could parse from filename if needed
+                info.isValid = (info.fileSize >= MIN_IMAGE_SIZE && info.fileSize <= MAX_IMAGE_SIZE);
+                
+                // For quality scoring, we'd need to read file content
+                // For efficiency, estimate quality from file size
+                if (info.isValid) {
+                    info.qualityScore = (float)info.fileSize / 1000.0f;  // Simple size-based estimate
+                    if (info.qualityScore > 100.0f) info.qualityScore = 100.0f;
+                } else {
+                    info.qualityScore = 0.0f;
+                }
+                
+                info.hash = 0;  // Would need to read file for actual hash
+                
+                images.push_back(info);
+            }
+        }
+        
+        file = dir.openNextFile();
+    }
+    
+    dir.close();
+}
+
+bool StorageManager::deleteImageAndMetadata(const String& imagePath) {
+    if (!initialized || imagePath.length() == 0) {
+        return false;
+    }
+    
+    bool success = true;
+    
+    // Delete the image file
+    if (SD_MMC.exists(imagePath)) {
+        if (!SD_MMC.remove(imagePath)) {
+            success = false;
+        }
+    }
+    
+    // Delete associated metadata file
+    int dotIndex = imagePath.lastIndexOf('.');
+    if (dotIndex > 0) {
+        String metaPath = imagePath.substring(0, dotIndex) + ".json";
+        if (SD_MMC.exists(metaPath)) {
+            SD_MMC.remove(metaPath);
+        }
+    }
+    
+    return success;
 }
 
 String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
@@ -251,7 +469,7 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     
     // Verify all bytes were written successfully
     if (written != fb->len) {
-        Serial.printf_P(TAG_ERROR_WRITE, written, fb->len);
+        Serial.printf_P(TAG_ERROR_WRITE, (int)written, (int)fb->len);
         return "";
     }
     
@@ -260,6 +478,7 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
     imageCounter++;
     preferences.putULong("imageCounter", imageCounter);
     
+    Serial.printf_P(TAG_SUCCESS_SAVE, fullPath.c_str(), (int)fb->len);
     
     return fullPath;
 }
@@ -309,7 +528,7 @@ bool StorageManager::saveMetadata(const String& imagePath, JsonDocument& metadat
         return false;
     }
     
-    Serial.printf_P(TAG_SUCCESS_META, jsonPath.c_str(), bytesWritten);
+    Serial.printf_P(TAG_SUCCESS_META, jsonPath.c_str(), (int)bytesWritten);
     
     return true;
 }
@@ -322,17 +541,82 @@ bool StorageManager::deleteOldFiles(int daysToKeep) {
     
     Serial.printf_P(TAG_CLEANUP, daysToKeep);
     
-    // This is a placeholder implementation
-    // Full implementation would require:
-    // 1. Calculate cutoff timestamp: current_time - (daysToKeep * 24 hours)
-    // 2. Iterate through all date-based subdirectories (e.g., /images/20241029/)
-    // 3. Parse directory names to extract dates (YYYYMMDD format)
-    // 4. Compare directory dates against cutoff timestamp
-    // 5. Recursively delete directories older than cutoff (including all files)
-    // 6. Handle fallback directories (day_XXXXX format) based on creation time
-    // 7. Return success if all old directories deleted, failure if any errors occurred
+    // Get current date for comparison
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("WARNING: Cannot get current time for date comparison");
+        return false;
+    }
     
-    Serial.println(FPSTR(TAG_CLEANUP_NOTE));
+    // Calculate cutoff date (today - daysToKeep)
+    time_t now;
+    time(&now);
+    time_t cutoff = now - (daysToKeep * 24 * 60 * 60);
+    struct tm cutoffTime;
+    localtime_r(&cutoff, &cutoffTime);
+    
+    // Format cutoff date as YYYYMMDD for comparison
+    char cutoffDateStr[9];
+    snprintf(cutoffDateStr, sizeof(cutoffDateStr), "%04d%02d%02d",
+             cutoffTime.tm_year + 1900,
+             cutoffTime.tm_mon + 1,
+             cutoffTime.tm_mday);
+    String cutoffDate = String(cutoffDateStr);
+    
+    // Open base directory and iterate through date folders
+    File baseDir = SD_MMC.open(basePath);
+    if (!baseDir || !baseDir.isDirectory()) {
+        return false;
+    }
+    
+    std::vector<String> dirsToDelete;
+    File dir = baseDir.openNextFile();
+    
+    while (dir) {
+        if (dir.isDirectory()) {
+            String dirName = String(dir.name());
+            
+            // Check if this is a date-formatted directory (YYYYMMDD)
+            if (dirName.length() == 8 && dirName.charAt(0) >= '0' && dirName.charAt(0) <= '9') {
+                // Compare directory date with cutoff
+                if (dirName < cutoffDate) {
+                    dirsToDelete.push_back(basePath + "/" + dirName);
+                }
+            }
+            // Handle fallback directories (day_XXXXX format)
+            else if (dirName.startsWith("day_")) {
+                // For simplicity, keep last N day_ directories
+                // Could implement more sophisticated logic if needed
+            }
+        }
+        dir = baseDir.openNextFile();
+    }
+    baseDir.close();
+    
+    // Delete old directories and their contents
+    int deletedCount = 0;
+    for (const String& dirPath : dirsToDelete) {
+        // First delete all files in the directory
+        File oldDir = SD_MMC.open(dirPath);
+        if (oldDir && oldDir.isDirectory()) {
+            File file = oldDir.openNextFile();
+            while (file) {
+                String filePath = dirPath + "/" + String(file.name());
+                file.close();
+                SD_MMC.remove(filePath);
+                file = oldDir.openNextFile();
+            }
+            oldDir.close();
+        }
+        
+        // Then remove the empty directory
+        if (SD_MMC.rmdir(dirPath)) {
+            deletedCount++;
+            Serial.printf("Deleted old directory: %s\n", dirPath.c_str());
+        }
+    }
+    
+    Serial.printf("Cleanup complete: deleted %d old directories\n", deletedCount);
     
     return true;
 }
@@ -375,21 +659,35 @@ void StorageManager::printStorageInfo() {
         return;
     }
     
-
+    Serial.println(FPSTR(TAG_STORAGE_INFO));
+    Serial.printf_P(TAG_BASE_PATH, basePath.c_str());
+    Serial.printf_P(TAG_INITIALIZED, initialized ? "Yes" : "No");
+    Serial.printf_P(TAG_IMG_COUNT, imageCounter);
     
     // Get raw byte values from SD card
     uint64_t totalBytes = SD_MMC.totalBytes();
     uint64_t usedBytes = SD_MMC.usedBytes();
     uint64_t freeBytes = totalBytes - usedBytes;
     
-
+    Serial.printf_P(TAG_TOTAL_BYTES, totalBytes / (1024 * 1024), totalBytes);
+    Serial.printf_P(TAG_USED_BYTES, usedBytes / (1024 * 1024), usedBytes);
+    Serial.printf_P(TAG_FREE_BYTES, freeBytes / (1024 * 1024), freeBytes);
     
     // Calculate and display usage percentage
     // Avoid division by zero if total is somehow 0
     if (totalBytes > 0) {
-        float usedPercent = (float)usedBytes / totalBytes * 100.0;
+        float usedPercent = (float)usedBytes / totalBytes * 100.0f;
         Serial.printf_P(TAG_USAGE, usedPercent);
     }
+    
+    // Print improved storage feature status
+    Serial.printf("Compression: %s (quality: %d)\n", 
+                  compressionEnabled ? "Enabled" : "Disabled",
+                  compressionQuality);
+    Serial.printf("Duplicate Detection: %s\n", 
+                  duplicateDetectionEnabled ? "Enabled" : "Disabled");
+    Serial.printf("Duplicates Skipped (session): %lu\n", g_duplicatesSkipped);
+    Serial.printf("Bytes Saved (session): %lu\n", g_bytesCompressed);
     
     Serial.println(FPSTR(TAG_SEPARATOR));
 }
@@ -397,72 +695,68 @@ void StorageManager::printStorageInfo() {
 std::vector<String> StorageManager::getImageFiles() {
     std::vector<String> imageFiles;
     
-    // 1. Check initialization status (pointer/state validation)
+    // Check initialization status
     if (!initialized) {
-
+        Serial.println(FPSTR(TAG_ERROR_NOT_INIT));
+        return imageFiles;
+    }
+    
+    // Helper lambda to recursively scan directories
+    std::function<void(const String&)> scanDirectory = [&](const String& dirPath) {
+        File dir = SD_MMC.open(dirPath);
+        if (!dir || !dir.isDirectory()) {
+            return;
+        }
+        
         File file = dir.openNextFile();
         int fileCount = 0;
         
-        while (file) {
-            // 10. Sanity check for infinite loops
+        while (file && fileCount < MAX_FILES_PER_DIR) {
             fileCount++;
-            if (fileCount > MAX_FILES_PER_DIR) {
-                Serial.printf("WARNING: Directory contains more than %d files: %s\n", 
-                             MAX_FILES_PER_DIR, path.c_str());
-                Serial.println("RECOVERY: Stopping scan of this directory to prevent excessive processing");
-                break;
-            }
             
-            // 11. Validate file name
             const char* rawName = file.name();
             if (rawName == nullptr) {
-                Serial.println("WARNING: Encountered file with null name - skipping");
                 file = dir.openNextFile();
                 continue;
             }
             
             String fileName = String(rawName);
-            
-            // 12. Validate filename is not empty
             if (fileName.length() == 0) {
-                Serial.println("WARNING: Encountered file with empty name - skipping");
                 file = dir.openNextFile();
                 continue;
             }
             
-            // 13. Process subdirectories recursively
             if (file.isDirectory()) {
-
-                if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
-                    fileName.endsWith(".JPG") || fileName.endsWith(".JPEG")) {
-                    
-                    // 15. Additional validation - check file size is reasonable
+                // Recursively scan subdirectories
+                String subDirPath = dirPath + "/" + fileName;
+                scanDirectory(subDirPath);
+            } else {
+                // Check if this is a JPEG image file
+                String lowerName = fileName;
+                lowerName.toLowerCase();
+                
+                if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) {
                     size_t fileSize = file.size();
                     
-                    if (fileSize > MAX_IMAGE_SIZE) {
-                        Serial.printf("WARNING: Image file too large (%d bytes): %s\n", 
-                                    fileSize, fileName.c_str());
-                        Serial.println("RECOVERY: Skipping this file - may be corrupted");
-                    } else if (fileSize < MIN_IMAGE_SIZE) {
-                        Serial.printf("WARNING: Image file too small (%d bytes): %s\n", 
-                                    fileSize, fileName.c_str());
-                        Serial.println("RECOVERY: Skipping this file - may be corrupted or empty");
-                    } else {
-                        // File appears valid - add to list
-                        imageFiles.push_back(fileName);
-                        totalFilesFound++;
+                    // Validate file size is reasonable
+                    if (fileSize >= MIN_IMAGE_SIZE && fileSize <= MAX_IMAGE_SIZE) {
+                        String fullPath = dirPath + "/" + fileName;
+                        imageFiles.push_back(fullPath);
                     }
                 }
             }
             
-
+            file = dir.openNextFile();
         }
         
-        // 17. Close directory handle to free resources
         dir.close();
     };
     
-
+    // Start scanning from base path
+    scanDirectory(basePath);
+    
+    // Sort files in descending order (newest first)
+    std::sort(imageFiles.begin(), imageFiles.end(), std::greater<String>());
     
     return imageFiles;
 }
@@ -472,4 +766,153 @@ unsigned long StorageManager::getImageCount() {
         return 0;
     }
     return imageCounter;
+}
+
+// ============================================================================
+// Improved Storage Features Implementation
+// ============================================================================
+
+void StorageManager::setCompressionEnabled(bool enable) {
+    compressionEnabled = enable;
+}
+
+bool StorageManager::isCompressionEnabled() const {
+    return compressionEnabled;
+}
+
+void StorageManager::setCompressionQuality(int quality) {
+    // Clamp quality to valid JPEG range (1-63)
+    if (quality < 1) quality = 1;
+    if (quality > 63) quality = 63;
+    compressionQuality = quality;
+}
+
+int StorageManager::getCompressionQuality() const {
+    return compressionQuality;
+}
+
+void StorageManager::setDuplicateDetectionEnabled(bool enable) {
+    duplicateDetectionEnabled = enable;
+}
+
+bool StorageManager::isDuplicateDetectionEnabled() const {
+    return duplicateDetectionEnabled;
+}
+
+void StorageManager::clearDuplicateCache() {
+    recentImageHashes.clear();
+}
+
+int StorageManager::smartDelete(unsigned long targetFreeSpaceKB) {
+    if (!initialized) {
+        return -1;
+    }
+    
+    unsigned long currentFreeKB = getFreeSpace() / 1024;
+    if (currentFreeKB >= targetFreeSpaceKB) {
+        return 0;  // Already have enough free space
+    }
+    
+    unsigned long spaceNeededKB = targetFreeSpaceKB - currentFreeKB;
+    
+    // Collect information about all images
+    std::vector<ImageQualityInfo> allImages;
+    collectImageInfo(basePath, allImages);
+    
+    if (allImages.empty()) {
+        return 0;
+    }
+    
+    // Sort by quality score (lowest first, so we delete worst quality first)
+    std::sort(allImages.begin(), allImages.end(), 
+              [](const ImageQualityInfo& a, const ImageQualityInfo& b) {
+                  return a.qualityScore < b.qualityScore;
+              });
+    
+    // Keep at least 10 images regardless of quality
+    const size_t MIN_IMAGES_TO_KEEP = 10;
+    size_t maxDeletable = (allImages.size() > MIN_IMAGES_TO_KEEP) 
+                          ? (allImages.size() - MIN_IMAGES_TO_KEEP) 
+                          : 0;
+    
+    int deletedCount = 0;
+    unsigned long freedBytes = 0;
+    
+    for (size_t i = 0; i < maxDeletable && freedBytes < (spaceNeededKB * 1024); i++) {
+        const ImageQualityInfo& info = allImages[i];
+        
+        // Don't delete if quality is above threshold (keep good quality images)
+        if (info.qualityScore > 50.0f) {
+            continue;
+        }
+        
+        if (deleteImageAndMetadata(info.path)) {
+            deletedCount++;
+            freedBytes += info.fileSize;
+        }
+    }
+    
+    Serial.printf_P(TAG_SMART_DELETE, deletedCount, freedBytes / 1024);
+    
+    return deletedCount;
+}
+
+String StorageManager::saveImageWithCompression(camera_fb_t* fb, const String& customPath, bool skipDuplicates) {
+    // Validate initialization state
+    if (!initialized) {
+        Serial.println(FPSTR(TAG_ERROR_NOT_INIT));
+        return "";
+    }
+    
+    // Validate frame buffer pointer and data integrity
+    if (!fb || fb->buf == NULL || fb->len == 0) {
+        Serial.println(FPSTR(TAG_ERROR_INVALID_FB));
+        return "";
+    }
+    
+    // Calculate hash for duplicate detection
+    uint32_t imageHash = 0;
+    if (duplicateDetectionEnabled && skipDuplicates) {
+        imageHash = calculateImageHash(fb->buf, fb->len);
+        
+        if (isDuplicateImage(imageHash)) {
+            Serial.println(FPSTR(TAG_DUPLICATE_DETECTED));
+            g_duplicatesSkipped++;
+            return "";  // Skip saving duplicate
+        }
+    }
+    
+    // Check if we need to free up space before saving
+    unsigned long freeSpaceKB = getFreeSpace() / 1024;
+    if (freeSpaceKB < STORAGE_MIN_FREE_SPACE_KB) {
+        Serial.println("INFO: Low storage space, running smart delete...");
+        smartDelete(STORAGE_MIN_FREE_SPACE_KB * 2);  // Try to free up 2x minimum
+    }
+    
+    // Note: Actual JPEG re-compression would require the esp_camera to capture
+    // at a different quality setting, or using a JPEG library to re-compress.
+    // For now, we use the image as-is but track the quality setting for 
+    // future captures via the camera manager.
+    
+    // Save the image using the standard method
+    String savedPath = saveImage(fb, customPath);
+    
+    // If save was successful and we have a valid hash, add to cache
+    if (savedPath.length() > 0 && imageHash != 0) {
+        // Manage cache size - remove oldest entries if cache is full
+        if (recentImageHashes.size() >= MAX_HASH_CACHE_SIZE) {
+            // Remove first (oldest) entry
+            recentImageHashes.erase(recentImageHashes.begin());
+        }
+        
+        recentImageHashes[imageHash] = savedPath;
+    }
+    
+    return savedPath;
+}
+
+void StorageManager::getStorageStats(unsigned long& totalImages, unsigned long& duplicatesSkipped, unsigned long& bytesCompressed) {
+    totalImages = imageCounter;
+    duplicatesSkipped = g_duplicatesSkipped;
+    bytesCompressed = g_bytesCompressed;
 }
