@@ -13,6 +13,7 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include <memory>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -182,6 +183,9 @@ void BasicAIProcessor::updateConfig(const BasicAIConfig& config) {
 bool BasicAIProcessor::allocateBuffers(size_t size) {
     freeBuffers();
     
+    // Note: Using raw pointers with std::nothrow for ESP32/embedded compatibility
+    // This allows explicit handling of allocation failures without exceptions
+    // which is critical for resource-constrained embedded systems
     previous_frame_ = new (std::nothrow) uint8_t[size];
     diff_frame_ = new (std::nothrow) uint8_t[size];
     
@@ -245,15 +249,17 @@ MotionDetectionResult BasicAIProcessor::detectMotion(
     
     uint32_t start_time = GET_TIME_US();
     
-    // Convert to grayscale if needed
+    // Convert to grayscale if needed - use unique_ptr for automatic cleanup
+    std::unique_ptr<uint8_t[]> grayscale_buffer;
     uint8_t* grayscale_frame = nullptr;
     size_t grayscale_size = width * height;
     
     if (channels > 1) {
-        grayscale_frame = new (std::nothrow) uint8_t[grayscale_size];
-        if (!grayscale_frame) {
+        grayscale_buffer = std::make_unique<uint8_t[]>(grayscale_size);
+        if (!grayscale_buffer) {
             return result;
         }
+        grayscale_frame = grayscale_buffer.get();
         convertToGrayscale(current_frame, grayscale_frame, width * height, channels);
     } else {
         // Use frame directly (cast away const for internal use only)
@@ -327,10 +333,7 @@ MotionDetectionResult BasicAIProcessor::detectMotion(
     // Store current frame for next comparison
     memcpy(previous_frame_, grayscale_frame, grayscale_size);
     
-    // Clean up temporary buffer if we allocated it
-    if (channels > 1 && grayscale_frame != current_frame) {
-        delete[] grayscale_frame;
-    }
+    // Note: grayscale_buffer (unique_ptr) will automatically clean up if we allocated it
     
     result.processing_time_us = GET_TIME_US() - start_time;
     
@@ -598,9 +601,9 @@ ClassificationResult BasicAIProcessor::classifyRegion(
     uint16_t roi_w = std::min(static_cast<uint16_t>(roi.x + roi.width), width) - roi.x;
     uint16_t roi_h = std::min(static_cast<uint16_t>(roi.y + roi.height), height) - roi.y;
     
-    // Extract ROI data
+    // Extract ROI data - use unique_ptr for automatic cleanup
     size_t roi_size = roi_w * roi_h;
-    uint8_t* roi_data = new (std::nothrow) uint8_t[roi_size];
+    std::unique_ptr<uint8_t[]> roi_data = std::make_unique<uint8_t[]>(roi_size);
     if (!roi_data) {
         return result;
     }
@@ -625,8 +628,8 @@ ClassificationResult BasicAIProcessor::classifyRegion(
     }
     
     // Calculate texture and edge features
-    float texture_score = calculateTextureScore(roi_data, roi_w, roi_h);
-    float edge_density = calculateEdgeDensity(roi_data, roi_w, roi_h);
+    float texture_score = calculateTextureScore(roi_data.get(), roi_w, roi_h);
+    float edge_density = calculateEdgeDensity(roi_data.get(), roi_w, roi_h);
     
     // Simple classification heuristics based on texture and edges
     // Animals tend to have moderate texture and clear edges
@@ -697,7 +700,7 @@ ClassificationResult BasicAIProcessor::classifyRegion(
         result.confidence = std::max(result.animal_score, result.non_animal_score);
     }
     
-    delete[] roi_data;
+    // Note: roi_data (unique_ptr) automatically cleaned up
     
     result.processing_time_us = GET_TIME_US() - start_time;
     

@@ -21,6 +21,8 @@ static const size_t TEST_FRAME_SIZE = TEST_WIDTH * TEST_HEIGHT;
  */
 void setUp(void) {
     processor = new BasicAIProcessor();
+    // Seed random number generator for reproducible tests
+    srand(42);
 }
 
 /**

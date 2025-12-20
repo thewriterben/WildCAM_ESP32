@@ -54,7 +54,7 @@ bool WildlifeDetector::initialize(const DetectorConfig& config) {
 }
 
 bool WildlifeDetector::initializeBasicAI() {
-    ai_processor_ = std::unique_ptr<BasicAI::BasicAIProcessor>(new BasicAI::BasicAIProcessor());
+    ai_processor_ = std::make_unique<BasicAI::BasicAIProcessor>();
     
     BasicAI::BasicAIConfig ai_config = BasicAI::getDefaultConfig();
     ai_config.motion_threshold = 25;
