@@ -1,19 +1,20 @@
 # WildCAM_ESP32 - Motion-Activated Wildlife Camera
 
-[![Version](https://img.shields.io/badge/version-3.0.0-green.svg)](https://github.com/thewriterben/WildCAM_ESP32)
+[![Version](https://img.shields.io/badge/version-3.1.0-green.svg)](https://github.com/thewriterben/WildCAM_ESP32)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-ESP32--CAM-orange.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-compatible-blue.svg)](https://platformio.org/)
 
-> 📘 **Documentation Version:** This README covers the core v3.0.0 release with production-ready wildlife camera functionality (motion detection, camera capture, SD storage, web interface, power management).  
+> 📘 **Documentation Version:** This README covers the core v3.1.0 release with production-ready wildlife camera functionality (motion detection, camera capture, SD storage, web interface, power management, cloud integration).  
 > For advanced enterprise features (Edge AI, cloud integration, satellite communication), see [README_ADVANCED.md](README_ADVANCED.md).
 > For detailed implementation status, see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+> For project roadmap and timeline, see [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md).
 
 ## Project Status
 
-**v3.0.0 - Production-Ready Core System**
+**v3.1.0 - Production-Ready Core System with Cloud Integration**
 
-WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-CAM. The core wildlife monitoring system is **production-ready** and actively deployed in the field, while advanced enterprise features continue in development.
+WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-CAM. The core wildlife monitoring system is **production-ready** and actively deployed in the field, with recent additions including cloud integration, SMS alerts, and advanced LoRa mesh networking with federated learning support.
 
 ### Core System - Production Ready ✅
 
@@ -28,22 +29,26 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **Multi-board support** | ✅ Complete | ESP32-CAM, ESP32-S3, FREENOVE, XIAO variants |
 | **Two-factor detection** | ✅ Complete | PIR + Vision confirmation (98% accuracy) |
 | **Time keeping** | ✅ Complete | NTP sync + DS3231 RTC for persistent timestamps |
+| **Cloud integration** | ✅ Complete | Automatic image upload, SMS alerts, remote API (NEW) |
+| **Data analytics** | ✅ Complete | Activity patterns, species frequency charts (NEW) |
 
 ### Enterprise Features - In Development 🔄
 
 | Feature | Status | Timeline |
 |---------|--------|----------|
 | **Edge AI (YOLO-tiny)** | 🔄 Framework | Est. 12-18 months |
-| **LoRa mesh networking** | 🔄 Framework | Est. 9-12 months |
-| **Cloud integration** | 🔄 Framework | Est. 9-12 months |
+| **LoRa mesh networking** | ✅ Complete | Federated learning support added |
+| **Cloud integration** | ✅ Complete | CloudManager, SMS alerts, remote API |
 | **Mobile app** | 🔄 Framework | Est. 12-15 months |
 | **MPPT solar charging** | ✅ Complete | Implemented |
 | **Satellite communication** | 🔄 Framework | Est. 12-15 months |
-| **Quantum-safe security** | 🔄 Framework | Est. 12-15 months |
+| **Quantum-safe security** | ✅ Foundation | Digital signatures implemented |
+| **Federated learning** | ✅ Complete | Distributed ML model training (NEW) |
+| **Advanced storage** | ✅ Complete | Compression, deduplication, smart deletion (NEW) |
 
 **Status Legend**: ✅ Complete | 🔄 In Development | 📋 Planned
 
-The core system is fully production-ready for wildlife monitoring. Advanced enterprise features are under active development. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for detailed status.
+The core system is fully production-ready for wildlife monitoring. Advanced enterprise features are under active development. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for detailed status and [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) for the development timeline.
 
 ## Features
 
@@ -750,6 +755,8 @@ We appreciate detailed bug reports - they help us fix issues faster! 🐛
 
 WildCAM_ESP32 is under active development. Here's the current status and what we're planning:
 
+> 📋 **For detailed roadmap:** See [PROJECT_ROADMAP.md](PROJECT_ROADMAP.md) for comprehensive timeline and milestones.
+
 ### ✅ Phase 1: Core System (Complete)
 
 The core wildlife camera system is **production-ready**:
@@ -820,24 +827,51 @@ The core wildlife camera system is **production-ready**:
 
 See [PHASE_3_IMPLEMENTATION_COMPLETE.md](PHASE_3_IMPLEMENTATION_COMPLETE.md) for detailed implementation status.
 
+### ✅ Phase 3+: Recent Enhancements (December 2025) - NEW
+
+- **Cloud Integration** ✅ **COMPLETE** (PR #229)
+  - CloudManager for automatic image upload
+  - SMS alerts for wildlife detections
+  - Remote monitoring API
+  - User preferences configuration
+  - See [CLOUD_INTEGRATION_SUMMARY.md](CLOUD_INTEGRATION_SUMMARY.md) for details
+
+- **Advanced LoRa Mesh** ✅ **COMPLETE** (PR #228)
+  - Federated learning for distributed ML training
+  - 4-bit quantization for efficient model transfer
+  - Network topology management (star, mesh, hierarchical)
+  - See [FEDERATED_LEARNING_IMPLEMENTATION_SUMMARY.md](FEDERATED_LEARNING_IMPLEMENTATION_SUMMARY.md)
+
+- **Improved Storage** ✅ **COMPLETE** (PR #226)
+  - Image compression with configurable quality
+  - Hash-based duplicate detection
+  - Smart deletion with priority policies
+  - Storage analytics and monitoring
+
+- **Data Analytics** ✅ **COMPLETE** (PR #225)
+  - Activity pattern analysis
+  - Species frequency charts
+  - Time-of-day wildlife activity visualization
+  - CSV/JSON export capabilities
+
 ### 📋 Phase 4: Enterprise Features (In Progress - 2026)
 
-- **LoRa Mesh Networking** (ESP32-S3 only)
-  - Multi-camera coordination
-  - Extended range communication
-  - Shared detection alerts
+- **Satellite Communication** 🔄 In Progress
+  - Swarm M138, RockBLOCK, Iridium support
+  - Global coverage for remote deployments
+  - Message compression and prioritization
 
-- **Cloud Integration**
-  - Automatic image upload (WiFi)
-  - Remote monitoring dashboard
-  - Email/SMS alerts
-
-- **Mobile App**
+- **Mobile App** 🔄 Framework
   - iOS and Android companion app
   - Real-time notifications
   - Remote configuration
 
-### Long-Term Vision (2028+)
+- **Production Cloud Deployment** 🔄 In Progress
+  - AWS/Azure/GCP production setup
+  - Auto-scaling and monitoring
+  - Multi-region support
+
+### Long-Term Vision (2027+)
 
 - **Advanced AI**
   - Species-specific detection (deer, bear, fox, etc.)
