@@ -1374,8 +1374,8 @@ bool AdvancedMeshNetwork::submitModelUpdate(const uint8_t* gradients, size_t gra
             return false;
         }
         
-        // Small delay between chunks
-        delay(50);
+        // Small delay between chunks to prevent radio congestion
+        delay(20);
         yield();
     }
     
@@ -1854,15 +1854,18 @@ uint8_t* AdvancedMeshNetwork::compressGradients(const uint8_t* data, size_t size
             }
             
         case FL_COMPRESS_QUANTIZE_4BIT:
-            // Pack two 8-bit values into one byte
+            // Quantize: take high 4 bits of each byte and pack two into one byte
+            // This reduces precision from 8-bit to 4-bit values
             {
                 size_t newSize = (size + 1) / 2;
                 uint8_t* result = (uint8_t*)malloc(newSize);
                 if (result != nullptr) {
                     for (size_t i = 0; i < newSize; i++) {
-                        uint8_t high = (i * 2 < size) ? (data[i * 2] >> 4) : 0;
-                        uint8_t low = (i * 2 + 1 < size) ? (data[i * 2 + 1] >> 4) : 0;
-                        result[i] = (high << 4) | low;
+                        // Get high nibble (top 4 bits) from first byte
+                        uint8_t high = (i * 2 < size) ? (data[i * 2] & 0xF0) : 0;
+                        // Get high nibble from second byte, shift to low position
+                        uint8_t low = (i * 2 + 1 < size) ? ((data[i * 2 + 1] >> 4) & 0x0F) : 0;
+                        result[i] = high | low;
                     }
                     *compressedSize = newSize;
                 }

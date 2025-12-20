@@ -441,7 +441,7 @@ void test_fl_model_chunk_structure(void) {
     chunk.modelVersion = 2;
     chunk.compression = FL_COMPRESS_QUANTIZE_8BIT;
     chunk.dataSize = 100;
-    memset(chunk.data, 0xAB, 100);
+    memset(chunk.data, 0xAB, chunk.dataSize);
     
     TEST_ASSERT_EQUAL_UINT32(0x12345678, chunk.roundId);
     TEST_ASSERT_EQUAL_UINT32(0xABCDEF01, chunk.originNodeId);
@@ -451,7 +451,7 @@ void test_fl_model_chunk_structure(void) {
     TEST_ASSERT_EQUAL(FL_COMPRESS_QUANTIZE_8BIT, chunk.compression);
     TEST_ASSERT_EQUAL_UINT16(100, chunk.dataSize);
     TEST_ASSERT_EQUAL_UINT8(0xAB, chunk.data[0]);
-    TEST_ASSERT_EQUAL_UINT8(0xAB, chunk.data[99]);
+    TEST_ASSERT_EQUAL_UINT8(0xAB, chunk.data[chunk.dataSize - 1]);
 }
 
 void test_fl_aggregation_stats_structure(void) {
