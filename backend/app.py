@@ -491,22 +491,28 @@ def create_app(config_name='development'):
                 db.func.count(WildlifeDetection.id).label('count')
             ).filter(*hourly_filters).group_by('date').order_by('date').all()
             
-            # Species-specific hourly activity
+            # Species-specific hourly activity - single query with grouping by species and hour
+            species_hourly_query = db.session.query(
+                WildlifeDetection.detected_species,
+                db.func.extract('hour', WildlifeDetection.timestamp).label('hour'),
+                db.func.count(WildlifeDetection.id).label('count')
+            ).filter(
+                *base_filters,
+                WildlifeDetection.detected_species.isnot(None)
+            ).group_by(
+                WildlifeDetection.detected_species,
+                db.func.extract('hour', WildlifeDetection.timestamp)
+            ).all()
+            
+            # Organize species hourly data into dictionary
             species_hourly_activity = {}
-            for sp in species_data:
-                if sp.detected_species:
-                    sp_hourly = db.session.query(
-                        db.func.extract('hour', WildlifeDetection.timestamp).label('hour'),
-                        db.func.count(WildlifeDetection.id).label('count')
-                    ).filter(
-                        *base_filters,
-                        WildlifeDetection.detected_species == sp.detected_species
-                    ).group_by('hour').all()
-                    
-                    species_hourly_activity[sp.detected_species] = [
-                        {'hour': int(item.hour), 'count': item.count}
-                        for item in sp_hourly
-                    ]
+            for item in species_hourly_query:
+                if item.detected_species not in species_hourly_activity:
+                    species_hourly_activity[item.detected_species] = []
+                species_hourly_activity[item.detected_species].append({
+                    'hour': int(item.hour),
+                    'count': item.count
+                })
             
             return jsonify({
                 'species_frequency': [

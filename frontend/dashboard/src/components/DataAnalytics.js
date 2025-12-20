@@ -97,14 +97,11 @@ function DataAnalytics() {
     try {
       setLoading(true);
       
-      // Fetch analytics data from API
-      const [speciesRes, activityRes] = await Promise.all([
-        apiService.getSpeciesAnalytics(timeRange),
-        apiService.getActivityPatterns(timeRange),
-      ]);
+      // Fetch comprehensive data analytics from the new endpoint
+      const analyticsRes = await apiService.getDataAnalytics(timeRange);
 
       // Process species frequency data
-      const speciesFrequency = (speciesRes.species_data || [])
+      const speciesFrequency = (analyticsRes.species_frequency || [])
         .filter(item => item.species)
         .map((item, index) => ({
           species: item.species,
@@ -116,7 +113,7 @@ function DataAnalytics() {
 
       // Process hourly activity data (ensure 24 hours)
       const hourlyData = Array.from({ length: 24 }, (_, hour) => {
-        const activity = (activityRes.hourly_activity || []).find(a => a.hour === hour);
+        const activity = (analyticsRes.hourly_activity || []).find(a => a.hour === hour);
         return {
           hour,
           hourLabel: `${hour.toString().padStart(2, '0')}:00`,
@@ -129,23 +126,22 @@ function DataAnalytics() {
       const timePeriodSummary = calculateTimePeriodSummary(hourlyData);
 
       // Process daily trends
-      const dailyTrends = (activityRes.daily_activity || []).map(item => ({
+      const dailyTrends = (analyticsRes.daily_activity || []).map(item => ({
         date: item.date,
         detections: item.count,
       }));
 
-      // Build activity by species (for species-specific filtering)
+      // Build activity by species from API data
       const activityBySpecies = {};
-      speciesFrequency.forEach(species => {
-        // Generate simulated hourly data per species for demo
-        // In production, this would come from a dedicated API endpoint
-        activityBySpecies[species.species] = Array.from({ length: 24 }, (_, hour) => {
-          const baseActivity = hourlyData[hour].detections;
-          const speciesRatio = species.count / (speciesFrequency.reduce((sum, s) => sum + s.count, 0) || 1);
+      const speciesHourlyActivity = analyticsRes.species_hourly_activity || {};
+      
+      Object.entries(speciesHourlyActivity).forEach(([speciesName, hourlyActivity]) => {
+        activityBySpecies[speciesName] = Array.from({ length: 24 }, (_, hour) => {
+          const activity = hourlyActivity.find(a => a.hour === hour);
           return {
             hour,
             hourLabel: `${hour.toString().padStart(2, '0')}:00`,
-            detections: Math.round(baseActivity * speciesRatio * (0.5 + Math.random())),
+            detections: activity?.count || 0,
             period: getTimePeriod(hour),
           };
         });
@@ -207,6 +203,36 @@ function DataAnalytics() {
       ...item,
       fullMark: Math.max(...currentActivityData.map(d => d.detections)) * 1.2 || 100,
     }));
+  }, [currentActivityData]);
+
+  // Calculate activity insights - memoized to avoid redundant calculations
+  const activityInsights = useMemo(() => {
+    if (!currentActivityData || currentActivityData.length === 0) {
+      return {
+        peakHour: { hourLabel: 'N/A', detections: 0 },
+        quietestHour: { hourLabel: 'N/A', detections: 0 },
+        averagePerHour: 0,
+      };
+    }
+    
+    const peakHour = currentActivityData.reduce(
+      (max, h) => (h.detections > max.detections ? h : max),
+      currentActivityData[0]
+    );
+    
+    const quietestHour = currentActivityData.reduce(
+      (min, h) => (h.detections < min.detections ? h : min),
+      currentActivityData[0]
+    );
+    
+    const totalDetections = currentActivityData.reduce((sum, h) => sum + h.detections, 0);
+    const averagePerHour = totalDetections / currentActivityData.length;
+    
+    return {
+      peakHour,
+      quietestHour,
+      averagePerHour,
+    };
   }, [currentActivityData]);
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -654,10 +680,10 @@ function DataAnalytics() {
                         Peak Hour
                       </Typography>
                       <Typography variant="h4">
-                        {currentActivityData.reduce((max, h) => h.detections > max.detections ? h : max, currentActivityData[0])?.hourLabel || 'N/A'}
+                        {activityInsights.peakHour?.hourLabel || 'N/A'}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
-                        {currentActivityData.reduce((max, h) => h.detections > max.detections ? h : max, currentActivityData[0])?.detections || 0} detections
+                        {activityInsights.peakHour?.detections || 0} detections
                       </Typography>
                     </Paper>
                   </Grid>
@@ -667,10 +693,10 @@ function DataAnalytics() {
                         Quietest Hour
                       </Typography>
                       <Typography variant="h4">
-                        {currentActivityData.reduce((min, h) => h.detections < min.detections ? h : min, currentActivityData[0])?.hourLabel || 'N/A'}
+                        {activityInsights.quietestHour?.hourLabel || 'N/A'}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
-                        {currentActivityData.reduce((min, h) => h.detections < min.detections ? h : min, currentActivityData[0])?.detections || 0} detections
+                        {activityInsights.quietestHour?.detections || 0} detections
                       </Typography>
                     </Paper>
                   </Grid>
@@ -680,7 +706,7 @@ function DataAnalytics() {
                         Average per Hour
                       </Typography>
                       <Typography variant="h4">
-                        {(currentActivityData.reduce((sum, h) => sum + h.detections, 0) / 24).toFixed(1)}
+                        {activityInsights.averagePerHour.toFixed(1)}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
                         detections/hour
