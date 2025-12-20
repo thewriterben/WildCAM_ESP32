@@ -154,7 +154,7 @@ This roadmap provides a comprehensive overview of the WildCAM ESP32 wildlife mon
 
 ### Q2 2026 (PLANNED)
 - Advanced analytics dashboard release
-- Federated learning production deployment
+- Federated learning production scale deployment (core feature complete Dec 2025)
 - Large-scale deployment validation
 - Mobile app beta release
 
