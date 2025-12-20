@@ -65,6 +65,10 @@ const SPECIES_COLORS = [
   '#00838f', '#6d4c41', '#546e7a', '#f50057', '#00c853',
 ];
 
+// Chart configuration constants
+const RADAR_CHART_SCALE_FACTOR = 1.2; // Scale factor for radar chart max value
+const RADAR_CHART_DEFAULT_MAX = 100; // Default max value when no data
+
 // Time period labels
 const TIME_PERIODS = {
   dawn: { start: 5, end: 7, label: 'Dawn', color: '#ffd54f' },
@@ -106,7 +110,7 @@ function DataAnalytics() {
         .map((item, index) => ({
           species: item.species,
           count: item.count,
-          avgConfidence: (item.avg_confidence * 100).toFixed(1),
+          avgConfidence: ((item.avg_confidence || 0) * 100).toFixed(1),
           color: SPECIES_COLORS[index % SPECIES_COLORS.length],
         }))
         .sort((a, b) => b.count - a.count);
@@ -204,7 +208,7 @@ function DataAnalytics() {
       return [];
     }
     const maxDetections = currentActivityData.reduce((max, d) => Math.max(max, d.detections), 0);
-    const fullMark = maxDetections > 0 ? maxDetections * 1.2 : 100;
+    const fullMark = maxDetections > 0 ? maxDetections * RADAR_CHART_SCALE_FACTOR : RADAR_CHART_DEFAULT_MAX;
     return currentActivityData.map(item => ({
       ...item,
       fullMark,
