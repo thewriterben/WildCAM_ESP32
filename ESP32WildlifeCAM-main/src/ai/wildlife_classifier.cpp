@@ -240,7 +240,9 @@ bool WildlifeClassifier::loadModel() {
     
     // Try to load species classifier model from multiple locations
     const char* modelPaths[] = {
-        "/models/species_classifier_v1.0.0.tflite",
+        "/models/best_int8.tflite",                    // Custom model (priority)
+        "/sd/models/best_int8.tflite",
+        "/models/species_classifier_v1.0.0.tflite",    // Default fallback
         "/sd/models/species_classifier_v1.0.0.tflite", 
         "/data/models/species_classifier_v1.0.0.tflite"
     };

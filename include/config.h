@@ -877,4 +877,49 @@
  */
 #define CLOUD_MAX_RETRIES 3
 
+//==============================================================================
+// AI/ML CLASSIFICATION SETTINGS
+//==============================================================================
+
+/**
+ * @brief Enable AI-based species classification
+ * @note Requires TensorFlow Lite model file on SD card
+ * @default true
+ */
+#define AI_CLASSIFICATION_ENABLED true
+
+/**
+ * @brief TensorFlow Lite model filename
+ * @note File should be placed in /models/ directory on SD card
+ * @default "best_int8.tflite"
+ */
+#define TFLITE_MODEL_FILENAME "best_int8.tflite"
+
+/**
+ * @brief TensorFlow Lite tensor arena size in bytes
+ * @note Must be large enough for your model
+ * @default 4194304 (4MB)
+ */
+#define TFLITE_ARENA_SIZE (4 * 1024 * 1024)
+
+/**
+ * @brief Model input image size (width and height)
+ * @note INT8 quantized models typically use 224x224
+ * @default 224
+ */
+#define MODEL_INPUT_SIZE 224
+
+/**
+ * @brief Minimum confidence threshold for valid classification
+ * @note Range: 0.0 to 1.0
+ * @default 0.6
+ */
+#define SPECIES_CONFIDENCE_THRESHOLD 0.6f
+
+/**
+ * @brief Maximum number of species classes
+ * @default 21
+ */
+#define MAX_SPECIES_COUNT 21
+
 #endif // CONFIG_H
