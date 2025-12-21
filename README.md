@@ -62,6 +62,17 @@ The core system is fully production-ready for wildlife monitoring. Advanced ente
 - 🖥️ **Multi-Board Support** - Compatible with ESP32-CAM, ESP32-S3, FREENOVE-CAM, and XIAO ESP32-S3
 - ⏰ **Accurate Time Keeping** - NTP time sync over WiFi with DS3231 external RTC for persistent timestamps across power cycles
 
+### AI-Powered Wildlife Classification
+
+- 🤖 **Species Identification** - TensorFlow Lite INT8 quantized model for real-time wildlife classification
+- 🎯 **Confidence Scoring** - Adjustable confidence thresholds for reliable species detection
+- 🧠 **Edge AI Processing** - On-device inference without cloud dependency
+- 📊 **Classification Metadata** - Species name, confidence level, and inference time saved with each image
+- 🔄 **Custom Model Support** - Deploy your own trained models for local wildlife species
+- ⚡ **Optimized Performance** - INT8 quantization enables fast inference on ESP32 (typically 1-3 seconds)
+
+See [MODEL_DEPLOYMENT.md](docs/MODEL_DEPLOYMENT.md) for detailed model deployment and configuration instructions.
+
 ### Additional Sensor Support (Optional)
 
 - 🌡️ **BME280 Environmental Sensor** - Temperature, humidity, and pressure monitoring
@@ -629,6 +640,58 @@ You can customize the behavior of your WildCAM_ESP32 by editing `include/config.
 ```
 
 ⚠️ **Warning:** Only change pin assignments if you have custom hardware. Incorrect pin configuration can prevent the camera from working.
+
+### AI/ML Classification Settings
+
+Configure AI-based wildlife species classification:
+
+```cpp
+// Enable/disable AI classification
+#define AI_CLASSIFICATION_ENABLED true       // Enable AI species identification
+
+// Model configuration
+#define TFLITE_MODEL_FILENAME "best_int8.tflite"  // Model file on SD card
+#define TFLITE_ARENA_SIZE (4 * 1024 * 1024)      // 4MB tensor arena
+#define MODEL_INPUT_SIZE 224                      // Input image size (224x224)
+
+// Classification thresholds
+#define SPECIES_CONFIDENCE_THRESHOLD 0.6f    // Minimum confidence (0.0-1.0)
+#define MAX_SPECIES_COUNT 21                 // Number of species classes
+```
+
+**Configuration Options:**
+
+- **AI_CLASSIFICATION_ENABLED**: Enable or disable AI classification
+  - `true`: AI classification active (requires model on SD card)
+  - `false`: Standard camera trap mode (no classification)
+
+- **TFLITE_MODEL_FILENAME**: Name of the TensorFlow Lite model file
+  - Default: `"best_int8.tflite"` (custom wildlife model)
+  - File must be in `/models/` directory on SD card
+
+- **TFLITE_ARENA_SIZE**: Memory allocated for TensorFlow Lite inference
+  - Default: 4MB (4 * 1024 * 1024)
+  - Increase if model requires more memory
+  - Decrease if experiencing memory issues
+
+- **MODEL_INPUT_SIZE**: Input image dimensions (width and height)
+  - Default: 224 (for 224x224 input)
+  - Must match your model's expected input size
+
+- **SPECIES_CONFIDENCE_THRESHOLD**: Minimum confidence for valid detection
+  - Range: 0.0 to 1.0 (0% to 100%)
+  - Default: 0.6 (60% confidence)
+  - Lower = more detections (but more false positives)
+  - Higher = fewer detections (but more accurate)
+
+**Model Deployment:**
+
+1. Copy `models/best_int8.tflite` to SD card `/models/` directory
+2. Enable AI classification in `config.h`
+3. Build and upload firmware
+4. System will automatically load model at startup
+
+For detailed model deployment instructions, see [MODEL_DEPLOYMENT.md](docs/MODEL_DEPLOYMENT.md).
 
 ### Applying Configuration Changes
 

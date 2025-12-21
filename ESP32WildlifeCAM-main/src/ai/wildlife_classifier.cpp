@@ -238,9 +238,31 @@ bool WildlifeClassifier::loadModel() {
         }
     }
     
+    // Build model paths using configured filename
+    // Use stack-allocated char arrays to avoid heap fragmentation
+    const size_t MAX_MODEL_PATH_LENGTH = 128;
+    static char customModelPath1[MAX_MODEL_PATH_LENGTH];
+    static char customModelPath2[MAX_MODEL_PATH_LENGTH];
+    
+    int result1 = snprintf(customModelPath1, MAX_MODEL_PATH_LENGTH, "/models/%s", TFLITE_MODEL_FILENAME);
+    int result2 = snprintf(customModelPath2, MAX_MODEL_PATH_LENGTH, "/sd/models/%s", TFLITE_MODEL_FILENAME);
+    
+    // Validate path construction
+    if (result1 < 0 || result1 >= MAX_MODEL_PATH_LENGTH) {
+        LOG_ERROR("Model path construction failed: path too long");
+        return false;
+    }
+    if (result2 < 0 || result2 >= MAX_MODEL_PATH_LENGTH) {
+        LOG_ERROR("Model path construction failed: path too long");
+        return false;
+    }
+    
     // Try to load species classifier model from multiple locations
+    // Priority: Custom model (from config.h), then default models
     const char* modelPaths[] = {
-        "/models/species_classifier_v1.0.0.tflite",
+        customModelPath1,                              // Custom model (priority)
+        customModelPath2,
+        "/models/species_classifier_v1.0.0.tflite",    // Default fallback
         "/sd/models/species_classifier_v1.0.0.tflite", 
         "/data/models/species_classifier_v1.0.0.tflite"
     };
