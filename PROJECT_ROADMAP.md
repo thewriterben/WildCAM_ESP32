@@ -1,12 +1,12 @@
 # 🗺️ WildCAM_ESP32 Project Roadmap
 
-*Last Updated: December 20, 2025*  
+*Last Updated: December 23, 2025*  
 *Version: 3.1.0 - Phase 3+ Complete*  
 *Project Owner: @thewriterben*
 
 ## 📋 Executive Summary
 
-This roadmap provides a comprehensive overview of the WildCAM ESP32 wildlife monitoring project phases, current status, and future development goals. Phase 3 advanced features are complete with 100% validation pass rate. Recent updates include cloud integration, advanced LoRa mesh networking with federated learning, improved storage management, and data analytics.
+This roadmap provides a comprehensive overview of the WildCAM ESP32 wildlife monitoring project phases, current status, and future development goals. Phase 3 advanced features are complete with 100% validation pass rate. Recent updates include TFLite model integration for wildlife classification, cloud integration, advanced LoRa mesh networking with federated learning, improved storage management, and data analytics.
 
 ---
 
@@ -83,6 +83,12 @@ This roadmap provides a comprehensive overview of the WildCAM ESP32 wildlife mon
 ---
 
 ## ✅ Phase 3+: Recent Enhancements (December 2025) - NEW
+
+### TFLite Model Integration ✅ (PR #234 - December 23, 2025)
+- ✅ **INT8 Quantized Model** - Pre-trained wildlife classification model
+- ✅ **On-Device Inference** - Real-time classification (1-3 seconds per image)
+- ✅ **Model Deployment Guide** - Complete deployment documentation
+- ✅ **SD Card Integration** - Models load from `/models/` directory
 
 ### Cloud Integration ✅ (PR #229 - December 20, 2025)
 - ✅ **CloudManager** - Automatic image upload to backend servers
@@ -166,10 +172,11 @@ This roadmap provides a comprehensive overview of the WildCAM ESP32 wildlife mon
 
 ---
 
-## 📊 Recent Progress Summary (December 20, 2025)
+## 📊 Recent Progress Summary (December 2025)
 
 | Feature | PR | Status | Description |
 |---------|-----|--------|-------------|
+| TFLite Model Integration | #234 | ✅ Merged | INT8 quantized wildlife classifier |
 | Cloud Integration | #229 | ✅ Merged | CloudManager, SMS alerts, remote API |
 | LoRa Mesh Federated Learning | #228 | ✅ Merged | Distributed ML, 4-bit quantization |
 | AI Training Files | #230 | ✅ Merged | Model training pipeline and data |

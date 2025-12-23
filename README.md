@@ -36,6 +36,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 
 | Feature | Status | Notes |
 |---------|--------|-------|
+| **TFLite Model Integration** | ✅ Complete | INT8 quantized wildlife classifier (Dec 2025) |
 | **Edge AI (YOLO-tiny)** | 🔄 Framework | Est. 12-18 months to production |
 | **LoRa mesh networking** | ✅ Complete | Federated learning support added (Dec 2025) |
 | **Cloud integration** | ✅ Complete | CloudManager, SMS alerts, remote API (Dec 2025) |
@@ -891,6 +892,12 @@ The core wildlife camera system is **production-ready**:
 See [PHASE_3_IMPLEMENTATION_COMPLETE.md](PHASE_3_IMPLEMENTATION_COMPLETE.md) for detailed implementation status.
 
 ### ✅ Phase 3+: Recent Enhancements (December 2025) - NEW
+
+- **TFLite Model Integration** ✅ **COMPLETE** (PR #234)
+  - INT8 quantized TensorFlow Lite model for wildlife classification
+  - Real-time on-device inference (1-3 seconds per image)
+  - Pre-trained model included (`models/best_int8.tflite`)
+  - See [MODEL_DEPLOYMENT.md](docs/MODEL_DEPLOYMENT.md) for deployment instructions
 
 - **Cloud Integration** ✅ **COMPLETE** (PR #229)
   - CloudManager for automatic image upload
