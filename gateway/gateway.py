@@ -19,7 +19,7 @@ from config import load_config_from_env, GatewayConfig
 from database import GatewayDatabase
 from lora_gateway import LoRaGateway
 from mqtt_bridge import MQTTBridge
-from api_server import create_app
+from api_server import create_api_server
 from cloud_sync import CloudSyncService
 from diagnostics import GatewayDiagnostics
 
@@ -55,17 +55,15 @@ class WildCAMGateway:
         self.mqtt = MQTTBridge(config.mqtt, self.db)
         
         # Cloud sync service
-        self.cloud_sync = CloudSyncService(config.cloud_sync, self.db)
+        self.cloud_sync = CloudSyncService(config.cloud_sync, self.db, config.gateway_id)
         
         # Diagnostics
         self.diagnostics = GatewayDiagnostics(config, self.db)
         
         # Flask API (created but not started here)
-        self.api_app = None
+        self.api_server = None
         if config.api.enabled:
-            self.api_app = create_app(config.api, self.db, 
-                                     self.lora, self.mqtt, 
-                                     self.diagnostics, self.cloud_sync)
+            self.api_server = create_api_server(config.api, self.db)
         
         # Setup signal handlers
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -150,17 +148,13 @@ class WildCAMGateway:
         self.logger.info("✓ Diagnostics monitoring started")
         
         # Start API server (blocking)
-        if self.api_app and self.config.api.enabled:
+        if self.api_server and self.config.api.enabled:
             self.logger.info(f"Starting API server on "
                            f"{self.config.api.host}:{self.config.api.port}...")
             self.logger.info("=" * 60)
             
             try:
-                self.api_app.run(
-                    host=self.config.api.host,
-                    port=self.config.api.port,
-                    debug=self.config.api.debug
-                )
+                self.api_server.run()
             except Exception as e:
                 self.logger.error(f"API server error: {e}")
         else:

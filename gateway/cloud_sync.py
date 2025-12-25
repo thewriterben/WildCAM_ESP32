@@ -25,16 +25,18 @@ class CloudSyncService:
     Implements offline-first operation with retry logic
     """
     
-    def __init__(self, config: CloudSyncConfig, database: GatewayDatabase):
+    def __init__(self, config: CloudSyncConfig, database: GatewayDatabase, gateway_id: str = "gateway_001"):
         """
         Initialize cloud sync service
         
         Args:
             config: Cloud sync configuration
             database: Database instance
+            gateway_id: Gateway identifier for cloud sync
         """
         self.config = config
         self.db = database
+        self.gateway_id = gateway_id
         
         # Threading
         self.running = False
@@ -448,10 +450,8 @@ class CloudSyncService:
             return None
     
     def _get_gateway_id(self) -> str:
-        """Get gateway ID from config or generate one"""
-        # This should be retrieved from the gateway config
-        # For now, return a placeholder
-        return "gateway_001"
+        """Get gateway ID from config"""
+        return self.gateway_id
     
     def sync_now(self):
         """Trigger immediate sync (non-blocking)"""
