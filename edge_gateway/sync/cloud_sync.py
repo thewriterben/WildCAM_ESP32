@@ -361,8 +361,7 @@ class CloudSyncService:
                     else:
                         item.status = SyncStatus.RETRY
                         logger.warning(f"Retry scheduled: {item.id} (attempt {item.attempts})")
-                        # Re-add to queue with exponential backoff
-                        time.sleep(min(2 ** item.attempts, 60))
+                        # Re-add to queue (backoff handled by next sync interval)
                         self._add_to_queue(item)
                 
             except Exception as e:
@@ -555,7 +554,8 @@ class CloudSyncService:
         """Save pending items to offline database"""
         items = []
         
-        while not self.sync_queue.empty():
+        # Get all items from queue
+        while True:
             try:
                 _, item = self.sync_queue.get_nowait()
                 items.append(item)

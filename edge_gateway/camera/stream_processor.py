@@ -250,10 +250,14 @@ class CameraStream:
     
     def _calculate_fps(self) -> float:
         """Calculate actual FPS"""
-        if self.last_frame_time == 0 or self.frame_count < 2:
+        # Track start time for FPS calculation
+        if not hasattr(self, 'start_time'):
+            self.start_time = time.time()
+        
+        if self.frame_count < 2:
             return 0.0
         
-        elapsed = time.time() - self.last_frame_time
+        elapsed = time.time() - self.start_time
         if elapsed > 0:
             return self.frame_count / elapsed
         return 0.0

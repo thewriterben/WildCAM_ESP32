@@ -230,7 +230,14 @@ class YOLODetector:
         # Reshape output (format depends on YOLO version)
         # For YOLOv8: [1, num_boxes, 4+num_classes]
         # 4 = bbox coords (x_center, y_center, width, height)
-        output = output.reshape(-1, 4 + len(self.class_labels))
+        expected_cols = 4 + len(self.class_labels)
+        
+        # Validate output shape before reshaping
+        if output.size % expected_cols != 0:
+            logger.warning(f"Output size {output.size} not divisible by {expected_cols}, using fallback parsing")
+            return []
+        
+        output = output.reshape(-1, expected_cols)
         
         for detection in output:
             # Extract bbox coordinates

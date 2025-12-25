@@ -219,7 +219,7 @@ class ConfigManager:
         
         # Validate detection model path
         model_path = Path(self.config.detection.model_path)
-        if not model_path.exists() and not model_path.is_absolute():
+        if not model_path.exists():
             logger.warning(f"Detection model not found: {model_path}")
         
         # Validate API key for cloud sync

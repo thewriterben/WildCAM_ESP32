@@ -451,7 +451,7 @@ class LoRaGateway:
                 logger.error(f"Error in LoRa receive loop: {e}")
                 
             # Small delay to prevent CPU spinning
-            threading.Event().wait(0.1)
+            time.sleep(0.1)
         
         logger.info("LoRa receive loop stopped")
     
