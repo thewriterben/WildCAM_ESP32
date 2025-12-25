@@ -1,0 +1,150 @@
+# Arducam Pivistation 5 Production Configuration
+# For wildlife monitoring deployment with IMX500 sensor
+
+device:
+  node_id: "pivistation_001"
+  location: "Wildlife Area A"
+  timezone: "America/Denver"
+
+inference:
+  # Path to deployed RPK model file
+  model_path: "/usr/share/imx500-models/wildlife_detector.rpk"
+  
+  # Minimum confidence threshold for detections (0.0 - 1.0)
+  confidence_threshold: 0.5
+  
+  # Target inference frame rate
+  inference_fps: 30
+  
+  # Input resolution for IMX500
+  input_width: 640
+  input_height: 640
+  
+  # Enable/disable specific detection features
+  enable_behavior_analysis: true
+  enable_tracking: true
+
+capture:
+  # Enable high-resolution capture on detection
+  enabled: true
+  
+  # Species that trigger full-resolution capture
+  trigger_species:
+    - "bear"
+    - "wolf"
+    - "mountain_lion"
+    - "elk"
+    - "moose"
+  
+  # Minimum confidence for triggering capture
+  capture_threshold: 0.6
+  
+  # Storage configuration
+  save_path: "/data/captures"
+  max_storage_gb: 32
+  
+  # Image format and quality
+  format: "JPEG"
+  quality: 95
+  
+  # Capture cooldown (seconds between captures of same species)
+  cooldown_seconds: 30
+  
+  # Enable EXIF metadata embedding
+  embed_metadata: true
+
+lora:
+  # Enable LoRa transmission
+  enabled: true
+  
+  # LoRa radio configuration (US915 band)
+  frequency: 915.0  # MHz
+  spreading_factor: 10
+  bandwidth: 125  # kHz
+  coding_rate: 5
+  tx_power: 17  # dBm
+  preamble_length: 8
+  
+  # Device configuration
+  sync_word: 0x12
+  
+  # Transmission settings
+  max_retries: 3
+  retry_delay: 1.0  # seconds
+  
+  # Queue configuration
+  max_queue_size: 100
+  batch_enabled: false
+
+mqtt:
+  # Enable MQTT publishing
+  enabled: true
+  
+  # Broker configuration
+  broker: "localhost"
+  port: 1883
+  
+  # Authentication (leave empty for anonymous)
+  username: ""
+  password: ""
+  
+  # TLS/SSL (for cloud brokers)
+  use_tls: false
+  ca_certs: ""
+  
+  # Topic configuration
+  topic_prefix: "wildcam"
+  
+  # QoS level (0, 1, or 2)
+  qos: 1
+  
+  # Retain messages
+  retain: false
+  
+  # Connection settings
+  keepalive: 60
+  reconnect_delay: 5  # seconds
+  max_reconnect_delay: 300  # seconds
+  
+  # Message batching
+  batch_enabled: false
+  batch_size: 10
+  batch_interval: 5  # seconds
+
+logging:
+  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  level: "INFO"
+  
+  # Log file configuration
+  log_file: "/var/log/wildcam/arducam.log"
+  max_bytes: 10485760  # 10 MB
+  backup_count: 5
+  
+  # Console logging
+  console_enabled: true
+  
+  # Performance logging
+  log_inference_stats: true
+  stats_interval: 60  # seconds
+
+health:
+  # Health check configuration
+  enabled: true
+  check_interval: 30  # seconds
+  
+  # Telemetry
+  report_telemetry: true
+  telemetry_interval: 300  # seconds
+
+power:
+  # Power management (for solar deployments)
+  solar_powered: true
+  
+  # Low power mode thresholds
+  battery_low_threshold: 20  # percent
+  battery_critical_threshold: 10  # percent
+  
+  # Actions on low battery
+  reduce_inference_fps: true
+  disable_high_res_capture: true
+  increase_sleep_intervals: true

@@ -1,0 +1,130 @@
+# Arducam Pivistation 5 Development Configuration
+# For testing and development
+
+device:
+  node_id: "pivistation_dev"
+  location: "Development Lab"
+  timezone: "UTC"
+
+inference:
+  # Path to development model
+  model_path: "/home/pi/models/wildlife_detector_dev.rpk"
+  
+  # Lower threshold for testing
+  confidence_threshold: 0.3
+  
+  # Reduced FPS for development
+  inference_fps: 10
+  
+  input_width: 640
+  input_height: 640
+  
+  enable_behavior_analysis: true
+  enable_tracking: false
+
+capture:
+  enabled: true
+  
+  # Trigger on all species for testing
+  trigger_species:
+    - "deer"
+    - "elk"
+    - "moose"
+    - "bear"
+    - "wolf"
+    - "mountain_lion"
+    - "coyote"
+    - "fox"
+    - "rabbit"
+    - "raccoon"
+  
+  capture_threshold: 0.4
+  
+  # Local development storage
+  save_path: "/tmp/captures"
+  max_storage_gb: 5
+  
+  format: "JPEG"
+  quality: 85
+  
+  # Shorter cooldown for testing
+  cooldown_seconds: 10
+  
+  embed_metadata: true
+
+lora:
+  # Disabled by default in development (may not have hardware)
+  enabled: false
+  
+  frequency: 915.0
+  spreading_factor: 7  # Faster for local testing
+  bandwidth: 125
+  coding_rate: 5
+  tx_power: 14
+  preamble_length: 8
+  
+  sync_word: 0x12
+  
+  max_retries: 2
+  retry_delay: 0.5
+  
+  max_queue_size: 50
+  batch_enabled: false
+
+mqtt:
+  # Use local broker for development
+  enabled: true
+  
+  broker: "localhost"
+  port: 1883
+  
+  username: ""
+  password: ""
+  
+  use_tls: false
+  ca_certs: ""
+  
+  topic_prefix: "wildcam/dev"
+  
+  qos: 0  # Fire and forget for development
+  retain: false
+  
+  keepalive: 60
+  reconnect_delay: 2
+  max_reconnect_delay: 30
+  
+  batch_enabled: false
+  batch_size: 5
+  batch_interval: 2
+
+logging:
+  # Verbose logging for development
+  level: "DEBUG"
+  
+  log_file: "/tmp/arducam_dev.log"
+  max_bytes: 5242880  # 5 MB
+  backup_count: 3
+  
+  console_enabled: true
+  
+  # Detailed performance logging
+  log_inference_stats: true
+  stats_interval: 10  # More frequent in dev
+
+health:
+  enabled: true
+  check_interval: 10  # More frequent checks
+  
+  report_telemetry: true
+  telemetry_interval: 60  # More frequent telemetry
+
+power:
+  # Assume AC power in development
+  solar_powered: false
+  
+  battery_low_threshold: 20
+  battery_critical_threshold: 10
+  
+  reduce_inference_fps: false
+  disable_high_res_capture: false
+  increase_sleep_intervals: false
