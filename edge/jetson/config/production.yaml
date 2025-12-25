@@ -1,0 +1,56 @@
+# Jetson Edge Gateway - Production Configuration
+
+# Logging configuration
+logging:
+  level: INFO
+  file: /var/log/wildcam/jetson-edge.log
+
+# Wildlife detector configuration
+detector:
+  model_path: /models/yolov8-wildlife.engine  # TensorRT engine file
+  confidence_threshold: 0.6
+  nms_threshold: 0.4
+  use_tensorrt: true
+  max_cameras: 8
+
+# Cloud sync configuration
+cloud:
+  api_url: ${CLOUD_API_URL:https://api.wildcam.example.com}
+  api_key: ${CLOUD_API_KEY}
+  sync_db_path: /data/sync_queue.db
+  batch_size: 10
+  sync_interval: 60  # seconds
+  max_retry_count: 5
+  retry_base_delay: 60  # seconds
+
+# ESP32 protocol handler configuration
+esp32:
+  host: 0.0.0.0
+  http_port: 8080
+  ws_port: 8081
+  node_timeout: 300  # seconds (5 minutes)
+
+# Camera sources (for direct camera connections)
+cameras:
+  - id: cam01
+    source: rtsp://192.168.1.101:8554/stream
+    enabled: true
+  - id: cam02
+    source: rtsp://192.168.1.102:8554/stream
+    enabled: true
+  # Add more cameras as needed
+
+# Video recording configuration
+recording:
+  enabled: true
+  codec: h265
+  output_dir: /data/recordings
+  max_duration: 300  # seconds per clip
+  motion_trigger: true
+
+# Storage management
+storage:
+  data_dir: /data
+  max_disk_usage: 80  # percentage
+  auto_cleanup: true
+  retention_days: 30

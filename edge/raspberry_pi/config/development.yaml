@@ -1,0 +1,38 @@
+# Raspberry Pi LoRa Gateway - Development Configuration
+
+# Logging configuration
+logging:
+  level: DEBUG
+  file: /tmp/wildcam/rpi-gateway-dev.log
+
+# LoRa radio configuration
+lora:
+  frequency: 915.0  # MHz
+  spreading_factor: 7
+  bandwidth: 125000  # Hz
+  coding_rate: 5
+  tx_power: 14  # Lower power for dev
+  use_sx1262: false
+  db_path: /tmp/wildcam/lora_gateway.db
+
+# MQTT broker configuration
+mqtt:
+  broker_host: ${MQTT_BROKER:localhost}
+  broker_port: ${MQTT_PORT:1883}
+  username: ${MQTT_USERNAME}
+  password: ${MQTT_PASSWORD}
+  client_id: wildcam_rpi_gateway_dev
+  use_tls: false
+  base_topic: wildcam/dev/lora
+  
+# REST API configuration
+api:
+  host: 0.0.0.0
+  port: 5000
+  enable_cors: true
+
+# Data retention
+retention:
+  packets_days: 7
+  detections_days: 14
+  telemetry_days: 7

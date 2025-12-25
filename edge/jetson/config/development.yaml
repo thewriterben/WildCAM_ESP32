@@ -1,0 +1,52 @@
+# Jetson Edge Gateway - Development Configuration
+
+# Logging configuration
+logging:
+  level: DEBUG
+  file: /tmp/wildcam/jetson-edge-dev.log
+
+# Wildlife detector configuration
+detector:
+  model_path: /models/yolov8-wildlife.onnx  # ONNX for development
+  confidence_threshold: 0.5
+  nms_threshold: 0.4
+  use_tensorrt: false  # Use ONNX for easier debugging
+  max_cameras: 4
+
+# Cloud sync configuration
+cloud:
+  api_url: ${CLOUD_API_URL:http://localhost:5000}
+  api_key: ${CLOUD_API_KEY:dev-api-key}
+  sync_db_path: /tmp/wildcam/sync_queue.db
+  batch_size: 5
+  sync_interval: 30  # seconds
+  max_retry_count: 3
+  retry_base_delay: 30  # seconds
+
+# ESP32 protocol handler configuration
+esp32:
+  host: 0.0.0.0
+  http_port: 8080
+  ws_port: 8081
+  node_timeout: 120  # seconds (2 minutes)
+
+# Camera sources (for direct camera connections)
+cameras:
+  - id: dev_cam01
+    source: 0  # Webcam
+    enabled: true
+
+# Video recording configuration
+recording:
+  enabled: false
+  codec: h264
+  output_dir: /tmp/wildcam/recordings
+  max_duration: 60  # seconds per clip
+  motion_trigger: true
+
+# Storage management
+storage:
+  data_dir: /tmp/wildcam/data
+  max_disk_usage: 90  # percentage
+  auto_cleanup: true
+  retention_days: 7
