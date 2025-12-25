@@ -48,7 +48,7 @@ class Detection:
     frame_number: int = 0
     device_id: str = ""
     location: Optional[Tuple[float, float]] = None
-    metadata: Dict[str, Any] = None
+    metadata: Optional[Dict[str, Any]] = None
     
     def to_dict(self) -> Dict:
         """Convert detection to dictionary"""
@@ -369,7 +369,16 @@ class IMX500WildlifeDetector:
             time.sleep(60)  # Sleep 1 minute during inactive hours
     
     def _detect_motion(self) -> bool:
-        """Detect motion using camera or PIR sensor"""
+        """
+        Detect motion using camera or PIR sensor
+        
+        TODO: Implement actual motion detection
+        - Option 1: Use PIR sensor (GPIO)
+        - Option 2: Use camera frame differencing
+        - Option 3: Use IMX500's built-in motion detection
+        
+        For now, returns False (placeholder for actual implementation)
+        """
         # Placeholder for motion detection
         # In real implementation, use camera frame differencing or PIR
         return False
@@ -378,18 +387,32 @@ class IMX500WildlifeDetector:
         """
         Process a single frame for wildlife detection
         
+        TODO: Implement actual IMX500 NPU inference
+        This is a placeholder that returns an empty list. In a real implementation:
+        1. Capture frame from camera
+        2. NPU inference happens automatically on-sensor
+        3. Parse detection results from IMX500
+        
+        Example real implementation:
+        ```python
+        detections = self.imx500.get_detections()
+        results = []
+        for det in detections:
+            results.append(Detection(
+                timestamp=datetime.now().isoformat(),
+                species=det.class_name,
+                confidence=det.confidence,
+                bbox=(det.x, det.y, det.width, det.height),
+                device_id=self.device_id,
+                frame_number=self.frame_count
+            ))
+        return results
+        ```
+        
         Returns:
             List of detections found in frame
         """
         # Placeholder for actual IMX500 NPU inference
-        # In real implementation:
-        # 1. Capture frame from camera
-        # 2. NPU inference happens automatically on-sensor
-        # 3. Parse detection results from IMX500
-        
-        # Example detection format from IMX500:
-        # detections = self.imx500.get_detections()
-        
         # For now, return empty list (no detections in placeholder)
         return []
     

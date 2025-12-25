@@ -11,11 +11,15 @@ import time
 import signal
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from edge.arducam import IMX500WildlifeDetector, IMX500Config
-from edge.arducam.config import CommunicationProtocol
+# Import from installed package
+try:
+    from edge.arducam import IMX500WildlifeDetector, IMX500Config
+    from edge.arducam.config import CommunicationProtocol
+except ImportError:
+    # Fallback for development - add parent to path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from edge.arducam import IMX500WildlifeDetector, IMX500Config
+    from edge.arducam.config import CommunicationProtocol
 
 
 def signal_handler(sig, frame):

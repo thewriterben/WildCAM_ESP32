@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Tests for IMX500 Wildlife Detector
 
@@ -7,18 +8,27 @@ Basic tests to validate configuration and detector initialization.
 import pytest
 import json
 from pathlib import Path
-import sys
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from edge.arducam import IMX500WildlifeDetector, IMX500Config
-from edge.arducam.config import (
-    CommunicationProtocol,
-    DetectionMode,
-    PRESET_CONFIGS
-)
-from edge.arducam.model_deployment import ModelConverter, ModelDeployer
+# Import from installed package
+try:
+    from edge.arducam import IMX500WildlifeDetector, IMX500Config
+    from edge.arducam.config import (
+        CommunicationProtocol,
+        DetectionMode,
+        PRESET_CONFIGS
+    )
+    from edge.arducam.model_deployment import ModelConverter, ModelDeployer
+except ImportError:
+    # Fallback for development - add parent to path
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from edge.arducam import IMX500WildlifeDetector, IMX500Config
+    from edge.arducam.config import (
+        CommunicationProtocol,
+        DetectionMode,
+        PRESET_CONFIGS
+    )
+    from edge.arducam.model_deployment import ModelConverter, ModelDeployer
 
 
 class TestIMX500Config:
