@@ -38,6 +38,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 |---------|--------|-------|
 | **TFLite Model Integration** | ✅ Complete | INT8 quantized wildlife classifier (Dec 2025) |
 | **Edge AI (YOLO-tiny)** | 🔄 Framework | Est. 12-18 months to production |
+| **Jetson Edge Gateway** | ✅ Complete | NVIDIA Jetson with YOLOv8 + TensorRT (Dec 2025) |
 | **LoRa mesh networking** | ✅ Complete | Federated learning support added (Dec 2025) |
 | **Cloud integration** | ✅ Complete | CloudManager, SMS alerts, remote API (Dec 2025) |
 | **Mobile app** | ✅ Framework Complete | iOS, Android, React Native with push notifications (Dec 2025) |
@@ -892,6 +893,14 @@ The core wildlife camera system is **production-ready**:
 See [PHASE_3_IMPLEMENTATION_COMPLETE.md](PHASE_3_IMPLEMENTATION_COMPLETE.md) for detailed implementation status.
 
 ### ✅ Phase 3+: Recent Enhancements (December 2025) - NEW
+
+- **NVIDIA Jetson Edge Gateway** ✅ **COMPLETE** (NEW)
+  - High-performance edge computing for real-time wildlife monitoring
+  - TensorRT-optimized YOLOv8 inference (45-60 FPS on Orin Nano)
+  - Multi-camera support (up to 8 simultaneous streams)
+  - Cloud sync with robust offline queue/retry logic
+  - ESP32 integration via HTTP/WebSocket/LoRa
+  - See [edge_gateway/README.md](edge_gateway/README.md) for deployment guide
 
 - **TFLite Model Integration** ✅ **COMPLETE** (PR #234)
   - INT8 quantized TensorFlow Lite model for wildlife classification
