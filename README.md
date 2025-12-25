@@ -82,6 +82,25 @@ See [MODEL_DEPLOYMENT.md](docs/MODEL_DEPLOYMENT.md) for detailed model deploymen
 
 See [SENSOR_INTEGRATION.md](SENSOR_INTEGRATION.md) for detailed setup instructions.
 
+### Raspberry Pi LoRa/MQTT Gateway (NEW) 🆕
+
+For scalable deployments with multiple ESP32-CAM nodes, a dedicated Raspberry Pi gateway aggregates data over LoRa mesh:
+
+- 📡 **LoRa Mesh Gateway** - Receive packets from 10+ ESP32 nodes simultaneously over long-range LoRa
+- 💾 **Local SQLite Storage** - Store detections, telemetry, and mesh health data with automatic rotation
+- 🔄 **MQTT Bridge** - Publish to local/cloud MQTT brokers (Mosquitto, AWS IoT, Azure IoT Hub)
+- 🌐 **REST API** - Query nodes, detections, telemetry via HTTP endpoints
+- ☁️ **Cloud Sync** - Batch upload with offline-first queue and retry logic
+- 📊 **Diagnostics** - System health, mesh network monitoring, and field deployment tools
+
+**Quick Start:**
+```bash
+cd gateway
+sudo ./install.sh
+```
+
+See [gateway/QUICKSTART.md](gateway/QUICKSTART.md) for 5-minute setup guide and [gateway/GATEWAY_SETUP.md](gateway/GATEWAY_SETUP.md) for complete documentation.
+
 ## Hardware Requirements
 
 ### Required Components

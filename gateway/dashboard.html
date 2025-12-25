@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WildCAM Gateway Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .status.online {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status.offline {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-card .label {
+            color: #999;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .node-list, .detection-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .node-item, .detection-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        
+        .node-item:last-child, .detection-item:last-child {
+            border-bottom: none;
+        }
+        
+        .node-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .node-id {
+            color: #999;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        
+        .node-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .battery {
+            color: #10b981;
+        }
+        
+        .battery.low {
+            color: #ef4444;
+        }
+        
+        .detection-species {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .detection-meta {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+        
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🦌 WildCAM Gateway Dashboard</h1>
+            <span class="status" id="gateway-status">Connecting...</span>
+        </div>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Active Nodes</h3>
+                <div class="value" id="stat-nodes">-</div>
+                <div class="label">ESP32 cameras online</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Detections Today</h3>
+                <div class="value" id="stat-detections">-</div>
+                <div class="label">Wildlife sightings</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Packets Received</h3>
+                <div class="value" id="stat-packets">-</div>
+                <div class="label">Last 24 hours</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Gateway Uptime</h3>
+                <div class="value" id="stat-uptime">-</div>
+                <div class="label">Hours online</div>
+            </div>
+        </div>
+        
+        <div class="content-grid">
+            <div class="card">
+                <h2>📡 Active Nodes</h2>
+                <div class="node-list" id="node-list">
+                    <p style="color: #999;">Loading nodes...</p>
+                </div>
+                <button class="refresh-btn" onclick="loadNodes()">Refresh</button>
+            </div>
+            
+            <div class="card">
+                <h2>🦌 Recent Detections</h2>
+                <div class="detection-list" id="detection-list">
+                    <p style="color: #999;">Loading detections...</p>
+                </div>
+                <button class="refresh-btn" onclick="loadDetections()">Refresh</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuration - Update this to your gateway IP
+        const API_BASE = 'http://localhost:5000/api';
+        
+        // Auto-refresh interval (ms)
+        const REFRESH_INTERVAL = 30000; // 30 seconds
+        
+        // Check gateway health
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                const statusEl = document.getElementById('gateway-status');
+                if (data.status === 'healthy') {
+                    statusEl.textContent = 'Online';
+                    statusEl.className = 'status online';
+                } else {
+                    statusEl.textContent = 'Degraded';
+                    statusEl.className = 'status offline';
+                }
+                
+                hideError();
+            } catch (error) {
+                const statusEl = document.getElementById('gateway-status');
+                statusEl.textContent = 'Offline';
+                statusEl.className = 'status offline';
+                showError('Cannot connect to gateway. Please check if the gateway is running.');
+            }
+        }
+        
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const data = await response.json();
+                
+                document.getElementById('stat-nodes').textContent = data.database_stats?.active_nodes || 0;
+                document.getElementById('stat-detections').textContent = data.database_stats?.total_detections || 0;
+                document.getElementById('stat-packets').textContent = data.database_stats?.packets_24h || 0;
+                
+                const uptime = data.lora_stats?.uptime_seconds || 0;
+                document.getElementById('stat-uptime').textContent = (uptime / 3600).toFixed(1);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        // Load nodes
+        async function loadNodes() {
+            try {
+                const response = await fetch(`${API_BASE}/nodes`);
+                const data = await response.json();
+                
+                const listEl = document.getElementById('node-list');
+                
+                if (data.nodes && data.nodes.length > 0) {
+                    listEl.innerHTML = data.nodes.map(node => {
+                        const batteryClass = node.battery_level < 20 ? 'battery low' : 'battery';
+                        const lastSeen = new Date(node.last_seen).toLocaleString();
+                        
+                        return `
+                            <div class="node-item">
+                                <div class="node-name">${node.node_name || 'Unknown'}</div>
+                                <div class="node-id">${node.node_id}</div>
+                                <div class="node-meta">
+                                    <span class="${batteryClass}">🔋 ${node.battery_level || '?'}%</span>
+                                    <span>📶 ${node.last_rssi || '?'} dBm</span>
+                                    <span>📦 ${node.total_packets || 0} packets</span>
+                                </div>
+                                <div class="node-meta">
+                                    <span style="font-size: 12px; color: #999;">Last seen: ${lastSeen}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    listEl.innerHTML = '<p style="color: #999;">No nodes detected yet</p>';
+                }
+            } catch (error) {
+                console.error('Error loading nodes:', error);
+                document.getElementById('node-list').innerHTML = 
+                    '<p style="color: #ef4444;">Error loading nodes</p>';
+            }
+        }
+        
+        // Load detections
+        async function loadDetections() {
+            try {
+                const response = await fetch(`${API_BASE}/detections?limit=10`);
+                const data = await response.json();
+                
+                const listEl = document.getElementById('detection-list');
+                
+                if (data.detections && data.detections.length > 0) {
+                    listEl.innerHTML = data.detections.map(detection => {
+                        const timestamp = new Date(detection.timestamp).toLocaleString();
+                        const confidence = (detection.confidence * 100).toFixed(0);
+                        
+                        return `
+                            <div class="detection-item">
+                                <div class="detection-species">${detection.species || 'Unknown Species'}</div>
+                                <div class="detection-meta">
+                                    <div>Confidence: ${confidence}% | Node: ${detection.node_id}</div>
+                                    <div style="font-size: 12px; color: #999; margin-top: 3px;">${timestamp}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    listEl.innerHTML = '<p style="color: #999;">No detections yet</p>';
+                }
+            } catch (error) {
+                console.error('Error loading detections:', error);
+                document.getElementById('detection-list').innerHTML = 
+                    '<p style="color: #ef4444;">Error loading detections</p>';
+            }
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+        
+        // Hide error message
+        function hideError() {
+            document.getElementById('error-message').style.display = 'none';
+        }
+        
+        // Initialize dashboard
+        function init() {
+            checkHealth();
+            loadStats();
+            loadNodes();
+            loadDetections();
+            
+            // Auto-refresh
+            setInterval(() => {
+                checkHealth();
+                loadStats();
+                loadNodes();
+                loadDetections();
+            }, REFRESH_INTERVAL);
+        }
+        
+        // Start when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
