@@ -1,0 +1,90 @@
+{
+  "deployment_name": "Arctic Wildlife Monitoring with Satellite Uplink",
+  "description": "IMX500 edge node for arctic species monitoring with satellite communication for remote areas",
+  
+  "device_config": {
+    "device_id": "imx500_arctic_001",
+    "location": "Svalbard, Norway",
+    "coordinates": [78.2232, 15.6267],
+    "deployment_date": "2025-12-25",
+    "deployment_name": "Arctic Wildlife Monitoring"
+  },
+  
+  "camera_settings": {
+    "resolution": [640, 640],
+    "frame_rate": 15,
+    "detection_threshold": 0.7
+  },
+  
+  "communication": {
+    "protocol": "satellite",
+    "fallback_protocols": ["lora"],
+    
+    "mqtt": {
+      "broker": null,
+      "port": 1883,
+      "topic_prefix": "wildcam/imx500",
+      "username": null,
+      "password": null,
+      "use_tls": false
+    },
+    
+    "lora": {
+      "frequency": 868.0,
+      "spreading_factor": 12,
+      "bandwidth": 125.0,
+      "tx_power": 20,
+      "sync_word": 18
+    },
+    
+    "rest_api": {
+      "endpoint": null,
+      "token": null
+    }
+  },
+  
+  "detection": {
+    "mode": "motion_triggered",
+    "metadata_only": true,
+    "capture_high_res_on_detect": true,
+    "target_species": [
+      "polar_bear",
+      "arctic_fox",
+      "reindeer",
+      "walrus",
+      "snowy_owl"
+    ],
+    "min_detection_interval_sec": 30
+  },
+  
+  "model": {
+    "path": "/home/pi/models/arctic_wildlife_v1.rpk",
+    "update_interval_hours": 168
+  },
+  
+  "storage": {
+    "store_and_forward": true,
+    "max_storage_mb": 4096,
+    "storage_path": "/home/pi/wildcam/storage",
+    "sync_interval_minutes": 360
+  },
+  
+  "power_management": {
+    "power_save_enabled": true,
+    "sleep_duration_sec": 300,
+    "low_battery_threshold": 3.5
+  },
+  
+  "advanced": {
+    "enable_pose_estimation": false,
+    "enable_tracking": true,
+    "max_tracks": 5,
+    "track_timeout_sec": 60
+  },
+  
+  "cloud_integration": {
+    "enabled": true,
+    "provider": "aws",
+    "bucket": "wildcam-arctic-monitoring"
+  }
+}
