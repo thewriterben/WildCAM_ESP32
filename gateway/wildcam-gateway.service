@@ -1,0 +1,32 @@
+[Unit]
+Description=WildCAM LoRa Gateway Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/wildcam-gateway
+ExecStart=/usr/bin/python3 /opt/wildcam-gateway/gateway.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables (customize as needed)
+Environment="GATEWAY_ID=gateway_001"
+Environment="GATEWAY_NAME=WildCAM Gateway"
+Environment="LORA_FREQUENCY=915.0"
+Environment="MQTT_ENABLED=true"
+Environment="MQTT_BROKER_HOST=localhost"
+Environment="API_ENABLED=true"
+Environment="API_PORT=5000"
+Environment="LOG_LEVEL=INFO"
+Environment="LOG_FILE=/var/log/wildcam-gateway/gateway.log"
+
+# Limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
