@@ -50,10 +50,13 @@ class ESP32Message:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ESP32Message':
         """Create message from dictionary"""
+        timestamp_str = data.get('timestamp')
+        timestamp = datetime.fromisoformat(timestamp_str) if timestamp_str else datetime.utcnow()
+        
         return cls(
             node_id=data['node_id'],
             message_type=ESP32MessageType(data['message_type']),
-            timestamp=datetime.fromisoformat(data.get('timestamp', datetime.utcnow().isoformat())),
+            timestamp=timestamp,
             sequence=data.get('sequence', 0),
             payload=data.get('payload', {})
         )
