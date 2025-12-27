@@ -1,0 +1,32 @@
+# Jetson Edge Gateway - Python Requirements
+
+# Core async framework
+aiohttp>=3.9.0
+aiofiles>=23.2.0
+asyncio>=3.4.3
+
+# Database
+aiosqlite>=0.19.0
+
+# YAML configuration
+PyYAML>=6.0.1
+
+# Computer vision and ML
+numpy>=1.24.0
+opencv-python>=4.8.0
+# NOTE: TensorRT and PyTorch are typically pre-installed on Jetson
+# or installed via NVIDIA SDK Manager
+# tensorrt>=8.6.0  # Install via NVIDIA SDK
+# torch>=2.0.0     # Install via NVIDIA SDK
+
+# ONNX Runtime (for non-TensorRT inference)
+onnxruntime-gpu>=1.16.0
+
+# Object tracking
+filterpy>=1.4.5  # For Kalman filtering in tracking
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Monitoring and logging
+prometheus-client>=0.19.0

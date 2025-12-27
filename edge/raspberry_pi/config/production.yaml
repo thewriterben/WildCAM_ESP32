@@ -1,0 +1,43 @@
+# Raspberry Pi LoRa Gateway - Production Configuration
+
+# Logging configuration
+logging:
+  level: INFO
+  file: /var/log/wildcam/rpi-gateway.log
+
+# LoRa radio configuration
+lora:
+  frequency: 915.0  # MHz (915 for US, 868 for EU, 433 for Asia)
+  spreading_factor: 7  # 7-12 (higher = longer range, lower data rate)
+  bandwidth: 125000  # Hz (125kHz, 250kHz, 500kHz)
+  coding_rate: 5  # 5-8
+  tx_power: 17  # dBm (2-20)
+  use_sx1262: false  # Set true if using SX1262 module
+  db_path: /data/lora_gateway.db
+
+# MQTT broker configuration
+mqtt:
+  broker_host: ${MQTT_BROKER:localhost}
+  broker_port: ${MQTT_PORT:1883}
+  username: ${MQTT_USERNAME}
+  password: ${MQTT_PASSWORD}
+  client_id: wildcam_rpi_gateway
+  use_tls: false
+  base_topic: wildcam/lora
+  # For AWS IoT
+  # broker_host: xxxxx.iot.us-east-1.amazonaws.com
+  # broker_port: 8883
+  # use_tls: true
+  # cert_path: /etc/wildcam/certs/
+  
+# REST API configuration
+api:
+  host: 0.0.0.0
+  port: 5000
+  enable_cors: true
+
+# Data retention
+retention:
+  packets_days: 30
+  detections_days: 90
+  telemetry_days: 30
