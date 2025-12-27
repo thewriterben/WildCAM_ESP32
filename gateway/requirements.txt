@@ -1,0 +1,31 @@
+# Python requirements for WildCAM Gateway
+
+# Core dependencies
+flask>=2.3.0
+flask-cors>=4.0.0
+paho-mqtt>=1.6.1
+requests>=2.31.0
+
+# System monitoring
+psutil>=5.9.0
+
+# Database (SQLite is built-in to Python)
+# sqlite3 is included in Python standard library
+
+# LoRa radio support (for SX127x modules on Raspberry Pi)
+# Note: This requires GPIO access and may need to be installed separately
+# RPi.LoRa>=0.4.0  # Uncomment if using SX127x LoRa modules
+
+# Optional: For SX1262 support
+# pyLoraRFM9x>=1.0.0  # Alternative LoRa library
+
+# Development and testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.4.0
+
+# Optional: For advanced features
+python-dotenv>=1.0.0  # Load environment variables from .env file
+pytz>=2023.3  # Timezone support
