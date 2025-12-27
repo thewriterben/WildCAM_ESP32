@@ -1,0 +1,41 @@
+# NVIDIA Jetson Edge Gateway Requirements
+
+# Core dependencies
+numpy>=1.21.0
+opencv-python>=4.5.0
+pyyaml>=6.0
+
+# TensorRT (pre-installed with JetPack)
+# tensorrt>=8.0.0  # Uncomment if using pip-installed TensorRT
+
+# PyCUDA for TensorRT
+pycuda>=2021.1
+
+# HTTP/WebSocket server
+aiohttp>=3.8.0
+python-socketio>=5.7.0
+
+# Serial communication (for LoRa)
+pyserial>=3.5
+
+# Database
+# For offline queue management
+# sqlite3 is built-in with Python
+
+# HTTP client for cloud sync
+requests>=2.28.0
+
+# Logging and monitoring (optional)
+colorlog>=6.7.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.20.0
+black>=22.0.0
+flake8>=5.0.0
+
+# Optional: Performance monitoring
+psutil>=5.9.0
+
+# Optional: Image processing
+Pillow>=9.0.0
