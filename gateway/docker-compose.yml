@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  gateway:
+    build: .
+    container_name: wildcam-gateway
+    restart: unless-stopped
+    privileged: true  # Required for GPIO/SPI access
+    devices:
+      - /dev/spidev0.0:/dev/spidev0.0
+      - /dev/gpiomem:/dev/gpiomem
+    ports:
+      - "5000:5000"
+    volumes:
+      - gateway-data:/data
+      - /var/log/wildcam-gateway:/data/logs
+    environment:
+      - GATEWAY_ID=gateway_001
+      - GATEWAY_NAME=WildCAM Gateway
+      - LORA_FREQUENCY=915.0
+      - LORA_SPREADING_FACTOR=7
+      - MQTT_ENABLED=true
+      - MQTT_BROKER_HOST=mosquitto
+      - MQTT_BROKER_PORT=1883
+      - API_ENABLED=true
+      - API_PORT=5000
+      - CLOUD_SYNC_ENABLED=true
+      - LOG_LEVEL=INFO
+    depends_on:
+      - mosquitto
+    networks:
+      - wildcam-network
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: wildcam-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-logs:/mosquitto/log
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks:
+      - wildcam-network
+
+  # Optional: InfluxDB for time-series data
+  influxdb:
+    image: influxdb:2.7
+    container_name: wildcam-influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=wildcam2024
+      - DOCKER_INFLUXDB_INIT_ORG=wildcam
+      - DOCKER_INFLUXDB_INIT_BUCKET=camera_data
+    networks:
+      - wildcam-network
+
+  # Optional: Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: wildcam-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=wildcam2024
+    depends_on:
+      - influxdb
+    networks:
+      - wildcam-network
+
+volumes:
+  gateway-data:
+  mosquitto-data:
+  mosquitto-logs:
+  influxdb-data:
+  grafana-data:
+
+networks:
+  wildcam-network:
+    driver: bridge

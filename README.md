@@ -38,6 +38,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 |---------|--------|-------|
 | **TFLite Model Integration** | ✅ Complete | INT8 quantized wildlife classifier (Dec 2025) |
 | **Edge AI (YOLO-tiny)** | 🔄 Framework | Est. 12-18 months to production |
+| **Jetson Edge Gateway** | ✅ Complete | NVIDIA Jetson with YOLOv8 + TensorRT (Dec 2025) |
 | **LoRa mesh networking** | ✅ Complete | Federated learning support added (Dec 2025) |
 | **Cloud integration** | ✅ Complete | CloudManager, SMS alerts, remote API (Dec 2025) |
 | **Mobile app** | ✅ Framework Complete | iOS, Android, React Native with push notifications (Dec 2025) |
@@ -81,6 +82,25 @@ See [MODEL_DEPLOYMENT.md](docs/MODEL_DEPLOYMENT.md) for detailed model deploymen
 - 💡 **Light Sensor (BH1750/LDR)** - Day/night detection for adaptive camera settings
 
 See [SENSOR_INTEGRATION.md](SENSOR_INTEGRATION.md) for detailed setup instructions.
+
+### Raspberry Pi LoRa/MQTT Gateway (NEW) 🆕
+
+For scalable deployments with multiple ESP32-CAM nodes, a dedicated Raspberry Pi gateway aggregates data over LoRa mesh:
+
+- 📡 **LoRa Mesh Gateway** - Receive packets from 10+ ESP32 nodes simultaneously over long-range LoRa
+- 💾 **Local SQLite Storage** - Store detections, telemetry, and mesh health data with automatic rotation
+- 🔄 **MQTT Bridge** - Publish to local/cloud MQTT brokers (Mosquitto, AWS IoT, Azure IoT Hub)
+- 🌐 **REST API** - Query nodes, detections, telemetry via HTTP endpoints
+- ☁️ **Cloud Sync** - Batch upload with offline-first queue and retry logic
+- 📊 **Diagnostics** - System health, mesh network monitoring, and field deployment tools
+
+**Quick Start:**
+```bash
+cd gateway
+sudo ./install.sh
+```
+
+See [gateway/QUICKSTART.md](gateway/QUICKSTART.md) for 5-minute setup guide and [gateway/GATEWAY_SETUP.md](gateway/GATEWAY_SETUP.md) for complete documentation.
 
 ## Hardware Requirements
 
@@ -892,6 +912,14 @@ The core wildlife camera system is **production-ready**:
 See [PHASE_3_IMPLEMENTATION_COMPLETE.md](PHASE_3_IMPLEMENTATION_COMPLETE.md) for detailed implementation status.
 
 ### ✅ Phase 3+: Recent Enhancements (December 2025) - NEW
+
+- **NVIDIA Jetson Edge Gateway** ✅ **COMPLETE** (NEW)
+  - High-performance edge computing for real-time wildlife monitoring
+  - TensorRT-optimized YOLOv8 inference (45-60 FPS on Orin Nano)
+  - Multi-camera support (up to 8 simultaneous streams)
+  - Cloud sync with robust offline queue/retry logic
+  - ESP32 integration via HTTP/WebSocket/LoRa
+  - See [edge_gateway/README.md](edge_gateway/README.md) for deployment guide
 
 - **TFLite Model Integration** ✅ **COMPLETE** (PR #234)
   - INT8 quantized TensorFlow Lite model for wildlife classification

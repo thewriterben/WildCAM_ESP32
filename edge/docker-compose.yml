@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # NVIDIA Jetson Edge Gateway
+  jetson-gateway:
+    build:
+      context: ..
+      dockerfile: edge/jetson/Dockerfile
+    container_name: wildcam-jetson-gateway
+    runtime: nvidia
+    environment:
+      - CLOUD_API_URL=${CLOUD_API_URL:-https://api.wildcam.example.com}
+      - CLOUD_API_KEY=${CLOUD_API_KEY}
+    volumes:
+      - jetson-data:/data
+      - jetson-models:/models
+      - ./jetson/config:/etc/wildcam/jetson:ro
+      - jetson-logs:/var/log/wildcam
+    ports:
+      - "8080:8080"  # HTTP API
+      - "8081:8081"  # WebSocket
+    restart: unless-stopped
+    networks:
+      - wildcam-edge
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Raspberry Pi LoRa Gateway
+  rpi-gateway:
+    build:
+      context: ..
+      dockerfile: edge/raspberry_pi/Dockerfile
+    container_name: wildcam-rpi-gateway
+    privileged: true  # Required for GPIO/SPI access
+    environment:
+      - MQTT_BROKER=${MQTT_BROKER:-localhost}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+    volumes:
+      - rpi-data:/data
+      - ./raspberry_pi/config:/etc/wildcam/rpi:ro
+      - rpi-logs:/var/log/wildcam
+      - /dev/gpiomem:/dev/gpiomem  # GPIO access
+      - /dev/spidev0.0:/dev/spidev0.0  # SPI access
+    ports:
+      - "5000:5000"  # REST API
+    restart: unless-stopped
+    networks:
+      - wildcam-edge
+    devices:
+      - /dev/gpiomem
+      - /dev/spidev0.0
+
+  # Local MQTT Broker (Mosquitto)
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: wildcam-mqtt-broker
+    volumes:
+      - mqtt-config:/mosquitto/config
+      - mqtt-data:/mosquitto/data
+      - mqtt-logs:/mosquitto/log
+    ports:
+      - "1883:1883"  # MQTT
+      - "9001:9001"  # WebSocket
+    restart: unless-stopped
+    networks:
+      - wildcam-edge
+
+  # TimescaleDB for time-series data (optional)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: wildcam-timescaledb
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-wildcam}
+      - POSTGRES_DB=wildcam_edge
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - wildcam-edge
+
+  # Grafana for monitoring (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: wildcam-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - wildcam-edge
+    depends_on:
+      - timescaledb
+
+networks:
+  wildcam-edge:
+    driver: bridge
+
+volumes:
+  jetson-data:
+  jetson-models:
+  jetson-logs:
+  rpi-data:
+  rpi-logs:
+  mqtt-config:
+  mqtt-data:
+  mqtt-logs:
+  timescale-data:
+  grafana-data:

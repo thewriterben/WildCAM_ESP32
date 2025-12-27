@@ -1,0 +1,111 @@
+# Example Configuration for WildCAM Edge Gateway
+
+# Gateway identification
+gateway_id: "jetson_gateway_001"
+
+# Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_level: "INFO"
+
+# Camera configurations
+cameras:
+  # USB Camera Example
+  - name: "cam_front"
+    source: "/dev/video0"
+    type: "usb"
+    fps: 30
+    resolution: [1920, 1080]
+    enabled: true
+  
+  # RTSP Camera Example
+  - name: "cam_trail"
+    source: "rtsp://192.168.1.100:554/stream"
+    type: "rtsp"
+    fps: 30
+    resolution: [1920, 1080]
+    enabled: true
+  
+  # IP Camera Example
+  - name: "cam_perimeter"
+    source: "http://192.168.1.101:8080/video"
+    type: "ip"
+    fps: 25
+    resolution: [1280, 720]
+    enabled: false
+
+# Detection/Inference Configuration
+detection:
+  # Path to TensorRT engine file
+  model_path: "models/yolov8n_wildlife_trt.engine"
+  
+  # Minimum confidence threshold for valid detections (0.0-1.0)
+  confidence_threshold: 0.6
+  
+  # Non-maximum suppression threshold (0.0-1.0)
+  nms_threshold: 0.45
+  
+  # Model input size [width, height]
+  input_size: [640, 640]
+  
+  # Wildlife species classes to detect
+  classes:
+    - "deer"
+    - "bear"
+    - "fox"
+    - "rabbit"
+    - "bird"
+    - "coyote"
+    - "raccoon"
+    - "skunk"
+    - "squirrel"
+    - "turkey"
+
+# Cloud Synchronization Configuration
+cloud:
+  # WildCAM cloud API URL
+  api_url: "https://api.wildcam.example.com"
+  
+  # API authentication key (required for cloud sync)
+  api_key: "your-api-key-here"
+  
+  # Sync interval in seconds (how often to sync with cloud)
+  sync_interval: 300
+  
+  # Maximum items in offline queue
+  offline_queue_size: 1000
+  
+  # Maximum retry attempts for failed uploads
+  max_retries: 5
+  
+  # Number of items to sync in one batch
+  batch_size: 50
+  
+  # Whether to upload detection images to cloud
+  upload_images: true
+
+# ESP32 Field Node Communication Configuration
+esp32:
+  # HTTP API port for ESP32 nodes
+  http_port: 8080
+  
+  # WebSocket port for real-time communication
+  websocket_port: 8081
+  
+  # LoRa gateway serial port (set to null if not using LoRa)
+  lora_gateway: "/dev/ttyUSB0"
+  
+  # LoRa serial baud rate
+  lora_baudrate: 115200
+
+# Storage Configuration
+storage:
+  # Directory to save detection images
+  detections_dir: "data/detections"
+  
+  # Directory for log files
+  logs_dir: "logs"
+  
+  # Path to offline queue database
+  queue_db: "data/sync_queue.db"
+  
+  # Auto-delete detection images older than this many days (0 = never delete)
+  max_detection_age_days: 30
