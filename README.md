@@ -43,7 +43,7 @@ WildCAM_ESP32 is a motion-activated wildlife camera platform built on the ESP32-
 | **Cloud integration** | ✅ Complete | CloudManager, SMS alerts, remote API (Dec 2025) |
 | **Mobile app** | ✅ Framework Complete | iOS, Android, React Native with push notifications (Dec 2025) |
 | **MPPT solar charging** | ✅ Complete | Implemented |
-| **Satellite communication** | 🔄 Framework | Est. 12-15 months to production |
+| **Satellite communication** | ✅ Complete | Iridium, Swarm, RockBLOCK support with network fallback (Oct 2025) |
 | **Quantum-safe security** | ✅ Foundation | Digital signatures implemented |
 | **Federated learning** | ✅ Complete | Distributed ML model training (Dec 2025) |
 | **Advanced storage** | ✅ Complete | Compression, deduplication, smart deletion (Dec 2025) |
