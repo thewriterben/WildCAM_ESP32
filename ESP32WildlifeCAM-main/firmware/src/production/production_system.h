@@ -34,6 +34,11 @@
 #include "../power_manager.h"
 #include "../multi_board/multi_board_system.h"
 
+// Satellite Communication Integration
+#include "../satellite_comm.h"
+#include "../satellite_integration.h"
+#include "../network_selector.h"
+
 // Production System Status
 enum ProductionStatus {
     PROD_INITIALIZING,
@@ -70,6 +75,16 @@ struct ProductionConfig {
     bool enableSecurity;
     bool enableMultiSite;
     
+    // Satellite Communication Settings
+    bool enableSatellite;           // Enable satellite communication
+    SatelliteModule satelliteModule; // Satellite module type (Iridium, Swarm, RockBLOCK)
+    uint16_t satelliteTransmitInterval; // Transmission interval in seconds
+    uint8_t maxSatelliteMessagesDaily; // Maximum daily satellite messages
+    float maxSatelliteCostDaily;    // Maximum daily satellite cost ($)
+    bool satelliteCostOptimization; // Enable cost optimization for satellite
+    bool satelliteEmergencyOnly;    // Use satellite only for emergencies
+    bool satelliteAutoFallback;     // Auto-fallback to satellite when other networks unavailable
+    
     // Performance targets
     float targetUptime;            // Target uptime percentage (99.99%)
     uint32_t maxResponseTime;      // Maximum response time (ms)
@@ -86,6 +101,9 @@ struct ProductionConfig {
         scenario(SCENARIO_CONSERVATION), deploymentId(""), siteId(""), networkId(""),
         enableOTA(true), enableCloudSync(true), enableAdvancedAI(true),
         enableEnvironmentalAdaptation(true), enableSecurity(true), enableMultiSite(false),
+        enableSatellite(false), satelliteModule(MODULE_SWARM), satelliteTransmitInterval(3600),
+        maxSatelliteMessagesDaily(24), maxSatelliteCostDaily(25.0), satelliteCostOptimization(true),
+        satelliteEmergencyOnly(false), satelliteAutoFallback(true),
         targetUptime(99.99), maxResponseTime(5000), maxDetectionLatency(2000),
         minBatteryLife(30.0), conservationMode(true), endangeredSpeciesAlert(true),
         poachingDetection(true), habitatMonitoring(true) {}
@@ -107,6 +125,7 @@ struct SystemHealthMetrics {
     bool detectionHealthy;        // Species detection health
     bool cloudHealthy;            // Cloud integration health
     bool securityHealthy;         // Security system health
+    bool satelliteHealthy;        // Satellite communication health
     
     // Performance metrics
     uint32_t averageResponseTime; // Average response time
@@ -121,14 +140,24 @@ struct SystemHealthMetrics {
     uint32_t dataTransmitted;     // Data transmitted (bytes)
     uint32_t dataReceived;        // Data received (bytes)
     
+    // Satellite metrics
+    bool satelliteAvailable;      // Satellite network availability
+    int satelliteSignalStrength;  // Satellite signal quality
+    uint32_t satelliteMessagesSent; // Satellite messages sent today
+    float satelliteCostToday;     // Satellite cost today ($)
+    uint32_t storedSatelliteMessages; // Messages queued for satellite
+    bool satelliteEmergencyMode;  // Satellite emergency mode active
+    
     SystemHealthMetrics() : 
         overallHealth(100.0), status(PROD_INITIALIZING), uptime(0),
         lastErrorTime(0), lastError(""), otaHealthy(true), configHealthy(true),
         environmentalHealthy(true), detectionHealthy(true), cloudHealthy(true),
-        securityHealthy(true), averageResponseTime(0), detectionCount24h(0),
+        securityHealthy(true), satelliteHealthy(true), averageResponseTime(0), detectionCount24h(0),
         batteryLevel(100.0), memoryUsage(0.0), cpuUsage(0.0),
         networkConnected(false), signalStrength(-70), dataTransmitted(0),
-        dataReceived(0) {}
+        dataReceived(0), satelliteAvailable(false), satelliteSignalStrength(-100),
+        satelliteMessagesSent(0), satelliteCostToday(0.0), storedSatelliteMessages(0),
+        satelliteEmergencyMode(false) {}
 };
 
 // Production Event
@@ -194,6 +223,21 @@ public:
     bool analyzeSpeciesTrends();
     bool generateConservationReport();
     bool checkConservationAlerts();
+    
+    // Satellite Communication Management
+    bool initializeSatelliteCommunication();
+    bool sendViaSatellite(const String& message, SatelliteMessagePriority priority = SAT_PRIORITY_NORMAL);
+    bool sendWildlifeAlertViaSatellite(const String& species, float confidence);
+    bool sendEmergencyViaSatellite(const String& emergency);
+    bool checkSatelliteNetwork();
+    bool optimizeSatelliteUsage();
+    bool processSatelliteQueue();
+    bool updateSatelliteConfiguration(const SatelliteConfig& config);
+    SatelliteConfig getSatelliteConfiguration() const;
+    bool isSatelliteAvailable() const;
+    bool isSatelliteEmergencyMode() const;
+    float getSatelliteCostToday() const;
+    size_t getSatelliteStoredMessageCount() const;
     
     // Cloud and enterprise features
     bool syncWithCloud();
@@ -293,6 +337,13 @@ private:
     CloudIntegrator* cloudIntegrator_;
     DataProtector* dataProtector_;
     
+    // Satellite communication components
+    SatelliteComm* satelliteComm_;
+    NetworkSelector* networkSelector_;
+    bool satelliteInitialized_;
+    uint32_t lastSatelliteCheck_;
+    uint32_t lastSatelliteQueueProcess_;
+    
     // Event tracking
     std::vector<ProductionEvent> eventHistory_;
     std::vector<ProductionEvent> criticalEvents_;
@@ -354,6 +405,12 @@ private:
     bool coordinateDataFlow();
     bool manageDataPriorities();
     bool optimizeDataTransmission();
+    
+    // Satellite communication helpers
+    bool initializeSatelliteModule();
+    void updateSatelliteHealthMetrics();
+    bool configureSatelliteForScenario(DeploymentScenario scenario);
+    bool attemptSatelliteFallback(const String& message, SatelliteMessagePriority priority);
 };
 
 // Global production system instance
@@ -371,6 +428,16 @@ bool isProductionOperational();
 String getProductionStatus();
 bool hasProductionErrors();
 std::vector<String> getProductionAlerts();
+
+// Satellite Communication Utility Functions
+bool initializeProductionSatellite();
+bool sendProductionSatelliteMessage(const String& message, SatelliteMessagePriority priority = SAT_PRIORITY_NORMAL);
+bool sendProductionEmergencyAlert(const String& emergency);
+bool isProductionSatelliteAvailable();
+float getProductionSatelliteCost();
+bool checkAndUpdateFirmware();
+bool isCloudConnected();
+bool syncAllData();
 
 // Phase 4 integration with existing phases
 namespace Phase4Integration {
