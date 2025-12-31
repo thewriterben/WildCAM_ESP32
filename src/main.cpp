@@ -509,7 +509,21 @@ void loop() {
                 LOG_INFO("Image saved: %s (size: %d bytes)", filepath.c_str(), fb->len);
                 Serial.printf("Image saved successfully: %s\n", filepath.c_str());
                 
-
+                // Create metadata JSON document
+                StaticJsonDocument<1024> metadata;
+                
+                // Add timestamp with proper time source
+                #if TIME_MANAGEMENT_ENABLED
+                if (timeManager.isTimeSet()) {
+                    char timestamp[30];
+                    timeManager.getTimestamp(timestamp, sizeof(timestamp));
+                    metadata["timestamp"] = timestamp;
+                    metadata["time_source"] = timeManager.getTimeSourceString();
+                } else {
+                    metadata["timestamp"] = millis();
+                    metadata["time_source"] = "millis";
+                }
+                #else
                 metadata["timestamp"] = millis();
                 metadata["time_source"] = "millis";
                 #endif

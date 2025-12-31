@@ -1,7 +1,9 @@
 # 📊 WildCAM_ESP32 Implementation Status
 
-**Last Updated**: December 23, 2025  
+**Last Updated**: December 31, 2025  
 **Document Purpose**: Provide honest, detailed status of every major feature across both core system and enterprise platform
+
+> **Recent Bug Fix (Dec 31, 2025)**: Critical bug in `src/main.cpp` metadata handling was fixed. See [AUDIT_FINDINGS.md](AUDIT_FINDINGS.md) for details.
 
 ---
 
