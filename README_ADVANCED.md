@@ -268,7 +268,7 @@ The AI-Thinker ESP32-CAM has **limited available GPIO pins** (5-8 usable), preve
 
 **Vision**: Deploy wildlife monitoring in areas with no cellular or WiFi coverage.
 
-✅ **Current Status**: **COMPLETE** - Production-ready implementation available in `ESP32WildlifeCAM-main/`
+✅ **Current Status: COMPLETE** - Production-ready implementation available in `ESP32WildlifeCAM-main/`
 - Full hardware drivers for Iridium, Swarm, and RockBLOCK modules
 - Multi-network fallback protocol (WiFi > LoRa > Cellular > Satellite)
 - Emergency mode with priority bypass
