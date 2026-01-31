@@ -46,6 +46,16 @@ CameraHandler::~CameraHandler() {
     Serial.println("CameraHandler: Destructor completed");
 }
 
+/**
+ * @brief Maximum number of initialization retry attempts
+ */
+static const uint8_t MAX_INIT_RETRIES = 3;
+
+/**
+ * @brief Delay between retry attempts in milliseconds
+ */
+static const uint32_t RETRY_DELAY_MS = 500;
+
 esp_err_t CameraHandler::initialize(const CameraConfig& user_config) {
     Serial.println("CameraHandler: Initializing with user configuration...");
     uint32_t start_time = millis();
@@ -107,24 +117,65 @@ esp_err_t CameraHandler::initialize(const CameraConfig& user_config) {
         return pin_result;
     }
     
-    // Initialize ESP camera
-    esp_err_t err = esp_camera_init(&config);
+    // Initialize ESP camera with retry logic for edge cases
+    esp_err_t err = ESP_FAIL;
+    uint8_t retry_count = 0;
+    
+    while (retry_count < MAX_INIT_RETRIES && err != ESP_OK) {
+        if (retry_count > 0) {
+            Serial.printf("CameraHandler: Retry attempt %d/%d after %lu ms delay\n", 
+                         retry_count, MAX_INIT_RETRIES - 1, RETRY_DELAY_MS);
+            delay(RETRY_DELAY_MS);
+            
+            // Progressive recovery: adjust clock frequency on retries
+            if (retry_count == 1 && config.xclk_freq_hz > 16000000) {
+                Serial.println("CameraHandler: Reducing XCLK frequency for compatibility");
+                config.xclk_freq_hz = 16000000; // Try lower clock
+            } else if (retry_count == 2 && config.xclk_freq_hz > 10000000) {
+                Serial.println("CameraHandler: Reducing XCLK to minimum for stability");
+                config.xclk_freq_hz = 10000000; // Minimum stable clock
+            }
+        }
+        
+        err = esp_camera_init(&config);
+        
+        if (err != ESP_OK) {
+            Serial.printf("CameraHandler: Camera init attempt %d failed: 0x%x\n", 
+                         retry_count + 1, err);
+            
+            // Ensure deinit before retry (clean state)
+            if (retry_count < MAX_INIT_RETRIES - 1) {
+                esp_camera_deinit();
+            }
+        }
+        
+        retry_count++;
+    }
+    
     if (err != ESP_OK) {
-        Serial.printf("CameraHandler: Camera init failed: 0x%x\n", err);
+        Serial.printf("CameraHandler: Camera init failed after %d attempts: 0x%x\n", 
+                     MAX_INIT_RETRIES, err);
         init_result.error_code = err;
-        init_result.error_message = "ESP camera initialization failed";
+        init_result.error_message = "ESP camera initialization failed after retries";
         CameraUtils::diagnoseCameraIssues(err);
         return err;
     }
     
-    // Configure sensor
+    // Configure sensor with error recovery
     esp_err_t sensor_result = configureSensor();
     if (sensor_result != ESP_OK) {
-        Serial.printf("CameraHandler: Sensor configuration failed: 0x%x\n", sensor_result);
-        esp_camera_deinit();
-        init_result.error_code = sensor_result;
-        init_result.error_message = "Sensor configuration failed";
-        return sensor_result;
+        // Try sensor configuration once more after brief delay
+        Serial.println("CameraHandler: Sensor configuration failed, retrying...");
+        delay(100);
+        sensor_result = configureSensor();
+        
+        if (sensor_result != ESP_OK) {
+            Serial.printf("CameraHandler: Sensor configuration failed: 0x%x\n", sensor_result);
+            esp_camera_deinit();
+            init_result.error_code = sensor_result;
+            init_result.error_message = "Sensor configuration failed";
+            return sensor_result;
+        }
     }
     
     initialized = true;
@@ -136,10 +187,18 @@ esp_err_t CameraHandler::initialize(const CameraConfig& user_config) {
     init_result.init_time_ms = millis() - start_time;
     
     Serial.printf("CameraHandler: Initialization successful (%lu ms)\n", init_result.init_time_ms);
+    if (retry_count > 1) {
+        Serial.printf("CameraHandler: Note - initialization required %d attempt(s)\n", retry_count);
+    }
     CameraUtils::logCameraConfig(user_config);
     
     return ESP_OK;
 }
+
+/**
+ * @brief Maximum number of capture retry attempts
+ */
+static const uint8_t MAX_CAPTURE_RETRIES = 2;
 
 esp_err_t CameraHandler::captureFrame(uint32_t timeout_ms) {
     if (!initialized) {
@@ -148,11 +207,35 @@ esp_err_t CameraHandler::captureFrame(uint32_t timeout_ms) {
     }
     
     uint32_t capture_start = millis();
+    camera_fb_t* fb = nullptr;
+    uint8_t retry_count = 0;
     
-    // Capture frame
-    camera_fb_t* fb = esp_camera_fb_get();
+    // Capture frame with retry logic for edge cases (sensor timing issues)
+    while (retry_count < MAX_CAPTURE_RETRIES && fb == nullptr) {
+        if (retry_count > 0) {
+            Serial.printf("CameraHandler: Capture retry attempt %d\n", retry_count);
+            delay(50); // Brief delay before retry
+        }
+        
+        fb = esp_camera_fb_get();
+        
+        if (!fb) {
+            retry_count++;
+            
+            // On first failure, try to recover sensor state
+            if (retry_count == 1) {
+                sensor_t* sensor = esp_camera_sensor_get();
+                if (sensor) {
+                    // Attempt to reset exposure settings to recover from edge case
+                    sensor->set_exposure_ctrl(sensor, 1);
+                    sensor->set_gain_ctrl(sensor, 1);
+                }
+            }
+        }
+    }
+    
     if (!fb) {
-        Serial.println("CameraHandler: Frame capture failed");
+        Serial.printf("CameraHandler: Frame capture failed after %d attempts\n", MAX_CAPTURE_RETRIES);
         updateCaptureStats(millis() - capture_start, 0, false);
         return ESP_FAIL;
     }
@@ -167,6 +250,14 @@ esp_err_t CameraHandler::captureFrame(uint32_t timeout_ms) {
         return ESP_ERR_TIMEOUT;
     }
     
+    // Validate frame buffer integrity (edge case protection)
+    if (fb->len == 0 || fb->buf == nullptr) {
+        Serial.println("CameraHandler: Invalid frame buffer received");
+        esp_camera_fb_return(fb);
+        updateCaptureStats(capture_time, 0, false);
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+    
     // Add to queue if space available
     if (xQueueSend(frame_queue, &fb, 0) != pdTRUE) {
         Serial.println("CameraHandler: Frame queue full, dropping frame");
@@ -176,8 +267,13 @@ esp_err_t CameraHandler::captureFrame(uint32_t timeout_ms) {
     }
     
     updateCaptureStats(capture_time, fb->len, true);
-    Serial.printf("CameraHandler: Frame captured (%dx%d, %d bytes, %lu ms)\n", 
-                  fb->width, fb->height, fb->len, capture_time);
+    if (retry_count > 0) {
+        Serial.printf("CameraHandler: Frame captured after %d retry(s) (%dx%d, %d bytes, %lu ms)\n", 
+                      retry_count, fb->width, fb->height, fb->len, capture_time);
+    } else {
+        Serial.printf("CameraHandler: Frame captured (%dx%d, %d bytes, %lu ms)\n", 
+                      fb->width, fb->height, fb->len, capture_time);
+    }
     
     return ESP_OK;
 }

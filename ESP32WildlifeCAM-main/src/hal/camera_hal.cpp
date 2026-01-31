@@ -389,13 +389,71 @@ CameraHAL::CameraConfig CameraHAL::getAIThinkerConfig() {
 }
 
 CameraHAL::CameraConfig CameraHAL::getESP32S3Config() {
-    // Implementation similar to AI-Thinker but optimized for S3
-    return getAIThinkerConfig(); // Placeholder - would be customized
+    // ESP32-S3-CAM optimized configuration with enhanced performance
+    CameraConfig config;
+    config.ledc_channel = LEDC_CHANNEL_0;
+    config.ledc_timer = LEDC_TIMER_0;
+    
+    // ESP32-S3-CAM specific pin mapping (matches board_profiles.h ESP32_S3_CAM_GPIO_MAP)
+    config.pin_d0 = 15;   // Y2 pin
+    config.pin_d1 = 17;   // Y3 pin
+    config.pin_d2 = 18;   // Y4 pin
+    config.pin_d3 = 16;   // Y5 pin
+    config.pin_d4 = 14;   // Y6 pin
+    config.pin_d5 = 12;   // Y7 pin
+    config.pin_d6 = 11;   // Y8 pin
+    config.pin_d7 = 48;   // Y9 pin
+    config.pin_xclk = 10; // External clock
+    config.pin_pclk = 13; // Pixel clock
+    config.pin_vsync = 38; // VSYNC
+    config.pin_href = 47;  // HREF
+    config.pin_sda = 40;   // I2C SDA (SCCB)
+    config.pin_scl = 39;   // I2C SCL (SCCB)
+    config.pin_pwdn = -1;  // Power down pin (not used on S3)
+    config.pin_reset = -1; // Reset pin (not used on S3)
+    
+    // ESP32-S3 performance optimizations
+    config.xclk_freq_hz = 24000000; // Higher clock for better performance (24MHz)
+    config.pixel_format = static_cast<int>(PIXFORMAT_JPEG);
+    config.frame_size = static_cast<int>(FRAMESIZE_UXGA); // 1600x1200 for quality
+    config.jpeg_quality = 8;  // Higher quality with S3 processing power
+    config.fb_count = 3;      // Triple buffering with PSRAM for smooth operation
+    
+    return config;
 }
 
 CameraHAL::CameraConfig CameraHAL::getTTGOConfig() {
-    // Implementation for TTGO T-Camera
-    return getAIThinkerConfig(); // Placeholder - would be customized
+    // TTGO T-Camera configuration
+    CameraConfig config;
+    config.ledc_channel = LEDC_CHANNEL_0;
+    config.ledc_timer = LEDC_TIMER_0;
+    
+    // TTGO T-Camera specific pin mapping (matches board_profiles.h TTGO_T_CAMERA_GPIO_MAP)
+    config.pin_d0 = 5;    // Y2 pin
+    config.pin_d1 = 14;   // Y3 pin
+    config.pin_d2 = 4;    // Y4 pin
+    config.pin_d3 = 15;   // Y5 pin
+    config.pin_d4 = 18;   // Y6 pin
+    config.pin_d5 = 23;   // Y7 pin
+    config.pin_d6 = 36;   // Y8 pin
+    config.pin_d7 = 39;   // Y9 pin
+    config.pin_xclk = 32; // External clock
+    config.pin_pclk = 19; // Pixel clock
+    config.pin_vsync = 27; // VSYNC
+    config.pin_href = 25;  // HREF
+    config.pin_sda = 13;   // I2C SDA (SCCB)
+    config.pin_scl = 12;   // I2C SCL (SCCB)
+    config.pin_pwdn = 26;  // Power down pin
+    config.pin_reset = -1; // Reset pin (not used)
+    
+    // TTGO T-Camera settings
+    config.xclk_freq_hz = 20000000; // 20MHz standard clock
+    config.pixel_format = static_cast<int>(PIXFORMAT_JPEG);
+    config.frame_size = static_cast<int>(FRAMESIZE_UXGA);
+    config.jpeg_quality = 12; // Standard quality
+    config.fb_count = 2;      // Double buffering with PSRAM
+    
+    return config;
 }
 
 CameraHAL::CameraConfig CameraHAL::getDefaultConfig() {
