@@ -501,6 +501,9 @@ void loop() {
         
         camera_fb_t* fb = camera.captureImage();
         if (fb != nullptr) {
+            // Record capture for energy accounting
+            power.recordCapture();
+            
             currentState = SAVING;
             
             // Save image to SD card
@@ -621,6 +624,8 @@ void loop() {
                     if (uploadStatus == UPLOAD_SUCCESS) {
                         LOG_INFO("Image uploaded to cloud successfully");
                         Serial.println("   ✓ Image uploaded to cloud");
+                        // Record transmission for energy accounting
+                        power.recordTransmission();
                     } else if (uploadStatus == UPLOAD_QUEUED) {
                         LOG_INFO("Image queued for cloud upload");
                         Serial.println("   ⏳ Image queued for upload (no WiFi)");
@@ -697,6 +702,13 @@ void loop() {
         int percent = power.getBatteryPercentage();
         LOG_INFO("Battery check: %.2fV (%d%%)", voltage, percent);
         Serial.printf("Battery check: %.2fV (%d%%)\n", voltage, percent);
+        
+        // Print energy accounting statistics
+        if (power.isEnergyTrackingEnabled()) {
+            EnergyStats stats = power.getEnergyStats();
+            LOG_DEBUG("Energy: %.2f mAh consumed, Est. remaining: %.1f hours", 
+                     stats.energyConsumedMah, stats.estimatedRemainingHours);
+        }
         
         // Enter deep sleep if battery is critically low
         if (voltage < BATTERY_CRITICAL_THRESHOLD) {
