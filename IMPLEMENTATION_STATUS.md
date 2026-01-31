@@ -1,9 +1,9 @@
 # 📊 WildCAM_ESP32 Implementation Status
 
-**Last Updated**: December 31, 2025  
+**Last Updated**: January 31, 2026  
 **Document Purpose**: Provide honest, detailed status of every major feature across both core system and enterprise platform
 
-> **Recent Bug Fix (Dec 31, 2025)**: Critical bug in `src/main.cpp` metadata handling was fixed. See [AUDIT_FINDINGS.md](AUDIT_FINDINGS.md) for details.
+> **Recent Feature Updates (Jan 31, 2026)**: Energy Accounting and Auto-cleanup Storage Policy are now complete. See updated sections below.
 
 ---
 
@@ -94,7 +94,7 @@
 | Solar Charging | ✅ Complete | 85% | Basic charging works, MPPT optimization in progress |
 | Power Profiles | ✅ Complete | 90% | Adaptive profiles working, weather integration pending |
 | Low Battery Alerts | ✅ Complete | 100% | Configurable thresholds working |
-| Energy Accounting | 🚧 In Progress | 40% | Basic tracking, detailed analytics pending |
+| Energy Accounting | ✅ Complete | 100% | Detailed power tracking, estimated runtime, power profiles |
 
 ### 5. Storage & Data Management
 | Feature | Status | Completion | Notes |
@@ -102,7 +102,7 @@
 | SD Card Storage | ✅ Complete | 100% | Reliable write operations |
 | File Organization | ✅ Complete | 100% | Date/time based folders |
 | Storage Monitoring | ✅ Complete | 100% | Space tracking and alerts |
-| Auto-cleanup | 🚧 In Progress | 60% | Manual cleanup works, auto-policy pending |
+| Auto-cleanup | ✅ Complete | 100% | Automatic cleanup policy with configurable thresholds |
 | Data Compression | 📋 Planned | 0% | Framework not yet implemented |
 
 ### 6. Time Management
@@ -482,10 +482,16 @@ This is a long-term development effort (12-24 months) that offers an exciting op
 
 This document will be updated monthly to reflect current implementation status. 
 
-**Last Updated**: December 31, 2025  
-**Next Review**: January 31, 2026
+**Last Updated**: January 31, 2026  
+**Next Review**: February 28, 2026
 
-**Recent Changes (December 31, 2025)**:
+**Recent Changes (January 31, 2026)**:
+- Energy Accounting feature now complete (100%) - Added detailed power tracking, estimated runtime calculations, and power profiles
+- Auto-cleanup Storage Policy now complete (100%) - Added automatic cleanup with configurable thresholds and retention periods
+- Updated PowerManager with EnergyStats structure and comprehensive power tracking
+- Updated StorageManager with automatic cleanup policy implementation
+
+**Previous Changes (December 31, 2025)**:
 - Added Section 13: Satellite Communication (Core System) with complete status
 - Updated Enterprise Platform Satellite section to clarify core vs enterprise scope
 - Clarified that core satellite drivers are 100% complete

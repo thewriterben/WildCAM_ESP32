@@ -212,6 +212,13 @@ private:
     std::map<uint32_t, String> recentImageHashes; ///< Cache of recent image hashes for duplicate detection
     static const size_t MAX_HASH_CACHE_SIZE = 50; ///< Maximum number of hashes to keep in cache
     
+    // Auto-cleanup policy members
+    bool autoCleanupEnabled;       ///< Whether automatic cleanup is enabled
+    unsigned long autoCleanupThresholdKB; ///< Free space threshold that triggers cleanup (KB)
+    int autoCleanupRetentionDays;  ///< Number of days to keep files during cleanup
+    unsigned long lastAutoCleanupTime; ///< Timestamp of last auto cleanup
+    static const unsigned long AUTO_CLEANUP_INTERVAL_MS = 300000; ///< Minimum time between auto cleanups (5 min)
+    
     // Error handling and retry logic members
     SDCardHealth cardHealth;       ///< Current SD card health statistics
     SDCardError lastError;         ///< Last error code encountered
@@ -225,6 +232,16 @@ private:
     uint8_t* writeBuffer;          ///< Pre-allocated write buffer to reduce fragmentation
     size_t writeBufferSize;        ///< Size of the write buffer
     bool memoryPoolEnabled;        ///< Whether memory pooling is enabled
+    
+    /**
+     * @brief Check if automatic cleanup should run and execute if needed
+     * 
+     * Checks free space and runs cleanup if below threshold.
+     * Respects minimum interval between cleanup runs.
+     * 
+     * @return bool true if cleanup ran successfully or wasn't needed
+     */
+    bool checkAndRunAutoCleanup();
     
     /**
      * @brief Get the current date-based path component
@@ -671,6 +688,81 @@ public:
      * @param bytesCompressed Output: Estimated bytes saved through compression (since boot)
      */
     void getStorageStats(unsigned long& totalImages, unsigned long& duplicatesSkipped, unsigned long& bytesCompressed);
+    
+    // ============================================================================
+    // Automatic Cleanup Policy (In Progress → Complete)
+    // ============================================================================
+    
+    /**
+     * @brief Enable or disable automatic storage cleanup
+     * 
+     * When enabled, the StorageManager will automatically delete old files
+     * when free space drops below the configured threshold. This prevents
+     * the SD card from filling up during extended deployments.
+     * 
+     * @param enable true to enable auto-cleanup, false to disable
+     */
+    void setAutoCleanupEnabled(bool enable);
+    
+    /**
+     * @brief Check if automatic cleanup is enabled
+     * 
+     * @return bool true if auto-cleanup is enabled
+     */
+    bool isAutoCleanupEnabled() const;
+    
+    /**
+     * @brief Set the free space threshold that triggers cleanup
+     * 
+     * When free space drops below this threshold and auto-cleanup is
+     * enabled, old files will be automatically deleted.
+     * 
+     * @param thresholdKB Free space threshold in kilobytes
+     */
+    void setAutoCleanupThreshold(unsigned long thresholdKB);
+    
+    /**
+     * @brief Get the current auto-cleanup threshold
+     * 
+     * @return unsigned long Threshold in kilobytes
+     */
+    unsigned long getAutoCleanupThreshold() const;
+    
+    /**
+     * @brief Set the retention period for auto-cleanup
+     * 
+     * Files older than this number of days will be deleted during
+     * automatic cleanup operations.
+     * 
+     * @param days Number of days to retain files (1-365)
+     */
+    void setAutoCleanupRetentionDays(int days);
+    
+    /**
+     * @brief Get the current retention period
+     * 
+     * @return int Number of days files are retained
+     */
+    int getAutoCleanupRetentionDays() const;
+    
+    /**
+     * @brief Manually trigger cleanup based on current policy
+     * 
+     * Runs the auto-cleanup process immediately, regardless of
+     * the current free space level.
+     * 
+     * @return int Number of files deleted, or -1 on error
+     */
+    int runCleanup();
+    
+    /**
+     * @brief Get information about the last cleanup operation
+     * 
+     * @param filesDeleted Output: Number of files deleted
+     * @param bytesFreed Output: Bytes freed by cleanup
+     * @param lastCleanupTime Output: Timestamp of last cleanup
+     */
+    void getLastCleanupInfo(int& filesDeleted, unsigned long& bytesFreed, unsigned long& lastCleanupTime);
     
     // ============================================================================
     // SD Card Error Handling and Retry Logic

@@ -88,6 +88,10 @@ StorageManager::StorageManager()
       compressionQuality(STORAGE_DEFAULT_COMPRESSION_QUALITY),
       compressionEnabled(true),
       duplicateDetectionEnabled(true),
+      autoCleanupEnabled(true),
+      autoCleanupThresholdKB(STORAGE_MIN_FREE_SPACE_KB),
+      autoCleanupRetentionDays(AUTO_DELETE_DAYS),
+      lastAutoCleanupTime(0),
       lastError(SD_ERROR_NONE),
       maxRetries(SD_CARD_MAX_RETRIES),
       retryDelayMs(SD_CARD_RETRY_DELAY_MS),
@@ -499,6 +503,9 @@ String StorageManager::saveImage(camera_fb_t* fb, const String& customPath) {
             return "";
         }
     }
+    
+    // Run automatic cleanup if enabled and needed
+    checkAndRunAutoCleanup();
     
     String fullPath;
     
@@ -1355,4 +1362,135 @@ size_t StorageManager::optimizeMemory() {
     Serial.printf_P(TAG_MEMORY_OPTIMIZED, freedBytes);
     
     return freedBytes;
+}
+
+// ============================================================================
+// Automatic Cleanup Policy Implementation
+// ============================================================================
+
+// Static variables for cleanup statistics
+static int g_lastCleanupFilesDeleted = 0;
+static unsigned long g_lastCleanupBytesFreed = 0;
+static unsigned long g_lastCleanupTimestamp = 0;
+
+// PROGMEM strings for auto-cleanup
+static const char TAG_AUTO_CLEANUP_CHECK[] PROGMEM = "Checking if auto-cleanup needed (free: %lu KB, threshold: %lu KB)\n";
+static const char TAG_AUTO_CLEANUP_TRIGGER[] PROGMEM = "Auto-cleanup triggered: free space below threshold\n";
+static const char TAG_AUTO_CLEANUP_SKIP[] PROGMEM = "Auto-cleanup skipped: sufficient free space\n";
+static const char TAG_AUTO_CLEANUP_COOLDOWN[] PROGMEM = "Auto-cleanup skipped: cooldown period active\n";
+static const char TAG_AUTO_CLEANUP_RESULT[] PROGMEM = "Auto-cleanup complete: deleted %d files, freed %lu KB\n";
+static const char TAG_AUTO_CLEANUP_DISABLED[] PROGMEM = "Auto-cleanup is disabled\n";
+
+bool StorageManager::checkAndRunAutoCleanup() {
+    if (!initialized || !autoCleanupEnabled) {
+        return true;  // Nothing to do, not an error
+    }
+    
+    // Check cooldown period
+    unsigned long currentTime = millis();
+    if (currentTime - lastAutoCleanupTime < AUTO_CLEANUP_INTERVAL_MS) {
+        return true;  // Still in cooldown, skip
+    }
+    
+    // Get current free space in KB
+    unsigned long freeSpaceKB = getFreeSpace() / 1024;
+    
+    Serial.printf_P(TAG_AUTO_CLEANUP_CHECK, freeSpaceKB, autoCleanupThresholdKB);
+    
+    // Check if cleanup is needed
+    if (freeSpaceKB >= autoCleanupThresholdKB) {
+        return true;  // Sufficient space, no cleanup needed
+    }
+    
+    // Trigger cleanup
+    Serial.println(FPSTR(TAG_AUTO_CLEANUP_TRIGGER));
+    
+    // First try smart delete
+    int deletedCount = smartDelete(autoCleanupThresholdKB);
+    
+    // If smart delete didn't free enough, also delete old files
+    freeSpaceKB = getFreeSpace() / 1024;
+    if (freeSpaceKB < autoCleanupThresholdKB && autoCleanupRetentionDays > 0) {
+        deleteOldFiles(autoCleanupRetentionDays);
+    }
+    
+    // Update statistics
+    unsigned long newFreeSpace = getFreeSpace() / 1024;
+    unsigned long bytesFreed = (newFreeSpace > freeSpaceKB) ? (newFreeSpace - freeSpaceKB) * 1024 : 0;
+    
+    g_lastCleanupFilesDeleted = deletedCount;
+    g_lastCleanupBytesFreed = bytesFreed;
+    g_lastCleanupTimestamp = currentTime;
+    lastAutoCleanupTime = currentTime;
+    
+    Serial.printf_P(TAG_AUTO_CLEANUP_RESULT, deletedCount, bytesFreed / 1024);
+    
+    return deletedCount >= 0;
+}
+
+void StorageManager::setAutoCleanupEnabled(bool enable) {
+    autoCleanupEnabled = enable;
+    
+    if (enable) {
+        // Run initial check when enabled
+        checkAndRunAutoCleanup();
+    }
+}
+
+bool StorageManager::isAutoCleanupEnabled() const {
+    return autoCleanupEnabled;
+}
+
+void StorageManager::setAutoCleanupThreshold(unsigned long thresholdKB) {
+    if (thresholdKB > 0) {
+        autoCleanupThresholdKB = thresholdKB;
+    }
+}
+
+unsigned long StorageManager::getAutoCleanupThreshold() const {
+    return autoCleanupThresholdKB;
+}
+
+void StorageManager::setAutoCleanupRetentionDays(int days) {
+    if (days >= 1 && days <= 365) {
+        autoCleanupRetentionDays = days;
+    }
+}
+
+int StorageManager::getAutoCleanupRetentionDays() const {
+    return autoCleanupRetentionDays;
+}
+
+int StorageManager::runCleanup() {
+    if (!initialized) {
+        Serial.println(FPSTR(TAG_ERROR_NOT_INIT));
+        return -1;
+    }
+    
+    unsigned long beforeFreeSpace = getFreeSpace() / 1024;
+    
+    // Run smart delete first
+    int deletedCount = smartDelete(autoCleanupThresholdKB);
+    
+    // Then delete old files based on retention policy
+    if (autoCleanupRetentionDays > 0) {
+        deleteOldFiles(autoCleanupRetentionDays);
+    }
+    
+    // Update statistics
+    unsigned long afterFreeSpace = getFreeSpace() / 1024;
+    unsigned long bytesFreed = (afterFreeSpace > beforeFreeSpace) ? (afterFreeSpace - beforeFreeSpace) * 1024 : 0;
+    
+    g_lastCleanupFilesDeleted = deletedCount;
+    g_lastCleanupBytesFreed = bytesFreed;
+    g_lastCleanupTimestamp = millis();
+    lastAutoCleanupTime = millis();
+    
+    return deletedCount;
+}
+
+void StorageManager::getLastCleanupInfo(int& filesDeleted, unsigned long& bytesFreed, unsigned long& lastCleanupTime) {
+    filesDeleted = g_lastCleanupFilesDeleted;
+    bytesFreed = g_lastCleanupBytesFreed;
+    lastCleanupTime = g_lastCleanupTimestamp;
 }
