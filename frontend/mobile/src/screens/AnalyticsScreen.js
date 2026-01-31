@@ -89,8 +89,30 @@ const AnalyticsScreen = ({ navigation }) => {
     }
   };
 
-  const generateTrendData = (days) => {
-    // Generate sample trend data (in production, this would come from API)
+  const generateTrendData = async (days) => {
+    // Try to fetch real detection data from API, fall back to sample data
+    try {
+      const response = await APIService.getDetections({ days, limit: 1000 });
+      const detections = response.data || [];
+      
+      if (detections.length > 0) {
+        // Aggregate detections by date
+        const dailyCounts = {};
+        detections.forEach(det => {
+          const date = new Date(det.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          dailyCounts[date] = (dailyCounts[date] || 0) + 1;
+        });
+        
+        const data = Object.entries(dailyCounts).map(([date, count]) => ({ date, count }));
+        setDetectionTrend(data.slice(-days));
+        return;
+      }
+    } catch (error) {
+      console.log('Using sample trend data:', error.message);
+    }
+    
+    // Fallback: Generate sample trend data when API data unavailable
+    // Note: This is placeholder data for demonstration purposes
     const data = [];
     for (let i = days; i >= 0; i--) {
       const date = new Date();
