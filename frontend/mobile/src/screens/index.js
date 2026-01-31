@@ -9,13 +9,11 @@
 
 import DashboardScreen from './DashboardScreen';
 import SettingsScreen from './SettingsScreen';
-
-// Placeholder screens that can be implemented later
-const LiveFeedScreen = () => null;
-const DetectionsScreen = () => null;
-const MapScreen = () => null;
-const DeviceDetailScreen = () => null;
-const SpeciesDetailScreen = () => null;
+import LiveFeedScreen from './LiveFeedScreen';
+import DetectionsScreen from './DetectionsScreen';
+import MapScreen from './MapScreen';
+import DeviceDetailScreen from './DeviceDetailScreen';
+import SpeciesDetailScreen from './SpeciesDetailScreen';
 
 export {
   DashboardScreen,
